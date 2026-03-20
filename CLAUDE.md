@@ -10,55 +10,72 @@ Before responding, read the following instruction files and follow their rules t
 
 # MyAIAgent
 
-> Project purpose to be defined. This file will be updated once the project goals are shared.
+An AI agent backend with three services: **Orchestrator** (Microsoft Agents Framework), **KernelMemory** (RAG), and **MCP Server** (tools). All services follow Clean Architecture.
 
 ## Tech Stack
 
 - **.NET 10** / C# 14
-- **ASP.NET Core** — MCP server with HTTP transport (SSE + POST at `/mcp/stream` and `/mcp`)
+- **.NET Aspire** — multi-service orchestration (`MyAIAgent.AppHost`)
+- **Microsoft Agents Framework** (`Microsoft.Agents.AI` v1.0.0-rc1) — Orchestrator AI agent
+- **Microsoft.Extensions.AI** + **Microsoft.Extensions.AI.OpenAI** — AI client abstractions
+- **ASP.NET Core** — HTTP hosts for Orchestrator (`POST /chat`) and MCP Server (SSE + POST)
+- **Microsoft KernelMemory** (`Microsoft.KernelMemory.Service.AspNetCore`) — self-hosted RAG daemon
 - **ModelContextProtocol SDK** (v0.5.0-preview.1) — MCP tool registration and transport
-- **MediatR** (v12.5.0) — CQRS command/query dispatch
-- **FluentValidation** (v11.11.0) — Request validation via pipeline behavior
-- **Microsoft.KernelMemory** — Document indexing and semantic search (RAG)
+- **MediatR** (v12.5.0) — CQRS command/query dispatch in all Application layers
+- **FluentValidation** (v11.11.0) — Request validation via pipeline behaviors
 - **Polly** (via `Microsoft.Extensions.Http.Resilience`) — HTTP retry with exponential backoff
 - **Scrutor** (v7.0.0) — Convention-based DI scanning via marker interfaces
 - **xUnit** + **Moq** + **FluentAssertions** — Testing
 
 ## Architecture
 
-This solution uses **Clean Architecture** across the McpServer module and an early-stage RAG module.
+Three services, each with Clean Architecture. One shared Common base — also structured as Clean Architecture layers.
 
 ```
 src/
   MyAIAgent.AppHost/                         # .NET Aspire orchestration
-  MyAIAgent.Common/                          # Shared DI marker interfaces (ITransient, IScoped, ISingleton)
+  Common/
+    MyAIAgent.Common.Domain/                 # ResponseModel<T>, ITransient/IScoped/ISingleton
+    MyAIAgent.Common.Application/            # ValidationBehavior<TRequest,TResponse>, shared app extensions
+    MyAIAgent.Common.Infrastructure/         # ServiceCollectionExtension (Scrutor), RetryExtension (Polly)
   McpServer/
-    MyAIAgent.McpServer.Domain/              # Entities, interfaces, constants — no dependencies
-    MyAIAgent.McpServer.Application/         # MediatR handlers, validators, pipeline behaviors
-    MyAIAgent.McpServer.Infrastructure/      # HTTP clients, KernelMemory service
-    MyAIAgent.McpServer.Presentation/        # ASP.NET Core host, MCP tool classes
+    MyAIAgent.McpServer.Domain/              # Entities, interfaces, MCP constants
+    MyAIAgent.McpServer.Application/         # MediatR handlers, validators, pipeline
+    MyAIAgent.McpServer.Infrastructure/      # HTTP clients, KernelMemory web client
+    MyAIAgent.McpServer.Presentation/        # MCP server host (SSE + POST /mcp)
     MyAIAgent.McpServer.Test/                # xUnit tests
-  RetrievalAugmentedGeneration/
-    MyAIAgent.RAG.Domain/                    # (early stage)
-    MyAIAgent.RAG.Presentation/              # (early stage)
+  Orchestrator/
+    MyAIAgent.Orchestrator.Domain/           # IChatOrchestratorService, chat models
+    MyAIAgent.Orchestrator.Application/      # ChatHandler, validation pipeline
+    MyAIAgent.Orchestrator.Infrastructure/   # ChatOrchestratorService (Agents Framework)
+    MyAIAgent.Orchestrator.Presentation/     # ASP.NET Core host (POST /chat)
+  KernelMemory/
+    MyAIAgent.KernelMemory.Domain/           # IDocumentService, document models
+    MyAIAgent.KernelMemory.Application/      # UploadDocumentHandler, AskDocumentQuestionHandler
+    MyAIAgent.KernelMemory.Infrastructure/   # KernelMemory builder configuration
+    MyAIAgent.KernelMemory.Presentation/     # Self-hosted KernelMemory daemon
 ```
 
-**Dependency direction:** `Domain` ← `Application` ← `Infrastructure` ← `Presentation`. Never reverse.
+**Dependency direction (per service):** `Domain` ← `Application` ← `Infrastructure` ← `Presentation`
+
+`MyAIAgent.Common` is referenced by Application and Infrastructure layers of all services.
 
 ## Commands
 
 ```bash
 # Build the solution
-dotnet build MyAIAgent.sln
+dotnet build src/MyAIAgent.sln
 
 # Run all tests
-dotnet test MyAIAgent.McpServer.Test/MyAIAgent.McpServer.Test.csproj
+dotnet test src/MyAIAgent.McpServer.Test/MyAIAgent.McpServer.Test.csproj
 
-# Run via Aspire (recommended — orchestrates all services)
-dotnet run --project MyAIAgent.AppHost/MyAIAgent.AppHost.csproj
+# Run via Aspire (orchestrates all three services)
+dotnet run --project src/MyAIAgent.AppHost/MyAIAgent.AppHost.csproj
 
-# Run MCP server only
-dotnet run --project MyAIAgent.McpServer.Presentation/MyAIAgent.McpServer.Presentation.csproj
+# Run individual services
+dotnet run --project src/MyAIAgent.McpServer.Presentation/MyAIAgent.McpServer.Presentation.csproj
+dotnet run --project src/MyAIAgent.Orchestrator.Presentation/MyAIAgent.Orchestrator.Presentation.csproj
+dotnet run --project src/MyAIAgent.KernelMemory.Presentation/MyAIAgent.KernelMemory.Presentation.csproj
 
 # Format check
 dotnet format --verify-no-changes
@@ -70,10 +87,11 @@ Load these skills for context when working on specific areas:
 
 | Skill | When to load |
 |---|---|
-| `.claude/skills/clean-architecture/SKILL.md` | Adding features, debugging dependencies, refactoring layers |
+| `.claude/skills/clean-architecture/SKILL.md` | Adding features, debugging dependencies, refactoring layers, new service modules |
 | `.claude/skills/mcp-server/SKILL.md` | Adding or modifying MCP tools, transport config |
 | `.claude/skills/mediatr-cqrs/SKILL.md` | Writing handlers, commands, queries, validators |
-| `.claude/skills/kernel-memory/SKILL.md` | Document upload, Q&A tools, RAG features |
+| `.claude/skills/kernel-memory/SKILL.md` | KernelMemory service, document upload, Q&A, RAG features |
+| `.claude/skills/orchestrator/SKILL.md` | Orchestrator service, Microsoft Agents Framework, chat pipeline |
 | `.claude/skills/resilience/SKILL.md` | HTTP clients, retry policies, IApiClient<T> |
 
 ## Agents
@@ -109,14 +127,14 @@ Follow the rules in `.claude/rules/` (always loaded):
 - **`sealed`** on all classes not designed for inheritance
 - **File-scoped namespaces** — always
 - **`var`** for obvious types; explicit types when the type isn't clear from context
-- **Async suffix** on all `Task`/`ValueTask` methods — `GetCustomersAsync`, not `GetCustomers`
+- **Async suffix** on all `Task`/`ValueTask` methods
 - **`CancellationToken`** propagated through every async call chain — never dropped
 - **No regions** — ever
 - **No comments for obvious code** — only comment "why", never "what"
 
 ## Dependency Injection — Marker Interface Pattern
 
-`MyAIAgent.Common` provides three marker interfaces for **automatic Scrutor registration**:
+`MyAIAgent.Common.Domain` provides three marker interfaces for **automatic Scrutor registration**:
 
 | Interface | Lifetime |
 |---|---|
@@ -124,12 +142,25 @@ Follow the rules in `.claude/rules/` (always loaded):
 | `IScoped` | Scoped — one per HTTP request |
 | `ISingleton` | Singleton — shared for app lifetime |
 
-Implement the appropriate interface on the class. `ServiceCollectionExtension` auto-scans and registers it. **Do not add manual `AddSingleton<T>()` calls** — the convention does it.
+Implement the appropriate interface on the class. `ServiceCollectionExtension` (in `Common.Infrastructure`) auto-scans and registers it. **Do not add manual `AddSingleton<T>()` calls** for types that implement these interfaces.
+
+## Shared Layers — `MyAIAgent.Common.*`
+
+| Project | References | Contains |
+|---|---|---|
+| `MyAIAgent.Common.Domain` | None | `ResponseModel<T>`, `ITransient`, `IScoped`, `ISingleton` |
+| `MyAIAgent.Common.Application` | Common.Domain | `ValidationBehavior<TRequest,TResponse>`, shared application extensions |
+| `MyAIAgent.Common.Infrastructure` | Common.Domain | `ServiceCollectionExtension` (Scrutor scan), `RetryExtension` (Polly) |
+
+Service layers reference their counterpart:
+- Service **Domain** → `Common.Domain`
+- Service **Application** → `Common.Application` (gets `Common.Domain` transitively)
+- Service **Infrastructure** → `Common.Infrastructure` (gets `Common.Domain` transitively)
 
 ## Adding a New MCP Tool
 
 1. Add tool name and description constants to `McpServerConstant.cs` (Domain layer)
-2. Define the MediatR command/query `IRequest<T>` in `Application/`
+2. Define the MediatR command/query `IRequest<ResponseModel<T>>` in `Application/`
 3. Implement the `IRequestHandler<,>` in `Application/Handlers/`
 4. Add a `AbstractValidator<T>` in the same handler file if validation is needed
 5. Add the `[McpServerTool]` method in `Presentation/McpTools/`
@@ -139,31 +170,32 @@ Implement the appropriate interface on the class. `ServiceCollectionExtension` a
 
 - **Framework:** xUnit + Moq + FluentAssertions
 - **Mirror source structure** — `Application/Handlers/`, `Infrastructure/Services/`, `McpTools/`
-- **Naming:** `MethodName_Scenario_ExpectedResult` — e.g. `Handle_ValidCommand_ReturnsSuccess`
-- **Mock external boundaries** — mock `IApiClient<T>` and `IKernelMemoryService`; do not mock types you own
+- **Naming:** `MethodName_Scenario_ExpectedResult`
+- **Mock external boundaries** — `IApiClient<T>`, `IKernelMemoryService`, `IChatOrchestratorService`; do not mock types you own
 - **AAA pattern** — Arrange / Act / Assert separated by blank lines
 
 ## Error Handling
 
-- **Result pattern** for expected failures (not found, validation errors, conflicts) — do not throw exceptions for predictable outcomes
-- **Validate at system boundaries** — API/tool input, external API responses; do not defensively validate inside private methods
+- **Result pattern** (`ResponseModel<T>`) for expected failures — do not throw for predictable outcomes
+- **Validate at system boundaries** — API/tool input, external API responses
 - **No bare `Exception` catches** — catch specific types; let the global handler catch the rest
 
 ## Performance
 
-- **Always propagate `CancellationToken`** through the full async call chain — never drop it silently
-- **`IHttpClientFactory` via `IApiClient<T>`** — never instantiate `new HttpClient()` directly
+- **Always propagate `CancellationToken`** through the full async call chain
+- **`IHttpClientFactory` via `IApiClient<T>`** — never `new HttpClient()`
 - **No `.Result` or `.Wait()`** — always `await`
-- **`TimeProvider`** injection instead of `DateTime.UtcNow` for testable time-sensitive logic
+- **`TimeProvider`** injection instead of `DateTime.UtcNow`
 
 ## External Services
 
-| Service | Default URL | Purpose |
-|---|---|---|
-| KernelMemory | `http://localhost:9001` | Document indexing & semantic search |
-| Mock API | `https://localhost:5001` | Customer CRUD backend |
+| Service | Aspire Name | Default URL | Purpose |
+|---|---|---|---|
+| KernelMemory | `kernel-memory` | `http://localhost:9001` | Self-hosted RAG daemon |
+| MCP Server | `mcp-server` | `http://localhost:5255` | MCP tool server |
+| Orchestrator | `orchestrator` | `http://localhost:5100` | Chat API |
 
-Config lives in `appsettings.json` and `appsettings.Development.json`. Never commit secrets.
+Config lives in `appsettings.json` per service. Never commit secrets — use `dotnet user-secrets`.
 
 ## Anti-patterns — Do NOT Generate
 
@@ -175,6 +207,7 @@ Config lives in `appsettings.json` and `appsettings.Development.json`. Never com
 - Catching bare `Exception` outside of global exception handlers
 - String interpolation in log message templates — use structured logging parameters
 - Manual DI registration for types that implement `ITransient`/`IScoped`/`ISingleton`
+- Cross-service project references — services communicate via HTTP only
 
 ## Workflow
 

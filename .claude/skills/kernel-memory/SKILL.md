@@ -1,135 +1,201 @@
 ---
 name: kernel-memory
 description: >
-  Microsoft KernelMemory integration patterns for MyAIAgent. Covers document
-  upload, readiness polling, semantic Q&A, the IKernelMemoryService abstraction,
-  and KernelMemory client configuration.
-  Load when: working on document tools, RAG features, KernelMemory service,
-  or asked about document Q&A, semantic search, or knowledge base queries.
+  Microsoft KernelMemory integration patterns for MyAIAgent. Covers the
+  self-hosted KernelMemory daemon, document upload, readiness polling,
+  semantic Q&A, the IDocumentService abstraction, and KernelMemory
+  configuration (AI provider, vector store).
+  Load when: working on the KernelMemory service, RAG features, document
+  ingestion, semantic search, or knowledge base queries.
 ---
 
-# KernelMemory Integration (MyAIAgent)
+# KernelMemory Service (MyAIAgent)
 
 ## Overview
 
-MyAIAgent uses [Microsoft KernelMemory](https://github.com/microsoft/kernel-memory) as an external service for:
-- **Document ingestion** — upload markdown/PDF files for indexing
-- **Semantic search / Q&A** — ask natural language questions against indexed documents
+The `MyAIAgent.KernelMemory.*` module is a **self-hosted KernelMemory daemon** — it IS the RAG service. Other services (McpServer, Orchestrator) connect to it via HTTP using `MemoryWebClient`.
 
-The KernelMemory service runs separately at `http://localhost:9001` (configurable via `appsettings.json`).
+The KernelMemory service also follows Clean Architecture across four layers.
+
+## Project Structure
+
+```
+MyAIAgent.KernelMemory.Domain/
+  Interfaces/IDocumentService.cs        ← service contract
+  Models/DocumentUploadResult.cs        ← upload result record
+  Models/DocumentQueryResult.cs         ← Q&A result record
+
+MyAIAgent.KernelMemory.Application/
+  Handlers/UploadDocumentHandler.cs     ← UploadDocumentCommand + handler + validator
+  Handlers/AskDocumentQuestionHandler.cs← AskDocumentQuestionQuery + handler + validator
+  Behaviors/ValidationBehavior.cs       ← MediatR pipeline behavior
+  Extensions/IoCExtension.cs
+
+MyAIAgent.KernelMemory.Infrastructure/
+  Services/DocumentService.cs           ← implements IDocumentService via IKernelMemory
+  Extensions/IoCExtension.cs            ← registers IKernelMemory, Scrutor scan
+
+MyAIAgent.KernelMemory.Presentation/
+  Program.cs                            ← self-hosted KernelMemory daemon bootstrap
+  appsettings.json                      ← KernelMemory config (AI provider, storage)
+```
 
 ## Domain Interface
 
 ```csharp
-// Domain/Interfaces/IKernelMemoryService.cs
-public interface IKernelMemoryService
+// KernelMemory.Domain/Interfaces/IDocumentService.cs
+public interface IDocumentService
 {
-    Task<string> AskAsync(string question, string documentId, CancellationToken ct);
-    Task UploadDocumentAsync(string documentId, Stream content, CancellationToken ct);
+    Task<DocumentUploadResult> UploadDocumentAsync(
+        string filePath, string documentId, CancellationToken ct);
+
     Task<bool> IsDocumentReadyAsync(string documentId, CancellationToken ct);
+
+    Task<DocumentQueryResult> AskAsync(string question, CancellationToken ct);
 }
 ```
 
 ## Infrastructure Implementation
 
-`KernelMemoryService` wraps the `MemoryWebClient`:
+`DocumentService` wraps the `IKernelMemory` engine:
 
 ```csharp
-public sealed class KernelMemoryService(MemoryWebClient client, ILogger<KernelMemoryService> logger)
-    : IKernelMemoryService, IScoped
+public sealed class DocumentService(IKernelMemory kernelMemory)
+    : IDocumentService, IScoped
 {
-    public async Task<string> AskAsync(string question, string documentId, CancellationToken ct)
+    public async Task<DocumentUploadResult> UploadDocumentAsync(
+        string filePath, string documentId, CancellationToken ct)
     {
-        var answer = await client.AskAsync(question, filter: MemoryFilters.ByDocument(documentId), ct: ct);
-        return answer.Result;
-    }
-
-    public async Task UploadDocumentAsync(string documentId, Stream content, CancellationToken ct)
-    {
-        await client.ImportDocumentAsync(
-            new Document(documentId).AddStream(documentId, content),
-            cancellationToken: ct);
+        await kernelMemory.ImportDocumentAsync(filePath, documentId: documentId, cancellationToken: ct);
+        return new DocumentUploadResult(documentId, IsSuccess: true);
     }
 
     public async Task<bool> IsDocumentReadyAsync(string documentId, CancellationToken ct)
     {
-        var status = await client.GetDocumentStatusAsync(documentId, cancellationToken: ct);
+        var status = await kernelMemory.GetDocumentStatusAsync(documentId, cancellationToken: ct);
         return status?.Completed ?? false;
     }
-}
-```
 
-## Document Upload + Poll Pattern
-
-The `AskBackendQuestionHandler` shows the full flow: upload → poll → ask.
-
-```csharp
-public sealed class AskBackendQuestionHandler(IKernelMemoryService kernelMemory)
-    : IRequestHandler<AskQuestionCommand, ResponseModel<string>>
-{
-    private const int MaxPollAttempts = 10;
-    private static readonly TimeSpan PollDelay = TimeSpan.FromSeconds(2);
-
-    public async Task<ResponseModel<string>> Handle(AskQuestionCommand command, CancellationToken ct)
+    public async Task<DocumentQueryResult> AskAsync(string question, CancellationToken ct)
     {
-        // 1. Upload the document
-        var documentStream = GetDocumentStream(command.DocumentName);
-        await kernelMemory.UploadDocumentAsync(command.DocumentName, documentStream, ct);
-
-        // 2. Poll until ready
-        for (int i = 0; i < MaxPollAttempts; i++)
-        {
-            if (await kernelMemory.IsDocumentReadyAsync(command.DocumentName, ct))
-                break;
-
-            await Task.Delay(PollDelay, ct);
-        }
-
-        // 3. Ask the question
-        var answer = await kernelMemory.AskAsync(command.Question, command.DocumentName, ct);
-        return ResponseModel<string>.Success(answer);
+        var answer = await kernelMemory.AskAsync(question, cancellationToken: ct);
+        return new DocumentQueryResult(answer.Result);
     }
 }
 ```
 
-## Configuration
+## Self-Hosted Daemon (Presentation)
 
-`appsettings.json`:
+`Program.cs` bootstraps the full KernelMemory service:
+
+```csharp
+// KernelMemory.Presentation/Program.cs
+var app = KernelMemoryWebApplicationBuilder.Build(args);
+await app.RunAsync();
+```
+
+All configuration (AI provider, vector store, storage backend) is driven by `appsettings.json`.
+
+### Standard KernelMemory HTTP Endpoints (auto-exposed)
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /upload` | Ingest a document |
+| `POST /ask` | Semantic Q&A |
+| `GET /search` | Vector search |
+| `GET /documents/{id}/status` | Indexing status |
+
+## Configuration (`appsettings.json`)
 
 ```json
 {
   "KernelMemory": {
-    "BaseUrl": "http://localhost:9001"
+    "Services": {
+      "AzureOpenAIEmbedding": {
+        "Auth": "ApiKey",
+        "Endpoint": "",
+        "Deployment": "text-embedding-ada-002"
+      },
+      "AzureOpenAIText": {
+        "Auth": "ApiKey",
+        "Endpoint": "",
+        "Deployment": "gpt-4o"
+      },
+      "SimpleVectorDb": {
+        "StorageType": "Volatile"
+      }
+    },
+    "DataIngestion": {
+      "EmbeddingGeneratorTypes": ["AzureOpenAIEmbedding"],
+      "MemoryDbTypes": ["SimpleVectorDb"]
+    },
+    "Retrieval": {
+      "MemoryDbType": "SimpleVectorDb",
+      "EmbeddingGeneratorType": "AzureOpenAIEmbedding"
+    }
   }
 }
 ```
 
-IoC registration in `Infrastructure/Extensions/IoCExtension.cs`:
+Use `dotnet user-secrets` for API keys — never commit them.
+
+## Upload + Poll Pattern (Application Handlers)
+
+The `UploadDocumentHandler` shows the full upload → poll → ready flow:
 
 ```csharp
-services.AddSingleton(_ =>
-    new MemoryWebClient(configuration["KernelMemory:BaseUrl"]!));
+public sealed class UploadDocumentHandler(IDocumentService documentService)
+    : IRequestHandler<UploadDocumentCommand, ResponseModel<DocumentUploadResult>>
+{
+    private const int MaxPollAttempts = 10;
+    private static readonly TimeSpan PollDelay = TimeSpan.FromSeconds(2);
+
+    public async Task<ResponseModel<DocumentUploadResult>> Handle(
+        UploadDocumentCommand command, CancellationToken ct)
+    {
+        var result = await documentService.UploadDocumentAsync(
+            command.FilePath, command.DocumentId, ct);
+
+        for (var i = 0; i < MaxPollAttempts; i++)
+        {
+            if (await documentService.IsDocumentReadyAsync(command.DocumentId, ct))
+                return ResponseModel<DocumentUploadResult>.Succeed(result);
+
+            await Task.Delay(PollDelay, ct);
+        }
+
+        return ResponseModel<DocumentUploadResult>.Fail(
+            message: $"Document '{command.DocumentId}' did not finish indexing within the timeout.");
+    }
+}
 ```
 
-## Supported Documents (Current)
+## How McpServer Connects to KernelMemory
 
-| Document ID | Source File | Purpose |
-|---|---|---|
-| `backend_structure` | `Documents/backend_structure.md` | Backend architecture Q&A |
-| `backend_tests` | `Documents/backend_tests.md` | Unit testing guidelines Q&A |
+The MCP Server's `Infrastructure` layer uses `MemoryWebClient` (a lightweight HTTP client) to call the KernelMemory daemon:
 
-To add a new document: add the markdown file to `Application/Documents/`, register a new tool constant in `McpServerConstant`, and add a handler using the upload → poll → ask pattern above.
+```csharp
+// McpServer.Infrastructure/Extensions/IoCExtension.cs
+var kernelMemoryApiUrl = configuration["KernelMemory:BaseUrl"]
+    ?? throw new InvalidOperationException("KernelMemory:BaseUrl is required");
+services.AddSingleton<IKernelMemory>(_ => new MemoryWebClient(kernelMemoryApiUrl));
+```
+
+In Aspire, the KernelMemory URL is automatically injected via service discovery — the McpServer reads it from the Aspire-provided environment variable.
 
 ## Anti-patterns
 
 ```csharp
-// DON'T — call MemoryWebClient directly from a handler (bypasses the abstraction)
-public sealed class MyHandler(MemoryWebClient client) { }
+// DON'T — call MemoryWebClient directly from a handler
+public sealed class MyHandler(MemoryWebClient client) { }  // bypass the interface
 
-// DON'T — forget to poll before asking (document may not be indexed yet)
-await kernelMemory.UploadDocumentAsync(docId, stream, ct);
-var answer = await kernelMemory.AskAsync(question, docId, ct);  // race condition
+// DON'T — forget to poll before asking (document not yet indexed)
+await documentService.UploadDocumentAsync(path, id, ct);
+var answer = await documentService.AskAsync(question, ct);  // race condition
 
-// DON'T — ignore CancellationToken in poll loop
-await Task.Delay(PollDelay);  // should be Task.Delay(PollDelay, ct)
+// DON'T — drop CancellationToken in the poll loop
+await Task.Delay(PollDelay);  // should pass ct
+
+// DON'T — cross-reference the KernelMemory Domain from another service
+// Services communicate via HTTP only
 ```

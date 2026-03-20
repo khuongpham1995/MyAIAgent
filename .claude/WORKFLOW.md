@@ -5,11 +5,20 @@
 ```
 1. Plan         → /plan          (planner agent — identify files, risks, steps)
 2. TDD          → /tdd           (tdd-guide agent — write failing test first)
-3. Implement    → write code     (skills: clean-architecture, mcp-server, mediatr-cqrs)
+3. Implement    → write code     (skills: clean-architecture, mcp-server, mediatr-cqrs, orchestrator, kernel-memory)
 4. Review       → /code-review   (code-reviewer agent)
 5. Verify       → /test-coverage (build + tests + anti-patterns + format)
 6. Commit       → conventional commit
 ```
+
+## Service Responsibilities
+
+| Service | Entry point | When to touch |
+|---|---|---|
+| **Orchestrator** | `MyAIAgent.Orchestrator.*` | Chat pipeline, AI agent, tool dispatch changes |
+| **KernelMemory** | `MyAIAgent.KernelMemory.*` | RAG config, document ingestion, embedding provider changes |
+| **MCP Server** | `MyAIAgent.McpServer.*` | Adding/modifying tools exposed to LLMs |
+| **Common** | `MyAIAgent.Common` | Shared types (`ResponseModel<T>`), DI marker interfaces |
 
 ## Agent Delegation
 
@@ -22,20 +31,43 @@
 | New external HTTP, auth, user input | `security-reviewer` |
 | Code smell or duplication | `refactor-cleaner` |
 
+## Skill Triggers
+
+| File touched | Load skill |
+|---|---|
+| `Orchestrator/**` | `orchestrator` |
+| `KernelMemory/**` | `kernel-memory` |
+| `McpServer/Presentation/McpTools/**` | `mcp-server` |
+| `*/Application/Handlers/**` | `mediatr-cqrs` |
+| `*/Infrastructure/ApiClients/**` | `resilience` |
+| 3+ layers across any service | `clean-architecture` |
+
 ## Parallel Execution
 
 Run agents in parallel for independent tasks:
 
 ```
-User: "Add a search_customer_by_email tool"
+User: "Add an ask_product_catalog MCP tool"
 
 Parallel:
-  → planner (plan the implementation)
+  → planner (plan the implementation across all layers)
   → tdd-guide (write failing test)
 Then:
   → implement handler + tool
   → code-reviewer
   → /test-coverage
+```
+
+## Cross-Service Changes
+
+When a change touches multiple services (e.g. adding a new tool that the Orchestrator also calls):
+
+```
+1. planner  — map the full dependency chain across services
+2. Implement service-by-service in dependency order:
+     KernelMemory → MCP Server → Orchestrator
+3. code-reviewer on each service
+4. /test-coverage for the full solution
 ```
 
 ## Agent Boundaries
