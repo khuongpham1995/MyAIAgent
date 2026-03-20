@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <PackageId>MyAIAgent.McpServer.Application</PackageId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="DotMarkdown" Version="0.3.0"/>
+        <PackageReference Include="FluentValidation" Version="11.11.0"/>
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0"/>
+        <PackageReference Include="MediatR" Version="12.5.0"/>
+        <PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\MyAIAgent.Common\MyAIAgent.Common.csproj" />
+        <ProjectReference Include="..\MyAIAgent.McpServer.Domain\MyAIAgent.McpServer.Domain.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="Documents\backend_structure_and_tests.md">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="Documents\backend_structure.md">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="Documents\backend_tests.md">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="Handlers\"/>
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CLAUDE_TOOL_INPUT_COMMAND=\"$CLAUDE_TOOL_INPUT_COMMAND\" bash /Users/kylepham184/Repositories/MyAIAgent/.claude/hooks/pre-bash-guard.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE_PATH=\"$FILE_PATH\" bash /Users/kylepham184/Repositories/MyAIAgent/.claude/hooks/post-edit-format.sh"
+          },
+          {
+            "type": "command",
+            "command": "FILE_PATH=\"$FILE_PATH\" bash /Users/kylepham184/Repositories/MyAIAgent/.claude/hooks/post-scaffold-restore.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

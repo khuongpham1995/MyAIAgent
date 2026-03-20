@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UserSecretsId>aspnet-MyAIAgent.RAG.Presentation-a7e0d247-b9a7-497a-beb1-85b4fb3b5199</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.1" NoWarn="NU1605"/>
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.1" NoWarn="NU1605"/>
+        <PackageReference Include="Microsoft.Identity.Web" Version="3.14.1"/>
+        <PackageReference Include="Microsoft.Identity.Web.DownstreamApi" Version="3.14.1"/>
+    </ItemGroup>
+
+</Project>
