@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
@@ -7,18 +7,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\MyAIAgent.Common\MyAIAgent.Common.csproj" />
-        <ProjectReference Include="..\MyAIAgent.McpServer.Domain\MyAIAgent.McpServer.Domain.csproj" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.1"/>
+        <PackageReference Include="Microsoft.KernelMemory.WebClient" Version="0.80.241017.2"/>
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.1" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.1" />
-        <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
-        <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.1.0" />
-        <PackageReference Include="Microsoft.Extensions.Resilience" Version="10.1.0" />
-        <PackageReference Include="Microsoft.KernelMemory.WebClient" Version="0.80.241017.2"/>
-        <PackageReference Include="Polly.Core" Version="8.4.2" />
+        <ProjectReference Include="..\MyAIAgent.Common.Infrastructure\MyAIAgent.Common.Infrastructure.csproj"/>
+        <ProjectReference Include="..\MyAIAgent.McpServer.Domain\MyAIAgent.McpServer.Domain.csproj"/>
     </ItemGroup>
 
 </Project>

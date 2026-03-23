@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UserSecretsId>aspnet-MyAIAgent.KernelMemory.Presentation-a7e0d247-b9a7-497a-beb1-85b4fb3b5199</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\MyAIAgent.KernelMemory.Application\MyAIAgent.KernelMemory.Application.csproj"/>
+        <ProjectReference Include="..\MyAIAgent.KernelMemory.Infrastructure\MyAIAgent.KernelMemory.Infrastructure.csproj"/>
+    </ItemGroup>
+
+</Project>

@@ -1,11 +1,12 @@
 using System.Net.Http.Headers;
-using MyAIAgent.Common.Extensions;
-using MyAIAgent.McpServer.Domain.Entities;
-using MyAIAgent.McpServer.Domain.Interfaces;
-using MyAIAgent.McpServer.Infrastructure.ApiClients;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.KernelMemory;
+using MyAIAgent.Common.Application.Extensions;
+using MyAIAgent.Common.Infrastructure.Extensions;
+using MyAIAgent.McpServer.Domain.Entities;
+using MyAIAgent.McpServer.Domain.Interfaces;
+using MyAIAgent.McpServer.Infrastructure.ApiClients;
 
 namespace MyAIAgent.McpServer.Infrastructure.Extensions;
 
@@ -13,12 +14,11 @@ public static class IoCExtension
 {
     public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        
         services
             .AddTransientAsMatchingInterfaces(typeof(IoCExtension).Assembly)
             .AddScopedAsMatchingInterfaces(typeof(IoCExtension).Assembly)
             .AddSingletonAsMatchingInterfaces(typeof(IoCExtension).Assembly);
-        
+
         services
             .AddHttpClient<IApiClient<Customer>, ApiClient<Customer>>(client =>
             {
@@ -32,7 +32,7 @@ public static class IoCExtension
             }).AddHttpRetryPolicy();
 
         var kernelMemoryApiUrl = configuration["KernelMemory:BaseUrl"] ??
-                                 throw new ArgumentNullException(nameof(configuration),
+                                 throw new InvalidOperationException(
                                      "Configuration key 'KernelMemory:BaseUrl' is missing");
         services.AddSingleton<IKernelMemory>(_ => new MemoryWebClient(kernelMemoryApiUrl));
     }

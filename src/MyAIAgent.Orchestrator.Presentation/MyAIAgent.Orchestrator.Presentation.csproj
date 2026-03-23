@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <UserSecretsId>aspnet-MyAIAgent.Orchestrator.Presentation-b3c1d2e4-f5a6-7890-bcde-f1234567890a</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\MyAIAgent.Orchestrator.Application\MyAIAgent.Orchestrator.Application.csproj"/>
+        <ProjectReference Include="..\MyAIAgent.Orchestrator.Infrastructure\MyAIAgent.Orchestrator.Infrastructure.csproj"/>
+    </ItemGroup>
+
+</Project>

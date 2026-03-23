@@ -1,6 +1,6 @@
 using MyAIAgent.McpServer.Domain.Interfaces;
-using MyAIAgent.Common.ServiceLifetime;
 using Microsoft.KernelMemory;
+using MyAIAgent.Common.Domain.ServiceLifetime;
 
 namespace MyAIAgent.McpServer.Infrastructure.Services;
 

@@ -1,0 +1,8 @@
+namespace MyAIAgent.Orchestrator.Domain.Entities;
+
+public sealed class ChatSessionMessage
+{
+    public string Role { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public DateTimeOffset CreatedAt { get; set; }
+}
