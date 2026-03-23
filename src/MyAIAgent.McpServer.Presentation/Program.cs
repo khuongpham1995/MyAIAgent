@@ -7,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddAzureAppConfiguration();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
+builder.Services.AddGlobalExceptionHandling();
 builder.Services.AddLogging();
 builder.Services
     .AddMcpServer()
@@ -15,6 +16,7 @@ builder.Services
 
 var app = builder.Build();
 
+app.UseExceptionHandler();
 app.UseAzureAppConfiguration();
 app.MapMcp();
 

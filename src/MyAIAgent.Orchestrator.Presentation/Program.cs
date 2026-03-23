@@ -11,10 +11,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddAzureAppConfiguration();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddGlobalExceptionHandling();
 builder.Services.AddSingleton(TimeProvider.System);
 
 var app = builder.Build();
 
+app.UseExceptionHandler();
 app.UseAzureAppConfiguration();
 
 await app.Services.EnsureCosmosDbCreatedAsync<OrchestratorDbContext>();
