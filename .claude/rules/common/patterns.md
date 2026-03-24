@@ -9,41 +9,25 @@ description: >
 
 ## Result Pattern for Expected Failures
 
-- **DO** use `Result<T>` / `ResponseModel<T>` for expected failure paths: not found, validation failure, external API error
-- **DON'T** throw exceptions for predictable outcomes — exceptions are expensive and hide control flow
+Use `ResponseModel<T>` for expected failure paths: not found, validation failure, external API error. Never throw exceptions for predictable outcomes — exceptions are expensive and hide control flow.
 
-```csharp
-// DO — return Result for expected failures
-public async Task<Result<Customer>> Handle(GetCustomerCommand command, CancellationToken ct)
-{
-    var customer = await _client.GetAsync(command.Id, ct);
-    return customer is not null
-        ? Result.Success(customer)
-        : Result.Failure<Customer>($"Customer {command.Id} not found");
-}
-
-// DON'T — exception for flow control
-if (customer is null)
-    throw new NotFoundException($"Customer {command.Id} not found");
-```
+Return `ResponseModel<T>.Succeed(value)` on success and `ResponseModel<T>.Fail(message)` on expected failure.
 
 ## Validation at the Application Boundary
 
-- FluentValidation runs via `ValidationBehavior<TRequest, TResponse>` in the MediatR pipeline
-- Add an `AbstractValidator<TCommand>` for every command that accepts user input
-- Don't defensively validate inside private methods or infrastructure — trust the pipeline
+`ValidationBehavior<TRequest, TResponse>` runs before every handler via the MediatR pipeline. Add an `AbstractValidator<TCommand>` for every command that accepts user input. Never defensively validate inside private methods or infrastructure — trust the pipeline.
 
 ## Exception Handling
 
-- **DON'T** catch bare `Exception` inside handlers or services
-- **DO** catch specific exceptions at infrastructure boundaries (HTTP calls, file I/O) and convert to `Result.Failure`
-- Let unhandled exceptions propagate — the host's global exception handler catches them
-- **DON'T** `catch { /* ignore */ }` or catch and rethrow without adding context
-
 | Scenario | Approach |
 |---|---|
-| User input invalid | FluentValidation via pipeline behavior |
-| Entity not found | `Result.Failure<T>("not found")` |
-| External API error | Catch `HttpRequestException`, return `Result.Failure` |
-| Unexpected crash | Let propagate to global handler |
+| User input invalid | FluentValidation via pipeline behavior — throws `ValidationException` |
+| Entity not found | `ResponseModel<T>.Fail("not found")` |
+| External API error | Catch `HttpRequestException`, return `ResponseModel<T>.Fail` with safe message |
+| Unexpected crash | Let propagate to `GlobalExceptionHandler` |
 | Cancellation | Propagate `CancellationToken`, let `OperationCanceledException` propagate |
+
+- Never catch bare `Exception` inside handlers or services
+- Catch specific exceptions at infrastructure boundaries and convert to `ResponseModel.Fail`
+- Never `catch { /* ignore */ }` or catch and rethrow without adding context
+- Never leak internal error details (URLs, IPs, stack traces) to callers — log them, return a safe message

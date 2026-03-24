@@ -26,6 +26,7 @@ Load a skill when the task matches — do not wait for the user to ask.
 | `Presentation/McpTools/**` | `mcp-server` |
 | `Application/Handlers/**` | `mediatr-cqrs` |
 | `Application/Commands/**` or `Application/Queries/**` | `mediatr-cqrs` |
+| `Application/Mappers/**` | `mediatr-cqrs` (mapper sits at Application boundary) |
 | `Infrastructure/ApiClients/**` | `resilience` |
 | `Infrastructure/Services/KernelMemoryService*` | `kernel-memory` |
 | 3+ layers touched in one task | `clean-architecture` |

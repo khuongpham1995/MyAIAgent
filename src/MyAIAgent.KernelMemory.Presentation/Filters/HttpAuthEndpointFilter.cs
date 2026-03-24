@@ -2,13 +2,16 @@ using Microsoft.KernelMemory.Configuration;
 
 namespace MyAIAgent.KernelMemory.Presentation.Filters;
 
-public sealed class HttpAuthEndpointFilter : IEndpointFilter
+public sealed class HttpAuthEndpointFilter(
+    ServiceAuthorizationConfig config,
+    ILogger<HttpAuthEndpointFilter> logger) : IEndpointFilter
 {
-    private readonly ServiceAuthorizationConfig _config;
-    public HttpAuthEndpointFilter(ServiceAuthorizationConfig config)
+    private readonly ServiceAuthorizationConfig _config = Validated(config);
+
+    private static ServiceAuthorizationConfig Validated(ServiceAuthorizationConfig config)
     {
         config.Validate();
-        _config = config;
+        return config;
     }
 
     public async ValueTask<object?> InvokeAsync(
@@ -16,17 +19,21 @@ public sealed class HttpAuthEndpointFilter : IEndpointFilter
         EndpointFilterDelegate next)
     {
         if (!_config.Enabled) return await next(context);
+
         if (!context.HttpContext.Request.Headers.TryGetValue(_config.HttpHeaderName, out var apiKey))
         {
+            logger.LogWarning("Missing API Key header on {Path}", context.HttpContext.Request.Path);
             return Results.Problem(detail: "Missing API Key HTTP header", statusCode: 401);
         }
 
-        if (!string.Equals(apiKey, _config.AccessKey1, StringComparison.Ordinal)
-            && !string.Equals(apiKey, _config.AccessKey2, StringComparison.Ordinal))
+        if (_config.AccessKey1.Equals(apiKey, StringComparison.Ordinal)
+            || _config.AccessKey2.Equals(apiKey, StringComparison.Ordinal))
         {
-            return Results.Problem(detail: "Invalid API Key", statusCode: 403);
+            return await next(context);
         }
+        
+        logger.LogWarning("Invalid API Key on {Path}", context.HttpContext.Request.Path);
+        return Results.Problem(detail: "Invalid API Key", statusCode: 403);
 
-        return await next(context);
     }
 }

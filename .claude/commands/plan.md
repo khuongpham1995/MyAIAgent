@@ -14,7 +14,7 @@ Invokes the `planner` agent to analyse the codebase and produce a step-by-step p
 ## When
 
 - Any feature touching 3+ files
-- New MCP tool or handler
+- New handler, tool, or feature
 - Adding a new external integration
 - Refactoring across layers
 - Unsure of the right approach
@@ -42,9 +42,9 @@ Output the plan in this format:
 ## Layers Affected
 | Layer | File | Change |
 |---|---|---|
-| Domain | McpServerConstant.cs | Add constants |
+| Domain | Constants/XConstant.cs | Add constants |
 | Application | Handlers/X/XHandler.cs | New handler |
-| Presentation | McpTools/XTool.cs | New tool method |
+| Presentation | [endpoint or tool class] | New endpoint/method |
 | Tests | Test/.../XHandlerTests.cs | New tests |
 
 ## Steps
@@ -62,12 +62,6 @@ Output the plan in this format:
 > "Does this plan look right? Reply 'yes' to proceed, or tell me what to change."
 
 User responses:
-- `yes` / `proceed` → start implementation using `/add-tool` or `/add-handler`
+- `yes` / `proceed` → start implementation
 - `modify: [changes]` → revise plan and re-present
 - `different approach: [alt]` → re-plan from scratch
-
-## Related
-
-- `/add-tool` — execute the plan for a new MCP tool
-- `/add-handler` — execute the plan for a new handler
-- `/verify` — run after implementation is complete

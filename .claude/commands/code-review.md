@@ -15,7 +15,7 @@ Invokes the `code-reviewer` agent to review staged or recent changes against the
 
 - After implementing a new handler or tool method
 - After any refactoring
-- Before running `/verify` or creating a PR
+- Before creating a PR
 - When unsure if code follows conventions
 
 ## How
@@ -32,10 +32,14 @@ git diff HEAD~1       # if reviewing last commit
 Load `.claude/agents/code-reviewer.md` and apply its checklist (CRITICAL → HIGH → MEDIUM → LOW).
 
 Cross-reference against:
-- `.claude/rules/architecture.md` — layer boundaries, DI pattern, tool registration
-- `.claude/rules/coding-style.md` — C# 14 conventions, naming, sealed
-- `.claude/rules/error-handling.md` — Result pattern, validation boundary
-- `.claude/rules/security.md` — secrets, SSL, logging, input validation
+- `.claude/rules/dotnet/architecture.md` — layer boundaries, cross-service rules
+- `.claude/rules/dotnet/coding-style.md` — C# 14 conventions, naming, sealed
+- `.claude/rules/dotnet/di.md` — marker interface pattern, lifetime selection
+- `.claude/rules/dotnet/mcp.md` — MCP tool constants, ISender dispatch
+- `.claude/rules/dotnet/mapping.md` — mapper placement and naming
+- `.claude/rules/common/patterns.md` — Result pattern, validation boundary, exception handling
+- `.claude/rules/common/security.md` — secrets, SSL, logging, input validation
+- `.claude/rules/common/performance.md` — async, CancellationToken, TimeProvider
 
 ### Step 3 — Report Findings
 
@@ -56,7 +60,3 @@ Verdict: APPROVE / NEEDS FIXES / WARN
 - MEDIUM findings → fix if quick, otherwise document
 - LOW findings → note and proceed
 
-## Related
-
-- `/verify` — run build + tests + format after addressing findings
-- `/plan` — if review reveals a deeper design issue

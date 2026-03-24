@@ -44,8 +44,9 @@ internal static class WebApplicationExtension
             $"- Environment: {Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}"))
             .WithName("Status Checker");
 
-        var errorFilter = new HttpErrorsEndpointFilter();
-        var authFilter = new HttpAuthEndpointFilter(config.ServiceAuthorization);
+        var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+        var errorFilter = new HttpErrorsEndpointFilter(loggerFactory.CreateLogger<HttpErrorsEndpointFilter>());
+        var authFilter = new HttpAuthEndpointFilter(config.ServiceAuthorization, loggerFactory.CreateLogger<HttpAuthEndpointFilter>());
         app.AddKernelMemoryEndpoints("/", config, [errorFilter, authFilter]);
 
         app.MapGet("/health", () => Results.Ok("Service is healthy."))

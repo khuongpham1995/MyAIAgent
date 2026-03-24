@@ -13,7 +13,7 @@ Use conventional commit prefixes:
 
 | Prefix | Use for |
 |---|---|
-| `feat:` | New MCP tool, handler, or capability |
+| `feat:` | New feature, handler, tool, or capability |
 | `fix:` | Bug fix |
 | `refactor:` | Code restructure without behavior change |
 | `test:` | Adding or updating tests |
@@ -25,8 +25,8 @@ Use conventional commit prefixes:
 
 ```
 # DO
-feat: add delete_customer MCP tool with validation
-fix: prevent double-upload of KernelMemory documents on retry
+feat: add delete_customer handler with FluentValidation
+fix: prevent double-upload of documents on retry
 refactor: extract retry logic into RetryExtension to remove duplication
 
 # DON'T
@@ -53,7 +53,6 @@ refactor/extract-api-client-base
 
 ## Pre-PR Checklist
 
-Run `/verify` before creating a PR:
 1. `dotnet build` passes
 2. `dotnet test` — all green
 3. `dotnet format --verify-no-changes` — no drift

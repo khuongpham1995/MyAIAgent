@@ -13,220 +13,80 @@ description: >
 
 ## Overview
 
-The `MyAIAgent.Orchestrator.*` module is the **chat API** — it receives user messages, routes them through the Microsoft Agents Framework, and dispatches MCP tools as needed. It exposes `POST /chat`.
-
-The Orchestrator follows Clean Architecture across four layers.
+`MyAIAgent.Orchestrator.*` is the **chat API** — receives user messages, manages session history, routes through the Microsoft Agents Framework, and exposes `POST /chat`.
 
 ## Project Structure
 
 ```
 MyAIAgent.Orchestrator.Domain/
-  Interfaces/IChatOrchestratorService.cs  ← service contract
-  Models/ChatMessage.cs                   ← role + content record
-  Models/ChatRequest.cs                   ← userMessage + history
-  Models/ChatResponse.cs                  ← reply string
+  Interfaces/IChatOrchestratorService.cs  ← Task<ResponseModel<string>> ChatAsync(...)
+  Interfaces/IChatSessionRepository.cs   ← find/add/update ChatSession
+  Entities/ChatSession.cs                ← EF Core Cosmos entity (partition: SessionId)
+  Entities/ChatSessionMessage.cs         ← owned entity (Role, Content, CreatedAt)
+  Models/ChatMessage.cs                  ← role + content (for AI calls)
+  Models/ChatRequest.cs                  ← UserMessage + History
+  Models/ChatRequestDto.cs               ← (SessionId?, UserMessage) — HTTP input
+  Models/ChatResponse.cs                 ← (Reply, SessionId)
 
 MyAIAgent.Orchestrator.Application/
-  Handlers/ChatHandler.cs                 ← ChatCommand + handler + validator
-  Behaviors/ValidationBehavior.cs         ← MediatR pipeline behavior
+  Handlers/ChatHandler.cs                ← ChatCommand + handler + validator
+  Mappers/ChatCommandMapper.cs           ← ChatRequestDto.ToCommand()
   Extensions/IoCExtension.cs
 
 MyAIAgent.Orchestrator.Infrastructure/
-  Services/ChatOrchestratorService.cs     ← implements IChatOrchestratorService
-  Extensions/IoCExtension.cs             ← registers IChatClient, Scrutor scan
+  Data/OrchestratorDbContext.cs          ← EF Core Cosmos (ChatSessions container)
+  Repositories/ChatSessionRepository.cs ← IScoped
+  Services/ChatOrchestratorService.cs   ← IScoped; wraps IChatClient
+  Extensions/IoCExtension.cs            ← registers IChatClient, AddCosmosDb<OrchestratorDbContext>
 
 MyAIAgent.Orchestrator.Presentation/
-  Program.cs                              ← ASP.NET Core host, POST /chat
-  appsettings.json                        ← AI provider config
+  Program.cs                             ← POST /chat, Aspire + Cosmos wiring
+  appsettings.json
 ```
 
-## Domain Interface
+## Chat Flow
 
-```csharp
-// Orchestrator.Domain/Interfaces/IChatOrchestratorService.cs
-public interface IChatOrchestratorService
-{
-    Task<ChatResponse> ChatAsync(ChatRequest request, CancellationToken ct);
-}
-```
+1. `POST /chat` receives `ChatRequestDto(SessionId?, UserMessage)`
+2. `request.ToCommand()` maps to `ChatCommand`
+3. `ChatHandler` looks up session by `SessionId` (or creates new), builds history, calls `IChatOrchestratorService.ChatAsync`
+4. Appends user + assistant messages to session, persists via `IChatSessionRepository`
+5. Returns `ResponseModel<ChatResponse(Reply, SessionId)>`
 
-```csharp
-// Orchestrator.Domain/Models/
-public sealed record ChatMessage(string Role, string Content);
-public sealed record ChatRequest(string UserMessage, IReadOnlyList<ChatMessage> History);
-public sealed record ChatResponse(string Reply);
-```
+See `Application/Handlers/ChatHandler.cs` for the current implementation.
 
-## Application Handler
+## AI Provider
 
-```csharp
-public sealed record ChatCommand(string UserMessage, IReadOnlyList<ChatMessage> History)
-    : IRequest<ResponseModel<ChatResponse>>;
+`ChatOrchestratorService` uses `IChatClient` from `Microsoft.Extensions.AI`. The provider (AzureOpenAI or OpenAI) is selected at startup via `AiProvider:Type` configuration.
 
-public sealed class ChatHandler(IChatOrchestratorService orchestratorService)
-    : IRequestHandler<ChatCommand, ResponseModel<ChatResponse>>
-{
-    public async Task<ResponseModel<ChatResponse>> Handle(
-        ChatCommand command, CancellationToken ct)
-    {
-        var request = new ChatRequest(command.UserMessage, command.History);
-        var response = await orchestratorService.ChatAsync(request, ct);
-        return ResponseModel<ChatResponse>.Succeed(response);
-    }
-}
+`IoCExtension.AddInfrastructure` registers `IChatClient` as a singleton based on configuration. See `Infrastructure/Extensions/IoCExtension.cs`.
 
-public sealed class ChatCommandValidator : AbstractValidator<ChatCommand>
-{
-    public ChatCommandValidator()
-    {
-        RuleFor(x => x.UserMessage).NotEmpty().MaximumLength(4000);
-    }
-}
-```
+## Presentation Bootstrap
 
-## Infrastructure — Microsoft Agents Framework
+`Program.cs` wires: `AddAzureAppConfiguration` → `AddApplication` → `AddInfrastructure` → `AddGlobalExceptionHandling` → `AddSingleton(TimeProvider.System)` → `UseExceptionHandler` → `EnsureCosmosDbCreatedAsync` → `MapPost("/chat", ...)`.
 
-`ChatOrchestratorService` uses `IChatClient` from `Microsoft.Extensions.AI` (the foundation that `Microsoft.Agents.AI` builds on):
+`TimeProvider` is injected for testable timestamps — never use `DateTimeOffset.UtcNow` directly.
 
-```csharp
-public sealed class ChatOrchestratorService(IChatClient chatClient)
-    : IChatOrchestratorService, IScoped
-{
-    public async Task<ChatResponse> ChatAsync(ChatRequest request, CancellationToken ct)
-    {
-        var messages = request.History
-            .Select(m => new Microsoft.Extensions.AI.ChatMessage(
-                m.Role == "assistant" ? ChatRole.Assistant : ChatRole.User,
-                m.Content))
-            .ToList();
+## MCP Tools Connection
 
-        messages.Add(new Microsoft.Extensions.AI.ChatMessage(ChatRole.User, request.UserMessage));
+The Orchestrator can register MCP tools from the MCP Server via `McpClientFactory` + `SseClientTransport`. The MCP Server URL is injected by Aspire via service discovery.
 
-        var completion = await chatClient.CompleteAsync(messages, cancellationToken: ct);
-        return new ChatResponse(completion.Message.Text ?? string.Empty);
-    }
-}
-```
-
-## Infrastructure — DI Registration
-
-`IoCExtension` registers the `IChatClient` based on the configured AI provider:
-
-```csharp
-public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
-{
-    services
-        .AddTransientAsMatchingInterfaces(typeof(IoCExtension).Assembly)
-        .AddScopedAsMatchingInterfaces(typeof(IoCExtension).Assembly)
-        .AddSingletonAsMatchingInterfaces(typeof(IoCExtension).Assembly);
-
-    var providerType = configuration["AiProvider:Type"]
-        ?? throw new InvalidOperationException("AiProvider:Type is required");
-
-    if (providerType == "AzureOpenAI")
-    {
-        var endpoint = configuration["AzureOpenAI:Endpoint"]!;
-        var deployment = configuration["AzureOpenAI:DeploymentName"]!;
-        var apiKey = configuration["AzureOpenAI:ApiKey"]!;
-
-        services.AddSingleton<IChatClient>(
-            new AzureOpenAIClient(new Uri(endpoint), new ApiKeyCredential(apiKey))
-                .AsChatClient(deployment));
-    }
-    else
-    {
-        var apiKey = configuration["OpenAI:ApiKey"]!;
-        var modelId = configuration["OpenAI:ModelId"]!;
-
-        services.AddSingleton<IChatClient>(
-            new OpenAIClient(apiKey).AsChatClient(modelId));
-    }
-}
-```
-
-## Presentation — POST /chat
-
-```csharp
-// Orchestrator.Presentation/Program.cs
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddApplication();
-
-var app = builder.Build();
-
-app.MapPost("/chat", async (ChatCommand command, ISender sender, CancellationToken ct) =>
-{
-    var result = await sender.Send(command, ct);
-    return result.IsSuccess
-        ? Results.Ok(result.Data)
-        : Results.BadRequest(result.Errors);
-});
-
-await app.RunAsync();
-```
-
-## Configuration (`appsettings.json`)
+## Configuration Shape (`appsettings.json`)
 
 ```json
 {
-  "AiProvider": {
-    "Type": "AzureOpenAI"
-  },
-  "AzureOpenAI": {
-    "Endpoint": "",
-    "DeploymentName": "gpt-4o",
-    "ApiKey": ""
-  },
-  "OpenAI": {
-    "ApiKey": "",
-    "ModelId": "gpt-4o"
-  }
+  "AiProvider": { "Type": "AzureOpenAI" },
+  "AzureOpenAI": { "Endpoint": "", "DeploymentName": "gpt-4o", "ApiKey": "" },
+  "OpenAI": { "ApiKey": "", "ModelId": "gpt-4o" }
 }
 ```
 
 Use `dotnet user-secrets` for API keys. Never commit them.
 
-## Packages (`MyAIAgent.Orchestrator.Infrastructure.csproj`)
+## Key Packages (`Orchestrator.Infrastructure.csproj`)
 
 | Package | Purpose |
 |---|---|
 | `Microsoft.Agents.AI` v1.0.0-rc1 | Microsoft Agents Framework |
-| `Microsoft.Agents.AI.OpenAI` v1.0.0-rc1 | OpenAI provider for Agents |
-| `Microsoft.Extensions.AI` | IChatClient abstraction |
-| `Microsoft.Extensions.AI.OpenAI` | OpenAI IChatClient implementation |
+| `Microsoft.Extensions.AI` | `IChatClient` abstraction |
+| `Microsoft.Extensions.AI.OpenAI` | OpenAI `IChatClient` implementation |
 | `Azure.AI.OpenAI` | Azure OpenAI client |
-| `Azure.Identity` | Azure credential types |
-
-## MCP Tools — Connecting to the MCP Server
-
-The Orchestrator can register MCP tools from the MCP Server via `McpClient`. This enables the agent to invoke tools during a conversation:
-
-```csharp
-// In Infrastructure DI extension — fetch available MCP tools
-var mcpEndpoint = configuration["McpServer:BaseUrl"]!;
-var mcpClient = await McpClientFactory.CreateAsync(
-    new SseClientTransport(new SseClientTransportOptions { Endpoint = new Uri(mcpEndpoint) }),
-    cancellationToken: ct);
-var tools = await mcpClient.ListToolsAsync(cancellationToken: ct);
-// Register tools with the agent...
-```
-
-The MCP Server URL is injected by Aspire via service discovery.
-
-## Anti-patterns
-
-```csharp
-// DON'T — call IChatClient directly from Presentation (bypass MediatR)
-app.MapPost("/chat", async (IChatClient client) => ...);
-
-// DON'T — hardcode AI provider in code
-var client = new OpenAIClient("sk-hardcoded");  // use configuration + user-secrets
-
-// DON'T — drop history (stateless handlers lose conversation context)
-var messages = new List<ChatMessage> { new(ChatRole.User, request.UserMessage) };
-// Missing: prepend history from request.History
-
-// DON'T — drop CancellationToken
-var completion = await chatClient.CompleteAsync(messages);  // should pass ct
-```

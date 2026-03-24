@@ -16,7 +16,7 @@ description: >
 ## HTTP Clients
 
 - Never instantiate `new HttpClient()` — use `IApiClient<T>` via `IHttpClientFactory`
-- Always configure a timeout — the default 100s is too long for MCP tool calls
+- Always configure a timeout — the default 100s is too long for most service-to-service calls
 
 ## Time
 

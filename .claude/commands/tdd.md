@@ -17,11 +17,12 @@ Delegates to the `tdd-guide` agent for test writing.
 
 ### Phase 1: RED — Write Failing Test
 
-Load `.claude/agents/tdd-guide.md`. Write the test file in `MyAIAgent.McpServer.Test/` before any production code exists.
+Load `.claude/agents/tdd-guide.md`. Write the test file in the appropriate service test project before any production code exists.
+
+Determine the test project path from the service being worked on (e.g., `src/MyAIAgent.McpServer.Test/`, `src/MyAIAgent.Orchestrator.Test/`).
 
 ```bash
-# Confirm the test fails (compilation or assertion)
-dotnet test MyAIAgent.McpServer.Test/MyAIAgent.McpServer.Test.csproj \
+dotnet test src/[Service].Test/[Service].Test.csproj \
   --filter "FullyQualifiedName~[TestClass]" \
   --verbosity quiet
 ```
@@ -33,7 +34,7 @@ Expected: test fails. If it passes, the test is wrong — fix it first.
 Write the smallest production code that makes the test pass. No extra logic, no pre-emptive abstractions.
 
 ```bash
-dotnet test MyAIAgent.McpServer.Test/MyAIAgent.McpServer.Test.csproj \
+dotnet test src/[Service].Test/[Service].Test.csproj \
   --filter "FullyQualifiedName~[TestClass]" \
   --verbosity quiet
 ```
@@ -47,20 +48,16 @@ Improve the code — extract, rename, simplify — without changing behaviour. T
 ### Phase 4: Full Suite
 
 ```bash
-dotnet test MyAIAgent.McpServer.Test/MyAIAgent.McpServer.Test.csproj --verbosity quiet
+dotnet test src/MyAIAgent.sln --verbosity quiet
 ```
 
-No regressions.
+No regressions across all services.
 
 ## Test Naming Convention
 
-```
-[MethodName]_[Scenario]_[ExpectedResult]
+`FunctionName_When_Should`
 
-Handle_ValidCreateCustomerCommand_ReturnsSuccess
-Handle_NullName_ThrowsValidationException
-ValidateAsync_EmptyEmail_ReturnsEmailError
-```
+Examples: `Handle_WhenCommandIsValid_ShouldReturnSuccess`, `Handle_WhenNameIsNull_ShouldThrowValidationException`, `ValidateAsync_WhenEmailIsEmpty_ShouldReturnValidationError`
 
 ## Coverage Targets
 
@@ -68,8 +65,3 @@ ValidateAsync_EmptyEmail_ReturnsEmailError
 - Each failure path: **required**
 - Each validation rule: **required**
 
-## Related
-
-- `/add-handler` — scaffold the production-side skeleton after TDD
-- `/add-tool` — scaffold the full tool including tests
-- `/verify` — run full verification after all tests are green

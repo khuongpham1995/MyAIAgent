@@ -10,146 +10,44 @@ description: >
 
 # MediatR CQRS (MyAIAgent)
 
-## Command and Query Definitions
+## Request Types
 
-Use records for immutable request types. Distinguish commands (write) from queries (read).
+- **Command** — mutates state. `sealed record *Command([params]) : IRequest<ResponseModel<T>>`
+- **Query** — read-only. `sealed record *Query([params]) : IRequest<ResponseModel<T>>`
 
-```csharp
-// Command — mutates state
-public sealed record CreateCustomerCommand(
-    string Name,
-    string Address,
-    string Phone,
-    string Email
-) : IRequest<ResponseModel<Customer>>;
+Place in `Application/Handlers/[Entity]/`.
 
-// Query — read-only
-public sealed record GetCustomersQuery : IRequest<ResponseModel<IReadOnlyList<Customer>>>;
-public sealed record GetCustomersByNameQuery(string Name) : IRequest<ResponseModel<IReadOnlyList<Customer>>>;
-```
+## Handler
 
-## Handler Implementation
+`sealed class *Handler(IDependency dep) : IRequestHandler<TRequest, ResponseModel<T>>`
 
-```csharp
-public sealed class GetCustomersHandler(IApiClient<Customer> client)
-    : IRequestHandler<GetCustomersQuery, ResponseModel<IReadOnlyList<Customer>>>
-{
-    public async Task<ResponseModel<IReadOnlyList<Customer>>> Handle(
-        GetCustomersQuery request, CancellationToken ct)
-    {
-        var customers = await client.GetAllAsync(ct);
-        return ResponseModel<IReadOnlyList<Customer>>.Success(customers);
-    }
-}
-```
+- One handler per command/query
+- Primary constructor for DI
+- Never call another handler directly — dispatch a separate command
+- Return `ResponseModel<T>.Succeed(value)` or `ResponseModel<T>.Fail(message)`
 
-**Rules:**
-- Handlers are `sealed` — not designed for inheritance
-- Handlers use primary constructors for DI
-- One handler per command/query — no shared handlers for multiple requests
-- Handlers never call other handlers directly — use separate commands if needed
+## Validator
 
-## FluentValidation Pipeline Behavior
+`sealed class *Validator : AbstractValidator<TCommand>` — co-locate with the handler file.
 
-`ValidationBehavior<TRequest, TResponse>` intercepts every `IRequest` before the handler runs. It finds all `IValidator<TRequest>` implementations in the Application assembly and runs them.
+- Add a rule for every user-controlled input field
+- Always use `.WithMessage()` — never rely on defaults
+- No validator needed for commands with no user input
 
-```csharp
-// The behavior (already implemented in Application/Behaviors/)
-public sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TRequest>> validators)
-    : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : IRequest<TResponse>
-{
-    public async Task<TResponse> Handle(
-        TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken ct)
-    {
-        if (!validators.Any()) return await next();
+## Validation Pipeline
 
-        var context = new ValidationContext<TRequest>(request);
-        var failures = validators
-            .Select(v => v.Validate(context))
-            .SelectMany(r => r.Errors)
-            .Where(f => f is not null)
-            .ToList();
+`ValidationBehavior<TRequest, TResponse>` (in `Common.Application`) runs before every handler. It collects all failures and throws `ValidationException`. The `GlobalExceptionHandler` converts it to `400 ResponseModel<object>`.
 
-        if (failures.Count > 0)
-            throw new ValidationException(failures);
-
-        return await next();
-    }
-}
-```
-
-## Writing a Validator
-
-```csharp
-public sealed class CreateCustomerValidator : AbstractValidator<CreateCustomerCommand>
-{
-    public CreateCustomerValidator()
-    {
-        RuleFor(x => x.Name)
-            .NotEmpty().WithMessage("Name is required")
-            .MaximumLength(100).WithMessage("Name must not exceed 100 characters");
-
-        RuleFor(x => x.Email)
-            .NotEmpty().WithMessage("Email is required")
-            .EmailAddress().WithMessage("Email must be a valid address");
-
-        RuleFor(x => x.Phone)
-            .NotEmpty().WithMessage("Phone is required");
-    }
-}
-```
-
-**Rules:**
-- Validator class name matches the command/query: `CreateCustomerValidator` for `CreateCustomerCommand`
-- Place validators next to or in the same file as their handler for locality
-- `sealed` validators — not designed for inheritance
-- Use `.WithMessage()` for every rule — don't rely on default messages
+**Do not** add `ResponseModel<T>` handling back into `ValidationBehavior` — it always throws.
 
 ## IoC Registration
 
-`IoCExtension.cs` (Application layer) registers everything:
-
-```csharp
-public static IServiceCollection AddApplication(this IServiceCollection services)
-{
-    services.AddMediatR(cfg =>
-    {
-        cfg.RegisterServicesFromAssembly(typeof(IoCExtension).Assembly);
-        cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
-    });
-
-    services.AddValidatorsFromAssembly(typeof(IoCExtension).Assembly);
-
-    return services;
-}
-```
+`Application/Extensions/IoCExtension.cs` registers MediatR, `ValidationBehavior`, and all validators via `AddValidatorsFromAssembly`. No manual per-handler registration needed.
 
 ## Response Model
 
-All handlers return `ResponseModel<T>` (Domain layer):
+All handlers return `ResponseModel<T>` (defined once in `Common.Domain`). Do not create service-level result wrappers.
 
-```csharp
-// Usage
-return ResponseModel<Customer>.Success(customer);
-return ResponseModel<Customer>.Failure("Customer not found");
-```
+## Mapper Convention
 
-## Anti-patterns
-
-```csharp
-// DON'T — non-record request type
-public class CreateCustomerCommand : IRequest<ResponseModel<Customer>>
-{
-    public string Name { get; set; }  // mutable, not a record
-}
-
-// DON'T — handler calling another handler
-public async Task<ResponseModel<Customer>> Handle(...)
-{
-    await _mediator.Send(new DeleteCustomerCommand(id), ct);  // use separate workflow
-}
-
-// DON'T — non-sealed handler
-public class GetCustomersHandler : IRequestHandler<...>  // missing sealed
-```
+DTO → Command mapping lives in `Application/Mappers/`. See `.claude/rules/dotnet/mapping.md`.

@@ -12,109 +12,25 @@ description: >
 
 ## IApiClient<T> — The Only HTTP Abstraction
 
-All HTTP calls go through `IApiClient<T>`. Never inject `HttpClient` directly into a handler or service.
+All HTTP calls go through `IApiClient<T>` (defined in `McpServer.Domain`). Never inject `HttpClient` directly into a handler or service.
 
-```csharp
-// Domain interface
-public interface IApiClient<T>
-{
-    Task<IReadOnlyList<T>> GetAllAsync(CancellationToken ct);
-    Task<T?> GetByIdAsync(Guid id, CancellationToken ct);
-    Task<IReadOnlyList<T>> GetByNameAsync(string name, CancellationToken ct);
-    Task<T> PostAsync(T entity, CancellationToken ct);
-    Task<T> PutAsync(Guid id, T entity, CancellationToken ct);
-    Task DeleteAsync(Guid id, CancellationToken ct);
-}
-```
+`ApiClient<T>` (in `McpServer.Infrastructure/ApiClients/`) implements the interface using `IHttpClientFactory`. It is registered as `IScoped`.
 
-## Infrastructure Implementation
+## Retry Policy
 
-`ApiClient<T>` implements `IApiClient<T>` using `HttpClient` (injected via factory):
+`RetryExtension` (in `Common.Infrastructure/Extensions/`) adds a Polly standard resilience pipeline:
+- 3 retry attempts, exponential backoff, 500ms base delay
 
-```csharp
-public sealed class ApiClient<T>(HttpClient httpClient, ILogger<ApiClient<T>> logger)
-    : IApiClient<T>, IScoped
-{
-    public async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken ct)
-    {
-        var response = await httpClient.GetFromJsonAsync<IReadOnlyList<T>>("", ct);
-        return response ?? [];
-    }
-
-    public async Task<T> PostAsync(T entity, CancellationToken ct)
-    {
-        var response = await httpClient.PostAsJsonAsync("", entity, ct);
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<T>(ct))!;
-    }
-
-    // ... other methods
-}
-```
-
-## Retry Policy — RetryExtension
-
-`RetryExtension` wires a Polly resilience pipeline onto every named `HttpClient`:
-
-```csharp
-// Infrastructure/Extensions/RetryExtension.cs
-public static IHttpClientBuilder AddRetryPolicy(this IHttpClientBuilder builder)
-{
-    return builder.AddStandardResilienceHandler(options =>
-    {
-        options.Retry.MaxRetryAttempts = 3;
-        options.Retry.Delay = TimeSpan.FromMilliseconds(500);
-        options.Retry.BackoffType = DelayBackoffType.Exponential;
-    });
-}
-```
+Every registered `HttpClient` must call `.AddRetryPolicy()` — no exceptions.
 
 ## Registering a New HTTP Client
 
-In `Infrastructure/Extensions/IoCExtension.cs`:
+In `Infrastructure/Extensions/IoCExtension.cs`, call `AddHttpClient<IApiClient<T>, ApiClient<T>>()` with the base URL from configuration, then chain `.AddRetryPolicy()`.
 
-```csharp
-services
-    .AddHttpClient<IApiClient<Customer>, ApiClient<Customer>>(client =>
-    {
-        client.BaseAddress = new Uri(configuration["MockApi:BaseUrl"]!);
-    })
-    .AddRetryPolicy();
-```
+- One `HttpClient` per entity type
+- Base URL always from configuration — never hardcoded
+- Always call `.AddRetryPolicy()`
 
-**Rules:**
-- Always use `AddHttpClient<TInterface, TImpl>()` — never `new HttpClient()`
-- Always call `.AddRetryPolicy()` — every registered client gets retry + exponential backoff
-- Base URL comes from configuration, never hardcoded
-- Register one `HttpClient` per entity type (Customer, etc.)
+## CancellationToken
 
-## CancellationToken Propagation
-
-Every async method in the call chain must accept and forward `CancellationToken`. Never drop it.
-
-```csharp
-// DO — token propagated all the way down
-public async Task<IReadOnlyList<Customer>> GetAllAsync(CancellationToken ct)
-    => await httpClient.GetFromJsonAsync<IReadOnlyList<Customer>>("", ct) ?? [];
-
-// DON'T — token silently dropped
-public async Task<IReadOnlyList<Customer>> GetAllAsync(CancellationToken ct)
-    => await httpClient.GetFromJsonAsync<IReadOnlyList<Customer>>("") ?? [];
-```
-
-## Anti-patterns
-
-```csharp
-// DON'T — direct HttpClient injection
-public sealed class GetCustomersHandler(HttpClient client) { }
-
-// DON'T — new HttpClient() anywhere
-var client = new HttpClient { BaseAddress = new Uri("...") };
-
-// DON'T — no retry policy
-services.AddHttpClient<IApiClient<Customer>, ApiClient<Customer>>(...);
-// missing: .AddRetryPolicy()
-
-// DON'T — .Result or .Wait() blocking
-var customers = client.GetAllAsync(ct).Result;
-```
+Every async method must accept and forward `CancellationToken`. See `.claude/rules/common/performance.md` for the full async rules.

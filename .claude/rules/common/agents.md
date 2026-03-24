@@ -8,45 +8,46 @@
 
 ## Agent Roster
 
-| Agent | File | When to invoke |
-|---|---|---|
-| `planner` | `.claude/agents/planner.md` | Complex features, architectural decisions, new modules |
-| `code-reviewer` | `.claude/agents/code-reviewer.md` | After writing or refactoring any C# code |
-| `tdd-guide` | `.claude/agents/tdd-guide.md` | Adding handlers, validators, tool methods |
-| `build-error-resolver` | `.claude/agents/build-error-resolver.md` | `dotnet build` or `dotnet test` fails |
-| `security-reviewer` | `.claude/agents/security-reviewer.md` | External HTTP, auth, secrets, user input |
+| Agent | File | Model | Boundary |
+|---|---|---|---|
+| `planner` | `.claude/agents/planner.md` | `claude-opus-4-6` | Read-only — produces plan, no code changes |
+| `code-reviewer` | `.claude/agents/code-reviewer.md` | `claude-sonnet-4-6` | Read-only — reports findings, no code changes |
+| `security-reviewer` | `.claude/agents/security-reviewer.md` | `claude-sonnet-4-6` | Read-only — severity report only |
+| `tdd-guide` | `.claude/agents/tdd-guide.md` | `claude-sonnet-4-6` | Writes test files only |
+| `build-error-resolver` | `.claude/agents/build-error-resolver.md` | `claude-sonnet-4-6` | Targeted fixes to failing files only |
+| `refactor-cleaner` | `.claude/agents/refactor-cleaner.md` | `claude-sonnet-4-6` | Proposes changes, waits for confirmation |
 
 ## Standard Development Workflow
 
 ```
 1. Plan         → planner agent
 2. TDD          → tdd-guide agent (write failing test first)
-3. Implement    → write production code (skills: clean-architecture, mcp-server, mediatr-cqrs)
+3. Implement    → write production code
 4. Review       → code-reviewer agent
-5. Verify       → /verify (build + tests + anti-patterns + format)
+5. Verify       → /test-coverage (build + tests + anti-patterns + format)
 6. Commit       → conventional commit
 ```
 
 ## Parallel Execution
 
-Run agents in parallel when tasks are independent:
+Run agents in parallel when tasks are independent by launching multiple Agent tool calls in a single response with `run_in_background: true`. Wait for all to complete before proceeding to dependent steps.
 
 ```
-User: "Add a search_customer_by_email tool"
-
-Parallel:
+Single response — launch in parallel (run_in_background: true):
   → planner (identify affected files + plan)
   → tdd-guide (write failing test)
-Then:
-  → implement handler + tool method
+
+Wait for both, then sequentially:
+  → implement handler
   → code-reviewer
-  → /verify
+  → /test-coverage
 ```
 
 ## Agent Boundaries
 
 - **planner** — read-only. Produces a plan. No code changes.
 - **code-reviewer** — read-only. Reports findings. No code changes.
+- **security-reviewer** — read-only. Reports findings with severity (CRITICAL / HIGH / MEDIUM / LOW).
 - **tdd-guide** — writes test files only. Does not touch production code.
 - **build-error-resolver** — reads errors, writes targeted fixes to failing files only.
-- **security-reviewer** — read-only. Reports findings with severity (CRITICAL / HIGH / MEDIUM / LOW).
+- **refactor-cleaner** — proposes refactors. Waits for user confirmation before applying changes.

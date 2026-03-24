@@ -24,7 +24,7 @@ Short-circuits on critical failures (phases 1–2).
 ### Phase 1 — Build (critical, short-circuits on failure)
 
 ```bash
-dotnet build MyAIAgent.sln --no-restore --verbosity quiet
+dotnet build src/MyAIAgent.sln --no-restore --verbosity quiet
 ```
 
 If build fails: STOP. Report errors. Do not proceed.
@@ -32,7 +32,7 @@ If build fails: STOP. Report errors. Do not proceed.
 ### Phase 2 — Tests (critical, short-circuits on failure)
 
 ```bash
-dotnet test MyAIAgent.McpServer.Test/MyAIAgent.McpServer.Test.csproj --no-build --verbosity quiet
+dotnet test src/MyAIAgent.sln --no-build --verbosity quiet
 ```
 
 Any failing test = FAIL. Report test name and failure message.
@@ -50,7 +50,7 @@ Scan all modified `.cs` files for:
 ### Phase 4 — Format Check
 
 ```bash
-dotnet format MyAIAgent.sln --verify-no-changes --verbosity quiet
+dotnet format src/MyAIAgent.sln --verify-no-changes --verbosity quiet
 ```
 
 Reports files with formatting drift. Does NOT auto-fix.

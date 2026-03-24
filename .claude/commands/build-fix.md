@@ -23,13 +23,13 @@ Invokes the `build-error-resolver` agent to diagnose and fix .NET build or test 
 ### Step 1 — Run and Capture
 
 ```bash
-dotnet build MyAIAgent.sln --no-restore --verbosity normal 2>&1
+dotnet build src/MyAIAgent.sln --no-restore --verbosity normal 2>&1
 ```
 
 or
 
 ```bash
-dotnet test MyAIAgent.McpServer.Test/MyAIAgent.McpServer.Test.csproj --verbosity normal 2>&1
+dotnet test src/MyAIAgent.sln --verbosity normal 2>&1
 ```
 
 ### Step 2 — Categorize
@@ -45,8 +45,8 @@ Apply minimal, targeted fix to the failing file only. Do not refactor surroundin
 ### Step 4 — Verify
 
 ```bash
-dotnet build MyAIAgent.sln --no-restore --verbosity quiet
-dotnet test MyAIAgent.McpServer.Test/MyAIAgent.McpServer.Test.csproj --no-build --verbosity quiet
+dotnet build src/MyAIAgent.sln --no-restore --verbosity quiet
+dotnet test src/MyAIAgent.sln --no-build --verbosity quiet
 ```
 
 ### Step 5 — Retry or Escalate
@@ -54,7 +54,3 @@ dotnet test MyAIAgent.McpServer.Test/MyAIAgent.McpServer.Test.csproj --no-build 
 - If still failing: retry with a different approach (max 3 attempts)
 - After 3 failures: report to user with error, what was tried, and what's needed
 
-## Related
-
-- `/verify` — full verification after build is fixed
-- `/code-review` — review the fix for correctness
