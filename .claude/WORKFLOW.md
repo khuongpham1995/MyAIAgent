@@ -6,7 +6,7 @@
 1. Plan         → /plan          (planner agent — identify files, risks, steps)
 2. TDD          → /tdd           (tdd-guide agent — write failing test first)
 3. Implement    → write code     (skills: clean-architecture, mcp-server, mediatr-cqrs, orchestrator, kernel-memory)
-4. Review       → /code-review   (code-reviewer agent)
+4. Review       → /full-review   (code-reviewer + security-reviewer + build-error-resolver in parallel)
 5. Verify       → /test-coverage (build + tests + anti-patterns + format)
 6. Commit       → conventional commit
 ```
@@ -22,14 +22,14 @@
 
 ## Agent Delegation
 
-| Task | Agent |
-|---|---|
-| Complex feature, 3+ files | `planner` |
-| New handler / validator / tool | `tdd-guide` |
-| After any code change | `code-reviewer` |
-| Build or test failure | `build-error-resolver` |
-| New external HTTP, auth, user input | `security-reviewer` |
-| Code smell or duplication | `refactor-cleaner` |
+| Task | Agent | Model |
+|---|---|---|
+| Complex feature, 3+ files | `planner` | opus |
+| New handler / validator / tool | `tdd-guide` | sonnet |
+| After any code change | `code-reviewer` | sonnet |
+| Build or test failure | `build-error-resolver` | sonnet |
+| New external HTTP, auth, user input | `security-reviewer` | sonnet |
+| Code smell or duplication | `refactor-cleaner` | sonnet |
 
 ## Skill Triggers
 

@@ -121,6 +121,7 @@ dotnet format --verify-no-changes
 | `/code-review` | Review recent C# changes against project rules |
 | `/build-fix` | Autonomously fix build and test failures |
 | `/test-coverage` | 4-phase pipeline: build → tests → anti-patterns → format |
+| `/full-review` | Run code-reviewer, security-reviewer, and build-error-resolver in parallel |
 
 ## External Services
 
