@@ -6,24 +6,15 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MyAIAgent.Common.Application.Behaviors;
+using MyAIAgent.Common.Tests;
 using MyAIAgent.McpServer.Application.Handlers.Search;
 using MyAIAgent.McpServer.Domain.Interfaces;
 using MyAIAgent.McpServer.Domain.Models;
 
-namespace MyAIAgent.McpServer.Test.Integration.Application;
+namespace MyAIAgent.McpServer.Tests.Integration.Application;
 
 public sealed class WebSearchPipelineTests
 {
-    private static async IAsyncEnumerable<SearchEntry> ToAsyncEnumerable(
-        IEnumerable<SearchEntry> entries)
-    {
-        foreach (var entry in entries)
-        {
-            yield return entry;
-            await Task.Yield();
-        }
-    }
-
     [Fact]
     public async Task Handle_WhenValidQueryDispatchedThroughFullPipeline_ShouldReturnNonEmptyJsonString()
     {
@@ -33,7 +24,7 @@ public sealed class WebSearchPipelineTests
 
         mockSearchProvider
             .Setup(s => s.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable([
+            .Returns(AsyncEnumerableHelper.ToAsyncEnumerable([
                 new SearchEntry("https://example.com/result1", "Result snippet one")
             ]));
 

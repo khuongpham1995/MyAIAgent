@@ -7,24 +7,15 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MyAIAgent.Common.Application.Behaviors;
+using MyAIAgent.Common.Tests;
 using MyAIAgent.McpServer.Application.Handlers.Search;
 using MyAIAgent.McpServer.Domain.Interfaces;
 using MyAIAgent.McpServer.Domain.Models;
 
-namespace MyAIAgent.McpServer.Test.Unit.Application.Handlers.Search;
+namespace MyAIAgent.McpServer.Tests.Unit.Application.Handlers.Search;
 
 public sealed class WebSearchHandlerTests
 {
-    private static async IAsyncEnumerable<SearchEntry> ToAsyncEnumerable(
-        IEnumerable<SearchEntry> entries)
-    {
-        foreach (var entry in entries)
-        {
-            yield return entry;
-            await Task.Yield();
-        }
-    }
-
     [Fact]
     public async Task Handle_WhenBothFetchesSucceed_ShouldReturnJsonContainingBothUrls()
     {
@@ -34,7 +25,7 @@ public sealed class WebSearchHandlerTests
 
         mockSearchProvider
             .Setup(s => s.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable([
+            .Returns(AsyncEnumerableHelper.ToAsyncEnumerable([
                 new SearchEntry("https://example.com/page1", "Snippet one"),
                 new SearchEntry("https://example.com/page2", "Snippet two")
             ]));
@@ -68,7 +59,7 @@ public sealed class WebSearchHandlerTests
 
         mockSearchProvider
             .Setup(s => s.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable([]));
+            .Returns(AsyncEnumerableHelper.ToAsyncEnumerable(Array.Empty<SearchEntry>()));
 
         var handler = new WebSearchHandler(mockSearchProvider.Object, mockPageFetcher.Object, NullLogger<WebSearchHandler>.Instance);
         var query = new WebSearchQuery("empty query");
@@ -89,7 +80,7 @@ public sealed class WebSearchHandlerTests
 
         mockSearchProvider
             .Setup(s => s.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable([
+            .Returns(AsyncEnumerableHelper.ToAsyncEnumerable([
                 new SearchEntry("https://example.com/good", "Good snippet"),
                 new SearchEntry("https://example.com/bad", "Bad snippet")
             ]));

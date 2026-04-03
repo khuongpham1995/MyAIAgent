@@ -21,6 +21,7 @@
     <ProjectReference Include="..\MyAIAgent.McpServer.Application\MyAIAgent.McpServer.Application.csproj" />
     <ProjectReference Include="..\MyAIAgent.McpServer.Infrastructure\MyAIAgent.McpServer.Infrastructure.csproj" />
     <ProjectReference Include="..\MyAIAgent.McpServer.Presentation\MyAIAgent.McpServer.Presentation.csproj" />
+    <ProjectReference Include="..\MyAIAgent.Common.Tests\MyAIAgent.Common.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>
