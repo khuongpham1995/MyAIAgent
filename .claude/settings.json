@@ -10,6 +10,10 @@
           {
             "type": "command",
             "command": "npx tsx .claude/hooks/pre-bash-guard.ts"
+          },
+          {
+            "type": "command",
+            "command": "npx tsx .claude/hooks/pre-commit-antipattern.ts"
           }
         ]
       }
@@ -25,6 +29,10 @@
           {
             "type": "command",
             "command": "npx tsx .claude/hooks/post-scaffold-restore.ts"
+          },
+          {
+            "type": "command",
+            "command": "npx tsx .claude/hooks/post-edit-code-review.ts"
           }
         ]
       }

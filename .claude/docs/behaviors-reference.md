@@ -41,8 +41,8 @@ Extended reference for common development scenarios in MyAIAgent.
 
 | Situation | Use |
 |---|---|
-| Entity not found | `Result.Failure<T>("not found")` |
+| Entity not found | `ResponseModel<T>.Fail("not found")` |
 | Validation failed | FluentValidation via pipeline (automatic) |
-| External API down | Catch `HttpRequestException`, return `Result.Failure` |
+| External API down | Catch `HttpRequestException`, return `ResponseModel<T>.Fail` |
 | Programming error (null ref, index OOB) | Let propagate — fix the bug |
 | Truly unexpected crash | Let propagate to global handler |
