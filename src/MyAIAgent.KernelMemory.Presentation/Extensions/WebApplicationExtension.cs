@@ -33,7 +33,7 @@ internal static class WebApplicationExtension
     }
 
     #region Private Method(s)
-    
+
     private static void MapEndpoints(WebApplication app, KernelMemoryConfig config, DateTimeOffset start)
     {
         if (!config.Service.RunWebService) return;

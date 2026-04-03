@@ -9,6 +9,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddGlobalExceptionHandling();
 builder.Services.AddLogging();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services
     .AddMcpServer()
     .WithHttpTransport()

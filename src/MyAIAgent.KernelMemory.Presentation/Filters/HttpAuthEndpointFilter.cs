@@ -31,7 +31,7 @@ public sealed class HttpAuthEndpointFilter(
         {
             return await next(context);
         }
-        
+
         logger.LogWarning("Invalid API Key on {Path}", context.HttpContext.Request.Path);
         return Results.Problem(detail: "Invalid API Key", statusCode: 403);
 
