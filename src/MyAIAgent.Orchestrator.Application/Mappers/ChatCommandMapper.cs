@@ -1,12 +1,10 @@
 using MyAIAgent.Orchestrator.Application.Handlers;
-using MyAIAgent.Orchestrator.Domain.Models;
+using MyAIAgent.Orchestrator.Application.Models;
 
 namespace MyAIAgent.Orchestrator.Application.Mappers;
 
 public static class ChatCommandMapper
 {
     public static ChatCommand ToCommand(this ChatRequestDto chatRequestDto)
-    {
-        return new ChatCommand(chatRequestDto.SessionId, chatRequestDto.UserMessage);
-    }
+        => new(chatRequestDto.SessionId, chatRequestDto.UserMessage, chatRequestDto.AgentId);
 }

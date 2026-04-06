@@ -31,8 +31,25 @@ Dependency direction is inward: **Domain ← Application ← Infrastructure ← 
 | `[Service].Application` | `Common.Application` (gets `Common.Domain` transitively) |
 | `[Service].Infrastructure` | `Common.Infrastructure` (gets `Common.Domain` transitively) |
 
+## Type Placement Conventions
+
+| Type | Layer | Examples |
+|---|---|---|
+| Entities (EF Core) | Domain | `ChatSession`, `AgentDefinition` |
+| Domain models / projections | Domain | `ChatRequest`, `AgentSummary`, `ChatResponse` |
+| Inbound HTTP DTOs | Application | `ChatRequestDto`, `CreateAgentRequestDto` |
+| Commands / Queries | Application | `ChatCommand`, `CreateAgentCommand` |
+| Application interfaces | Application | `IAgentBuilderService` |
+| Infrastructure interfaces (cross-layer) | Domain | `IChatOrchestratorService`, `IAgentRepository` |
+| Infrastructure interfaces (internal-only) | Same file as implementation | `IAgentHelper` in `AgentHelper.cs` |
+
+> **Rule:** Inbound HTTP request DTOs belong in `[Service].Application/Models/`. They are mapped to Commands/Queries at the Application boundary. Domain must not hold HTTP-contract types.
+
+> **Rule:** If an Infrastructure interface is consumed only within the Infrastructure layer (i.e., no Application or Domain code depends on it), declare it in the same `.cs` file as its implementation. Only promote it to Domain when a higher layer needs to depend on the abstraction.
+
 ## Anti-patterns
 
 - Never inject a type from a higher layer into a lower one (e.g., a Presentation type into a handler)
 - Never bypass MediatR by calling Infrastructure directly from Presentation endpoints
 - Never add a `<ProjectReference>` between sibling services — communicate via HTTP only
+- Never place inbound HTTP DTOs in the Domain layer — they belong in Application/Models/

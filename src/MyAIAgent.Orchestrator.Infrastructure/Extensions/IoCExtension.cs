@@ -3,7 +3,6 @@ using Azure.AI.OpenAI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.KernelMemory;
 using MyAIAgent.Common.Application.Extensions;
 using MyAIAgent.Common.Infrastructure.Extensions;
 using MyAIAgent.Orchestrator.Infrastructure.Data;
@@ -33,11 +32,6 @@ public static class IoCExtension
         };
 
         services.AddSingleton(chatClient);
-
-        var kernelMemoryBaseUrl = configuration["KernelMemory:BaseUrl"]
-            ?? throw new InvalidOperationException("Configuration key 'KernelMemory:BaseUrl' is missing");
-
-        services.AddSingleton<IKernelMemory>(_ => new MemoryWebClient(kernelMemoryBaseUrl));
     }
 
     private static IChatClient BuildAzureOpenAiClient(IConfiguration configuration)

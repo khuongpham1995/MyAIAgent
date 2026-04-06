@@ -14,7 +14,7 @@
         <PackageReference Include="Microsoft.Extensions.AI" Version="10.3.0"/>
         <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0"/>
         <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.1"/>
-        <PackageReference Include="Microsoft.KernelMemory.WebClient" Version="0.80.241017.2"/>
+        <PackageReference Include="ModelContextProtocol" Version="0.1.0-preview.10"/>
     </ItemGroup>
 
     <ItemGroup>

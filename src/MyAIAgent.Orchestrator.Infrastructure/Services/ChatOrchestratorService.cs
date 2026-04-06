@@ -4,10 +4,15 @@ using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Common.Domain.ServiceLifetime;
 using MyAIAgent.Orchestrator.Domain.Interfaces;
 using MyAIAgent.Orchestrator.Domain.Models;
+using MyAIAgent.Orchestrator.Infrastructure.Helpers;
 
 namespace MyAIAgent.Orchestrator.Infrastructure.Services;
 
-public sealed class ChatOrchestratorService(IChatClient chatClient, ILogger<ChatOrchestratorService> logger)
+public sealed class ChatOrchestratorService(
+    IChatClient chatClient,
+    IAgentRepository agentRepository,
+    IAgentHelper agentHelper,
+    ILogger<ChatOrchestratorService> logger)
     : IChatOrchestratorService, IScoped
 {
     public async Task<ResponseModel<string>> ChatAsync(ChatRequest request, CancellationToken cancellationToken)
@@ -16,12 +21,32 @@ public sealed class ChatOrchestratorService(IChatClient chatClient, ILogger<Chat
         {
             var messages = request.History
                 .Select(m => new Microsoft.Extensions.AI.ChatMessage(
-                    m.Role == "assistant" ? ChatRole.Assistant : ChatRole.User,
+                    m.Role switch
+                    {
+                        "assistant" => ChatRole.Assistant,
+                        "system" => ChatRole.System,
+                        _ => ChatRole.User,
+                    },
                     m.Content))
                 .ToList();
             messages.Add(new Microsoft.Extensions.AI.ChatMessage(ChatRole.User, request.UserMessage));
 
-            var completion = await chatClient.GetResponseAsync(messages, cancellationToken: cancellationToken);
+            ChatOptions? chatOptions = null;
+
+            var agent = request.AgentId is not null
+                ? await agentRepository.FindByIdAsync(request.AgentId, cancellationToken)
+                : await agentRepository.FindDefaultAsync(cancellationToken);
+
+            if (agent is not null)
+            {
+                if (!string.IsNullOrEmpty(agent.Instructions))
+                    messages.Insert(0, new Microsoft.Extensions.AI.ChatMessage(ChatRole.System, agent.Instructions));
+
+                var tools = await agentHelper.GetAgentToolsAsync(agent, cancellationToken);
+                chatOptions = new ChatOptions { Tools = [.. tools] };
+            }
+
+            var completion = await chatClient.GetResponseAsync(messages, chatOptions, cancellationToken);
             return ResponseModel<string>.Succeed(completion.Text);
         }
         catch (HttpRequestException ex)

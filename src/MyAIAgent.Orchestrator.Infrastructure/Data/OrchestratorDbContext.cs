@@ -8,6 +8,7 @@ public sealed class OrchestratorDbContext(DbContextOptions<OrchestratorDbContext
     : BaseDbContext(options)
 {
     public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
+    public DbSet<AgentDefinition> AgentDefinitions => Set<AgentDefinition>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -15,5 +16,10 @@ public sealed class OrchestratorDbContext(DbContextOptions<OrchestratorDbContext
             .ToContainer("ChatSessions")
             .HasPartitionKey(x => x.SessionId)
             .OwnsMany(x => x.Messages);
+
+        modelBuilder.Entity<AgentDefinition>()
+            .ToContainer("AgentDefinitions")
+            .HasPartitionKey(x => x.Id)
+            .OwnsMany(x => x.AgentTools);
     }
 }

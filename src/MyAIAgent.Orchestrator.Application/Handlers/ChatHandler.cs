@@ -7,7 +7,7 @@ using MyAIAgent.Orchestrator.Domain.Models;
 
 namespace MyAIAgent.Orchestrator.Application.Handlers;
 
-public sealed record ChatCommand(string? SessionId, string UserMessage)
+public sealed record ChatCommand(string? SessionId, string UserMessage, string? AgentId = null)
     : IRequest<ResponseModel<ChatResponse>>;
 
 public sealed class ChatHandler(
@@ -37,7 +37,7 @@ public sealed class ChatHandler(
             .Select(m => new ChatMessage(m.Role, m.Content))
             .ToList();
 
-        var request = new ChatRequest(command.UserMessage, history);
+        var request = new ChatRequest(command.UserMessage, history, command.AgentId);
         var aiResult = await orchestratorService.ChatAsync(request, cancellationToken);
 
         if (!aiResult.IsSuccess)
@@ -62,7 +62,7 @@ public sealed class ChatCommandValidator : AbstractValidator<ChatCommand>
     public ChatCommandValidator()
     {
         RuleFor(x => x.UserMessage)
-            .NotEmpty()
+            .NotEmpty().WithMessage("User message is required.")
             .MaximumLength(4000).WithMessage("User message must not exceed 4000 characters.");
     }
 }
