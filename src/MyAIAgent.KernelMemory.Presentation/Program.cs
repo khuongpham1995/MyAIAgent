@@ -21,7 +21,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddAzureAppConfiguration();
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment());
 builder.Services.AddGlobalExceptionHandling();
 
 var config = builder.Configuration.GetSection("KernelMemory").Get<KernelMemoryConfig>()
@@ -55,5 +55,6 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseAzureAppConfiguration();
 
-await app.Services.EnsureCosmosDbCreatedAsync<KernelMemoryDbContext>();
+if (app.Environment.IsDevelopment())
+    await app.Services.EnsureDbCreatedAsync<KernelMemoryDbContext>();
 await app.RunKernelMemoryAsync(config, start, memoryType, syncHandlersCount, asyncHandlersCount);

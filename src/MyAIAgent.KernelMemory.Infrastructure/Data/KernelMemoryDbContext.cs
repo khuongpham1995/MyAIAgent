@@ -11,8 +11,11 @@ public sealed class KernelMemoryDbContext(DbContextOptions<KernelMemoryDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<DocumentRecord>()
-            .ToContainer("DocumentRecords")
-            .HasPartitionKey(x => x.IndexName);
+        if (IsCosmosProvider)
+        {
+            modelBuilder.Entity<DocumentRecord>()
+                        .ToContainer("DocumentRecords")
+                        .HasPartitionKey(x => x.IndexName);
+        }
     }
 }

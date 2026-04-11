@@ -4,26 +4,30 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MyAIAgent.Common.Application.Extensions;
 using MyAIAgent.Common.Infrastructure.Extensions;
-using MyAIAgent.KernelMemory.Domain.Options;
+using MyAIAgent.Common.Domain.Models;
+using MyAIAgent.KernelMemory.Domain.Models;
 using MyAIAgent.KernelMemory.Infrastructure.Data;
 
 namespace MyAIAgent.KernelMemory.Infrastructure.Extensions;
 
 public static class IoCExtension
 {
-    public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isDevelopment)
     {
         services
             .AddTransientAsMatchingInterfaces(typeof(IoCExtension).Assembly)
             .AddScopedAsMatchingInterfaces(typeof(IoCExtension).Assembly)
             .AddSingletonAsMatchingInterfaces(typeof(IoCExtension).Assembly);
 
-        services.AddCosmosDb<KernelMemoryDbContext>(configuration);
+        if (isDevelopment)
+            services.AddSqliteDb<KernelMemoryDbContext>("kernelmemory.db");
+        else
+            services.AddCosmosDb<KernelMemoryDbContext>(configuration);
 
-        services.Configure<KernelMemoryServiceOptions>(
+        services.Configure<KernelMemoryServiceModel>(
             configuration.GetSection("KernelMemory:Service"));
 
-        services.Configure<ServiceAuthorizationOptions>(
+        services.Configure<ServiceAuthorizationModel>(
             configuration.GetSection("KernelMemory:ServiceAuthorization"));
 
         var maxUploadMb = configuration.GetValue<double?>("KernelMemory:Service:MaxUploadSizeMb");

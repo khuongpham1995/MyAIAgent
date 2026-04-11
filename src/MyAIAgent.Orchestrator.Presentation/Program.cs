@@ -5,13 +5,15 @@ using MyAIAgent.Orchestrator.Application.Handlers.Agents;
 using MyAIAgent.Orchestrator.Application.Mappers;
 using MyAIAgent.Orchestrator.Application.Models;
 using MyAIAgent.Orchestrator.Infrastructure.Data;
+using MyAIAgent.Common.Infrastructure.Filters;
 using MyAIAgent.Orchestrator.Infrastructure.Extensions;
+using MyAIAgent.Orchestrator.Presentation.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddAzureAppConfiguration();
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment());
 builder.Services.AddGlobalExceptionHandling();
 builder.Services.AddSingleton(TimeProvider.System);
 
@@ -20,21 +22,24 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseAzureAppConfiguration();
 
-await app.Services.EnsureCosmosDbCreatedAsync<OrchestratorDbContext>();
+if (app.Environment.IsDevelopment())
+    await app.Services.EnsureDbCreatedAsync<OrchestratorDbContext>();
 
-app.MapPost("/chat", async (ChatRequestDto request, ISender sender, CancellationToken cancellationToken) =>
+var api = app.MapGroup("").AddEndpointFilter(app.Services.GetRequiredService<HttpAuthEndpointFilter>());
+
+api.MapPost("/chat", async (ChatRequestDto request, ISender sender, CancellationToken cancellationToken) =>
 {
     var result = await sender.Send(request.ToCommand(), cancellationToken);
     return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapGet("/agents", async (ISender sender, CancellationToken cancellationToken) =>
+api.MapGet("/agents", async (ISender sender, CancellationToken cancellationToken) =>
 {
     var result = await sender.Send(new ListAgentsQuery(), cancellationToken);
     return Results.Ok(result);
 });
 
-app.MapPost("/agents", async (CreateAgentRequestDto request, ISender sender, CancellationToken cancellationToken) =>
+api.MapPost("/agents", async (CreateAgentRequestDto request, ISender sender, CancellationToken cancellationToken) =>
 {
     var result = await sender.Send(request.ToCommand(), cancellationToken);
     return result.IsSuccess
@@ -42,10 +47,10 @@ app.MapPost("/agents", async (CreateAgentRequestDto request, ISender sender, Can
         : Results.BadRequest(result);
 });
 
-app.MapDelete("/agents/{id}", async (string id, ISender sender, CancellationToken cancellationToken) =>
+api.MapDelete("/agents/{id}", async (string id, ISender sender, CancellationToken cancellationToken) =>
 {
     var result = await sender.Send(new DeleteAgentCommand(id), cancellationToken);
     return result.IsSuccess ? Results.NoContent() : Results.NotFound(result);
 });
 
-await app.RunAsync();
+await app.RunOrchestratorAsync(builder.Configuration);

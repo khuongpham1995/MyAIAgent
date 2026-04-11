@@ -24,11 +24,4 @@ public static class CosmosDbExtension
         return services;
     }
 
-    public static async Task EnsureCosmosDbCreatedAsync<TContext>(this IServiceProvider services)
-        where TContext : BaseDbContext
-    {
-        await using var scope = services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<TContext>();
-        await db.Database.EnsureCreatedAsync();
-    }
 }

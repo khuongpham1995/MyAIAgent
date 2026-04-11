@@ -4,7 +4,9 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MyAIAgent.Common.Application.Extensions;
+using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Common.Infrastructure.Extensions;
+using MyAIAgent.Common.Infrastructure.Filters;
 using MyAIAgent.Orchestrator.Infrastructure.Data;
 using OpenAI;
 
@@ -12,14 +14,22 @@ namespace MyAIAgent.Orchestrator.Infrastructure.Extensions;
 
 public static class IoCExtension
 {
-    public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isDevelopment)
     {
         services
             .AddTransientAsMatchingInterfaces(typeof(IoCExtension).Assembly)
             .AddScopedAsMatchingInterfaces(typeof(IoCExtension).Assembly)
             .AddSingletonAsMatchingInterfaces(typeof(IoCExtension).Assembly);
 
-        services.AddCosmosDb<OrchestratorDbContext>(configuration);
+        if (isDevelopment)
+            services.AddSqliteDb<OrchestratorDbContext>("orchestrator.db");
+        else
+            services.AddCosmosDb<OrchestratorDbContext>(configuration);
+
+        services.Configure<ServiceAuthorizationModel>(
+            configuration.GetSection("ServiceAuthorization"));
+
+        services.AddSingleton<HttpAuthEndpointFilter>();
 
         var providerType = configuration["AiProvider:Type"]
             ?? throw new InvalidOperationException("Configuration key 'AiProvider:Type' is missing");

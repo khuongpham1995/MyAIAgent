@@ -1,6 +1,8 @@
 using MyAIAgent.Common.Infrastructure.Extensions;
+using MyAIAgent.Common.Infrastructure.Filters;
 using MyAIAgent.McpServer.Application.Extensions;
 using MyAIAgent.McpServer.Infrastructure.Extensions;
+using MyAIAgent.McpServer.Presentation.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +21,6 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseAzureAppConfiguration();
-app.MapMcp();
+app.MapMcp().AddEndpointFilter(app.Services.GetRequiredService<HttpAuthEndpointFilter>());
 
-await app.RunAsync();
+await app.RunMcpServerAsync();

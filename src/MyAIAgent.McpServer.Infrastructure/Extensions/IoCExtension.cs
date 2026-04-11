@@ -1,7 +1,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MyAIAgent.Common.Application.Extensions;
+using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Common.Infrastructure.Extensions;
+using MyAIAgent.Common.Infrastructure.Filters;
+
 using MyAIAgent.McpServer.Domain.Interfaces;
 using MyAIAgent.McpServer.Infrastructure.Services;
 
@@ -15,6 +18,11 @@ public static class IoCExtension
             .AddTransientAsMatchingInterfaces(typeof(IoCExtension).Assembly)
             .AddScopedAsMatchingInterfaces(typeof(IoCExtension).Assembly)
             .AddSingletonAsMatchingInterfaces(typeof(IoCExtension).Assembly);
+
+        services.Configure<ServiceAuthorizationModel>(
+            configuration.GetSection("ServiceAuthorization"));
+
+        services.AddSingleton<HttpAuthEndpointFilter>();
 
         services.AddHttpClient<ISearchProvider, GoogleSearchClient>(client =>
         {

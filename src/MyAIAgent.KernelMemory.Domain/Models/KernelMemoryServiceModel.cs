@@ -1,6 +1,6 @@
-namespace MyAIAgent.KernelMemory.Domain.Options;
+namespace MyAIAgent.KernelMemory.Domain.Models;
 
-public sealed record KernelMemoryServiceOptions
+public sealed record KernelMemoryServiceModel
 {
     public bool RunWebService { get; init; } = true;
     public double? MaxUploadSizeMb { get; init; }
