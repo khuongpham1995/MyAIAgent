@@ -58,14 +58,20 @@ Both filters are instantiated manually in `WebApplicationExtension` (not via DI)
 - `HttpAuthEndpointFilter` — validates the `Authorization` header against `ServiceAuthorization.AccessKey1`/`AccessKey2`; config validated once at construction
 - `HttpErrorsEndpointFilter` — catches `BadHttpRequestException` 413 → 413 response; all other exceptions → log + rethrow to `GlobalExceptionHandler`
 
-## How Other Services Connect
+## Service Connections
 
-Services that need to call the KernelMemory daemon register a typed `HttpClient` in their own Infrastructure `IoCExtension`:
+| Service | Connects to KernelMemory? | Purpose |
+|---|---|---|
+| **MainSubSys** | Yes — `IKernelMemoryClient` / `KernelMemoryClient` (120s) | Admin: document upload, ask, status |
+| **Orchestrator** | Yes — planned, not yet implemented | RAG during chat (augment replies with indexed knowledge) |
+| **McpServer** | **No — must never connect** | MCP Server exposes tools only; RAG is Orchestrator's concern |
+
+When adding a KernelMemory HTTP client to a service, follow this pattern in its Infrastructure `IoCExtension`:
 
 ```csharp
 services.AddHttpClient<IKernelMemoryClient, KernelMemoryClient>(client =>
 {
-    client.BaseAddress = new Uri(configuration[MainSubSysConstant.Config.KernelMemoryBaseUrl]
+    client.BaseAddress = new Uri(configuration["KernelMemory:BaseUrl"]
         ?? throw new InvalidOperationException("KernelMemory:BaseUrl is required."));
     client.Timeout = TimeSpan.FromSeconds(120);
 })
