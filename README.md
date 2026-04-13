@@ -1,42 +1,66 @@
 # MyAIAgent
 
-A modular AI agent backend built on **.NET 10** with Clean Architecture. The solution exposes three independently deployable services orchestrated by .NET Aspire.
+A modular AI agent backend built on **.NET 10** with Clean Architecture. Four independently deployable services orchestrated by .NET Aspire.
 
-## Architecture Overview
+## Service Topology
 
+```mermaid
+graph TD
+    User(["User / Client"])
+
+    subgraph Aspire ["MyAIAgent.All (.NET Aspire)"]
+        MainSubSys["<b>MainSubSys</b><br/>API Gateway<br/>POST /chat<br/>POST /admin/documents<br/>GET /admin/documents/{id}/status<br/>GET|POST|DELETE /admin/agents<br/>GET /admin/tools"]
+
+        Orchestrator["<b>Orchestrator</b><br/>Chat API + RAG<br/>POST /chat<br/>GET|POST|DELETE /agents"]
+
+        KernelMemory["<b>KernelMemory</b><br/>RAG Daemon<br/>POST /upload<br/>POST /ask<br/>GET /documents/{id}/status"]
+
+        McpServer["<b>MCP Server</b><br/>Tool Server<br/>GET /mcp/stream (SSE)<br/>POST /mcp"]
+    end
+
+    User --> MainSubSys
+
+    MainSubSys -- "forward chat / manage agents" --> Orchestrator
+    MainSubSys -- "upload / status" --> KernelMemory
+    MainSubSys -- "list tools" --> McpServer
+
+    Orchestrator -- "tool dispatch" --> McpServer
+    Orchestrator -- "RAG context" --> KernelMemory
 ```
-┌─────────────────────────────────────────────────────┐
-│                   MyAIAgent.AppHost                 │
-│              (.NET Aspire Orchestration)             │
-└────────────┬──────────────────┬─────────────────────┘
-             │                  │
-             ▼                  ▼
-┌────────────────────┐  ┌──────────────────────────┐
-│    Orchestrator    │  │  KernelMemory (RAG)       │
-│  POST /chat        │  │  Self-hosted daemon       │
-│  Microsoft Agents  │  │  /upload, /ask, /search   │
-│  Framework         │  │  Microsoft KernelMemory   │
-└────────────┬───────┘  └──────────────────────────┘
-             │
-             ▼
-┌────────────────────┐
-│    MCP Server      │
-│  .NET MCP Tools    │
-│  GET /mcp/stream   │
-│  POST /mcp         │
-└────────────────────┘
+
+> **Note:** MCP Server never connects to KernelMemory. RAG is the Orchestrator's responsibility.
+
+## Clean Architecture Layers
+
+```mermaid
+graph RL
+    subgraph Common ["MyAIAgent.Common (shared)"]
+        CD["Common.Domain<br/>ResponseModel&lt;T&gt;<br/>ITransient/IScoped/ISingleton<br/>ServiceAuthorizationModel"]
+        CA["Common.Application<br/>ValidationBehavior&lt;TRequest,TResponse&gt;"]
+        CI["Common.Infrastructure<br/>Scrutor · Polly · GlobalExceptionHandler<br/>HttpAuthEndpointFilter · SqliteDbExtension"]
+    end
+
+    subgraph Service ["[Service].* (per service)"]
+        D["Domain<br/>Entities · Interfaces · Constants"]
+        A["Application<br/>Handlers · Validators · Mappers"]
+        I["Infrastructure<br/>Services · HTTP Clients · DbContext"]
+        P["Presentation<br/>Program.cs · Endpoints · MCP Tools"]
+    end
+
+    P --> I --> A --> D
+    D --> CD
+    A --> CA
+    I --> CI
 ```
 
-### Services
+## Services
 
-| Service | Project | Purpose |
-|---|---|---|
-| **Orchestrator** | `MyAIAgent.Orchestrator.*` | Chat API — routes user messages to AI agent, dispatches MCP tools |
-| **KernelMemory** | `MyAIAgent.KernelMemory.*` | RAG service — document ingestion, semantic search, Q&A |
-| **MCP Server** | `MyAIAgent.McpServer.*` | MCP tool server — exposes tools to LLMs via Model Context Protocol |
-
-Each service follows **Clean Architecture** across four layers:
-`Domain` ← `Application` ← `Infrastructure` ← `Presentation`
+| Service | Aspire Name | Entry Points | Purpose |
+|---|---|---|---|
+| **MainSubSys** | `main-subsys` | `POST /chat`, `/admin/documents`, `/admin/agents`, `/admin/tools` | API gateway — routes to all backend services |
+| **Orchestrator** | `orchestrator` | `POST /chat`, `GET\|POST\|DELETE /agents` | Chat API — Microsoft Agents Framework + RAG context |
+| **KernelMemory** | `kernel-memory` | `POST /upload`, `POST /ask`, `GET /documents/{id}/status` | RAG daemon — embedding, vector store, semantic Q&A |
+| **MCP Server** | `mcp-server` | `GET /mcp/stream`, `POST /mcp` | Tool server — exposes tools to LLMs via Model Context Protocol |
 
 ## Tech Stack
 
@@ -46,40 +70,28 @@ Each service follows **Clean Architecture** across four layers:
 | Orchestration | .NET Aspire |
 | AI Agent Framework | Microsoft Agents (`Microsoft.Agents.AI` v1.0.0-rc1) |
 | AI Abstractions | `Microsoft.Extensions.AI` + `Microsoft.Extensions.AI.OpenAI` |
-| RAG / Knowledge | Microsoft KernelMemory (self-hosted via `Microsoft.KernelMemory.Service.AspNetCore`) |
+| RAG / Knowledge | Microsoft KernelMemory (self-hosted, Azure Cosmos DB NoSQL vector store) |
 | MCP Protocol | ModelContextProtocol SDK v0.5.0-preview.1 |
 | CQRS | MediatR v12.5.0 |
 | Validation | FluentValidation v11.11.0 |
 | HTTP Resilience | Polly via `Microsoft.Extensions.Http.Resilience` |
 | DI Convention | Scrutor v7.0.0 |
+| Database | Azure Cosmos DB (production) · SQLite (development) |
 | Testing | xUnit + Moq + FluentAssertions |
 
 ## Solution Structure
 
 ```
 src/
-  MyAIAgent.sln
-  MyAIAgent.AppHost/                         # .NET Aspire — runs all three services
-  Common/                                    # Shared base — Clean Architecture layers
-    MyAIAgent.Common.Domain/                 # ResponseModel<T>, ITransient/IScoped/ISingleton
-    MyAIAgent.Common.Application/            # ValidationBehavior, shared app extensions
-    MyAIAgent.Common.Infrastructure/         # Scrutor DI scanning, Polly retry policy
-  McpServer/
-    MyAIAgent.McpServer.Domain/              # Entities, interfaces, MCP constants
-    MyAIAgent.McpServer.Application/         # MediatR handlers, validators, pipeline
-    MyAIAgent.McpServer.Infrastructure/      # HTTP clients, KernelMemory web client
-    MyAIAgent.McpServer.Presentation/        # MCP server host, tool classes
-    MyAIAgent.McpServer.Test/                # xUnit tests
-  Orchestrator/
-    MyAIAgent.Orchestrator.Domain/           # IChatOrchestratorService, chat models
-    MyAIAgent.Orchestrator.Application/      # ChatHandler, validation pipeline
-    MyAIAgent.Orchestrator.Infrastructure/   # ChatOrchestratorService (Agents Framework)
-    MyAIAgent.Orchestrator.Presentation/     # ASP.NET Core host, POST /chat
-  KernelMemory/
-    MyAIAgent.KernelMemory.Domain/           # IDocumentService, document models
-    MyAIAgent.KernelMemory.Application/      # Document handlers, validation pipeline
-    MyAIAgent.KernelMemory.Infrastructure/   # KernelMemory builder configuration
-    MyAIAgent.KernelMemory.Presentation/     # Self-hosted KernelMemory daemon
+  MyAIAgent.slnx
+  MyAIAgent.All/                          # .NET Aspire — starts all four services
+  MyAIAgent.Common.Domain/                # ResponseModel<T>, DI markers, ServiceAuthorizationModel
+  MyAIAgent.Common.Application/           # ValidationBehavior
+  MyAIAgent.Common.Infrastructure/        # Scrutor, Polly, HttpAuthEndpointFilter, SqliteDbExtension
+  MyAIAgent.McpServer.*/                  # MCP tool server (web_search, get_current_datetime)
+  MyAIAgent.Orchestrator.*/               # Chat API + session persistence + agent management
+  MyAIAgent.KernelMemory.*/               # Self-hosted KernelMemory RAG daemon
+  MyAIAgent.MainSubSys.*/                 # API gateway (document mgmt, agent mgmt, chat forwarding)
 ```
 
 ## Getting Started
@@ -87,90 +99,45 @@ src/
 ### Prerequisites
 
 - .NET 10 SDK
-- An AI provider credential — Azure OpenAI (recommended) or OpenAI API key
-- _(Optional)_ SQL Server for long-term memory
+- Azure OpenAI (or OpenAI) API credentials
+- Azure Cosmos DB connection string (or use SQLite for local dev — enabled automatically)
 
 ### Run via Aspire (recommended)
 
 ```bash
 dotnet restore
-dotnet run --project src/MyAIAgent.AppHost
+dotnet run --project src/MyAIAgent.All
 ```
 
-Aspire starts all three services and opens the dashboard with live endpoint URLs.
+Aspire starts all four services and opens the dashboard with live endpoint URLs. SQLite is used automatically in development — no Cosmos DB required locally.
 
 ### Configure secrets
 
-Set your AI provider credentials via user secrets (never commit these):
-
 ```bash
-# For the Orchestrator
+# Orchestrator — AI provider
 cd src/MyAIAgent.Orchestrator.Presentation
-dotnet user-secrets set "AzureOpenAI:Endpoint" "https://<your-resource>.openai.azure.com/"
+dotnet user-secrets set "AzureOpenAI:Endpoint" "https://<resource>.openai.azure.com/"
 dotnet user-secrets set "AzureOpenAI:DeploymentName" "gpt-4o"
-dotnet user-secrets set "AzureOpenAI:ApiKey" "<your-key>"
+dotnet user-secrets set "AzureOpenAI:ApiKey" "<key>"
+
+# KernelMemory — embeddings + vector store
+cd src/MyAIAgent.KernelMemory.Presentation
+dotnet user-secrets set "KernelMemory:Services:AzureOpenAIEmbedding:APIKey" "<key>"
+dotnet user-secrets set "KernelMemory:Services:AzureOpenAIText:APIKey" "<key>"
+dotnet user-secrets set "KernelMemory:Services:AzureCosmosDbNoSQL:ConnectionString" "<conn>"
 ```
 
 ### Build and test
 
 ```bash
-dotnet build src/MyAIAgent.sln
-dotnet test src/MyAIAgent.McpServer.Test/MyAIAgent.McpServer.Test.csproj
+dotnet build src/MyAIAgent.slnx
+dotnet test src/MyAIAgent.slnx
 dotnet format --verify-no-changes
 ```
-
-## Service Details
-
-### Orchestrator (`POST /chat`)
-
-Accepts a chat message and returns the agent's reply:
-
-```json
-POST /chat
-{ "userMessage": "What customers are registered?", "history": [] }
-
-→ { "reply": "There are currently 3 customers: ..." }
-```
-
-The Orchestrator uses the Microsoft Agents Framework to dispatch the user message through the AI model. Tools registered on the MCP Server are available to the agent via `McpClient`.
-
-### KernelMemory (RAG)
-
-Self-hosted KernelMemory daemon exposing the standard KernelMemory HTTP API:
-
-| Endpoint | Purpose |
-|---|---|
-| `POST /upload` | Ingest a document |
-| `POST /ask` | Semantic Q&A against indexed documents |
-| `GET /search` | Vector search |
-| `GET /status` | Document indexing status |
-
-Configuration (AI provider for embeddings, vector store) is driven by `appsettings.json`.
-
-### MCP Server
-
-Exposes tools to LLMs via the Model Context Protocol (HTTP transport):
-
-| Endpoint | Purpose |
-|---|---|
-| `GET /mcp/stream` | SSE stream (tool listing, results) |
-| `POST /mcp` | Tool invocation |
-
-Tools are discovered automatically via `WithToolsFromAssembly()`.
-
-## Dependency Direction
-
-```
-Common.Domain ← Common.Application ← Common.Infrastructure
-     ↑                  ↑                     ↑
-  [Service].Domain  [Service].Application  [Service].Infrastructure ← [Service].Presentation
-```
-
-`MyAIAgent.Common.*` is a shared Clean Architecture base. Each service layer references its Common counterpart — Domain→Common.Domain, Application→Common.Application, Infrastructure→Common.Infrastructure.
 
 ## Contributing
 
 - Follow `.claude/rules/` coding standards
 - Run `/plan` before any change touching 3+ files
-- Run `/verify` (`dotnet build` + `dotnet test` + format check) before every PR
+- Run `/test-coverage` (`dotnet build` + `dotnet test` + format check) before every PR
 - Use conventional commit prefixes: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`
