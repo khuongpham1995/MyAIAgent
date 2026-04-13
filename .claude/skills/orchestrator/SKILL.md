@@ -13,7 +13,7 @@ description: >
 
 ## Overview
 
-`MyAIAgent.Orchestrator.*` is the **chat API** — receives user messages, manages session history, routes through the Microsoft Agents Framework, and exposes `POST /chat`.
+`MyAIAgent.Orchestrator.*` is the **chat API and RAG consumer** — receives user messages, retrieves relevant context from KernelMemory, manages session history, routes through the Microsoft Agents Framework, dispatches MCP tools, and exposes `POST /chat`.
 
 ## Project Structure
 
@@ -34,10 +34,10 @@ MyAIAgent.Orchestrator.Application/
   Extensions/IoCExtension.cs
 
 MyAIAgent.Orchestrator.Infrastructure/
-  Data/OrchestratorDbContext.cs          ← EF Core Cosmos (ChatSessions container)
+  Data/OrchestratorDbContext.cs          ← EF Core (SQLite dev / Cosmos prod; ChatSessions + AgentDefinitions)
   Repositories/ChatSessionRepository.cs ← IScoped
-  Services/ChatOrchestratorService.cs   ← IScoped; wraps IChatClient
-  Extensions/IoCExtension.cs            ← registers IChatClient, AddCosmosDb<OrchestratorDbContext>
+  Services/ChatOrchestratorService.cs   ← IScoped; wraps IChatClient + IKernelMemoryClient (planned)
+  Extensions/IoCExtension.cs            ← registers IChatClient, DB provider, HttpAuthEndpointFilter
 
 MyAIAgent.Orchestrator.Presentation/
   Program.cs                             ← POST /chat, Aspire + Cosmos wiring
@@ -62,13 +62,15 @@ See `Application/Handlers/ChatHandler.cs` for the current implementation.
 
 ## Presentation Bootstrap
 
-`Program.cs` wires: `AddAzureAppConfiguration` → `AddApplication` → `AddInfrastructure` → `AddGlobalExceptionHandling` → `AddSingleton(TimeProvider.System)` → `UseExceptionHandler` → `EnsureCosmosDbCreatedAsync` → `MapPost("/chat", ...)`.
+`Program.cs` wires: `AddAzureAppConfiguration` → `AddApplication` → `AddInfrastructure(isDevelopment)` → `AddGlobalExceptionHandling` → `AddSingleton(TimeProvider.System)` → `UseExceptionHandler` → `EnsureDbCreatedAsync<OrchestratorDbContext>()` (dev only) → endpoints via `MapGroup("").AddEndpointFilter(HttpAuthEndpointFilter)`.
 
 `TimeProvider` is injected for testable timestamps — never use `DateTimeOffset.UtcNow` directly.
 
-## MCP Tools Connection
+## External Connections
 
-The Orchestrator can register MCP tools from the MCP Server via `McpClientFactory` + `SseClientTransport`. The MCP Server URL is injected by Aspire via service discovery.
+**MCP Server** — tools are registered via `McpClientFactory` + `SseClientTransport`. The MCP Server URL is injected by Aspire via service discovery.
+
+**KernelMemory** — the Orchestrator calls KernelMemory's `/ask` endpoint before generating a reply, prepending the retrieved context to the user prompt. Implemented via a typed `HttpClient` (`IKernelMemoryClient`) registered in Infrastructure. This connection is **planned but not yet implemented**.
 
 ## Configuration Shape (`appsettings.json`)
 

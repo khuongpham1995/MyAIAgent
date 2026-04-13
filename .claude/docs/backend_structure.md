@@ -1,55 +1,73 @@
 # Backend Project Structure
 
-MyAIAgent is a modular AI agent backend built on .NET 10 with Clean Architecture. The solution exposes three independently deployable services orchestrated by .NET Aspire.
+MyAIAgent is a modular AI agent backend built on .NET 10 with Clean Architecture. The solution exposes four independently deployable services orchestrated by .NET Aspire.
 
 ## Services
 
 ### Orchestrator (`MyAIAgent.Orchestrator.*`)
 
-The chat API. Receives user messages, routes them through the Microsoft Agents Framework (`Microsoft.Agents.AI`), and dispatches MCP tools as needed.
+The chat API. Receives user messages, manages session history, routes through the Microsoft Agents Framework, calls KernelMemory for RAG context, and dispatches MCP tools as needed.
 
-- Entry point: `POST /chat`
+- Entry point: `POST /chat`, `GET|POST|DELETE /agents`
 - AI abstraction: `IChatClient` from `Microsoft.Extensions.AI`
 - Tool dispatch: connects to MCP Server via `McpClient`
+- RAG: connects to KernelMemory via typed `HttpClient` (augments chat context)
 
 ### KernelMemory (`MyAIAgent.KernelMemory.*`)
 
-The RAG service. A self-hosted KernelMemory daemon that provides document ingestion, semantic search, and Q&A.
+The RAG daemon. A self-hosted KernelMemory service that handles document ingestion, embedding, vector storage, and semantic Q&A.
 
-- Entry point: standard KernelMemory HTTP API (`POST /upload`, `POST /ask`, `GET /search`)
+- Entry point: standard KernelMemory HTTP API (`POST /upload`, `POST /ask`, `GET /documents/{id}/status`)
 - Package: `Microsoft.KernelMemory.Service.AspNetCore`
-- Clients connect via `MemoryWebClient`
+- Vector store: Azure Cosmos DB NoSQL (production), SQLite (development)
+- Consumers connect via typed `HttpClient` — **not** `MemoryWebClient`
 
 ### MCP Server (`MyAIAgent.McpServer.*`)
 
-The tool server. Exposes tools to LLMs via the Model Context Protocol (HTTP transport).
+The tool server. Exposes tools to LLMs via the Model Context Protocol (HTTP transport). Does **not** connect to KernelMemory — RAG is the Orchestrator's concern.
 
 - Entry point: `GET /mcp/stream` (SSE), `POST /mcp`
 - Tools are discovered via `WithToolsFromAssembly()`
 - Each tool dispatches via MediatR (`ISender`)
+- Current tools: `web_search`, `get_current_datetime`
+
+### MainSubSys (`MyAIAgent.MainSubSys.*`)
+
+The API gateway. Provides a unified REST surface for managing documents, agents, and tools. Routes to Orchestrator, KernelMemory, and MCP Server via typed HTTP clients.
+
+- Entry point: `POST /chat`, `POST /admin/documents`, `GET /admin/documents/{id}/status`, `GET|POST|DELETE /admin/agents`, `GET /admin/tools`
+- Document management: upload + status polling only — Q&A is the Orchestrator's concern
+
+## Service Connection Topology
+
+```
+User → MainSubSys → Orchestrator → MCP Server
+                 ↘              ↘
+                  KernelMemory   KernelMemory
+```
+
+| From | To | Purpose |
+|---|---|---|
+| MainSubSys | Orchestrator | Forward chat, manage agents |
+| MainSubSys | KernelMemory | Document upload + status check |
+| MainSubSys | McpServer | List available tools |
+| Orchestrator | McpServer | Tool dispatch during chat |
+| Orchestrator | KernelMemory | Retrieve RAG context before generating reply |
+| McpServer | KernelMemory | **Never** — not connected |
 
 ## Solution Layout
 
 ```
 src/
-  MyAIAgent.AppHost/                         # .NET Aspire — starts all three services
-  MyAIAgent.Common/                          # Shared: ResponseModel<T>, DI marker interfaces
-  McpServer/
-    MyAIAgent.McpServer.Domain/
-    MyAIAgent.McpServer.Application/
-    MyAIAgent.McpServer.Infrastructure/
-    MyAIAgent.McpServer.Presentation/
-    MyAIAgent.McpServer.Test/
-  Orchestrator/
-    MyAIAgent.Orchestrator.Domain/
-    MyAIAgent.Orchestrator.Application/
-    MyAIAgent.Orchestrator.Infrastructure/
-    MyAIAgent.Orchestrator.Presentation/
-  KernelMemory/
-    MyAIAgent.KernelMemory.Domain/
-    MyAIAgent.KernelMemory.Application/
-    MyAIAgent.KernelMemory.Infrastructure/
-    MyAIAgent.KernelMemory.Presentation/
+  MyAIAgent.All/                    # .NET Aspire orchestration
+  MyAIAgent.Common.Domain/          # ResponseModel<T>, DI markers, ServiceAuthorizationModel
+  MyAIAgent.Common.Application/     # ValidationBehavior<TRequest,TResponse>
+  MyAIAgent.Common.Infrastructure/  # Scrutor, Polly, GlobalExceptionHandler, HttpAuthEndpointFilter,
+                                    # CosmosDbExtension, SqliteDbExtension
+  MyAIAgent.McpServer.*/
+  MyAIAgent.Orchestrator.*/
+  MyAIAgent.KernelMemory.*/
+  MyAIAgent.MainSubSys.*/
 ```
 
 ## Clean Architecture Per Service
@@ -69,51 +87,43 @@ Dependency direction: `Domain` ← `Application` ← `Infrastructure` ← `Prese
 
 ## Shared Types (`MyAIAgent.Common`)
 
-| Type | Namespace | Purpose |
+| Type | Layer | Purpose |
 |---|---|---|
-| `ResponseModel<T>` | `MyAIAgent.Common.Models` | Standard result wrapper for all handlers |
-| `ITransient` | `MyAIAgent.Common.ServiceLifetime` | DI: transient lifetime |
-| `IScoped` | `MyAIAgent.Common.ServiceLifetime` | DI: scoped lifetime |
-| `ISingleton` | `MyAIAgent.Common.ServiceLifetime` | DI: singleton lifetime |
-
-## Dependency Injection Convention
-
-Types implement `ITransient`, `IScoped`, or `ISingleton` from `MyAIAgent.Common`. Scrutor auto-registers them during startup — no manual `AddScoped<T>()` calls needed.
-
-```csharp
-// Scrutor picks this up automatically
-public sealed class DocumentService(IKernelMemory kernelMemory)
-    : IDocumentService, IScoped { }
-```
+| `ResponseModel<T>` | Common.Domain | Standard result wrapper for all handlers |
+| `ServiceAuthorizationModel` | Common.Domain | API key auth config (shared across services) |
+| `ITransient` / `IScoped` / `ISingleton` | Common.Domain | DI lifetime marker interfaces |
+| `ValidationBehavior<TRequest,TResponse>` | Common.Application | MediatR pipeline validation — always throws `ValidationException` |
+| `HttpAuthEndpointFilter` | Common.Infrastructure | Shared API key endpoint filter |
+| `SqliteDbExtension` | Common.Infrastructure | SQLite dev DB registration + `EnsureDbCreatedAsync` |
 
 ## Key Packages
 
 | Package | Service | Purpose |
 |---|---|---|
 | `Microsoft.Agents.AI` v1.0.0-rc1 | Orchestrator | Microsoft Agents Framework |
-| `Microsoft.Extensions.AI.OpenAI` | Orchestrator | IChatClient (OpenAI/Azure OpenAI) |
+| `Microsoft.Extensions.AI.OpenAI` | Orchestrator | `IChatClient` (OpenAI / Azure OpenAI) |
 | `Microsoft.KernelMemory.Service.AspNetCore` | KernelMemory | Self-hosted RAG daemon |
-| `Microsoft.KernelMemory.WebClient` | McpServer | HTTP client for KernelMemory |
 | `ModelContextProtocol.AspNetCore` | McpServer | MCP server transport |
 | `MediatR` v12.5.0 | All services | CQRS handler dispatch |
 | `FluentValidation` v11.11.0 | All services | Request validation |
+| `Microsoft.EntityFrameworkCore.Sqlite` | Common.Infrastructure | SQLite dev provider |
 
 ## Aspire Service Discovery
 
-AppHost wires the three services together:
-
 ```csharp
-var kernelMemory = builder.AddProject<Projects.MyAIAgent_KernelMemory_Presentation>("kernel-memory")
-    .WithExternalHttpEndpoints();
+var mcpServer    = builder.AddProject<...>("mcp-server").WithExternalHttpEndpoints();
+var kernelMemory = builder.AddProject<...>("kernel-memory").WithExternalHttpEndpoints();
 
-var mcpServer = builder.AddProject<Projects.MyAIAgent_McpServer_Presentation>("mcp-server")
-    .WithExternalHttpEndpoints()
-    .WithReference(kernelMemory);
-
-var orchestrator = builder.AddProject<Projects.MyAIAgent_Orchestrator_Presentation>("orchestrator")
+var orchestrator = builder.AddProject<...>("orchestrator")
     .WithExternalHttpEndpoints()
     .WithReference(mcpServer)
     .WithReference(kernelMemory);
+
+builder.AddProject<...>("main-subsys")
+    .WithExternalHttpEndpoints()
+    .WithReference(orchestrator)
+    .WithReference(kernelMemory)
+    .WithReference(mcpServer);
 ```
 
 Aspire injects service URLs as environment variables (e.g. `services__kernel-memory__http__0`), replacing hard-coded `appsettings.json` base URLs at runtime.

@@ -3,8 +3,8 @@ name: clean-architecture
 description: >
   Clean Architecture patterns for the MyAIAgent solution. Covers layer
   responsibilities, dependency direction, DI registration, shared types,
-  and how to add new features across all four layers for any of the three
-  services (McpServer, Orchestrator, KernelMemory).
+  and how to add new features across all four layers for any of the four
+  services (McpServer, Orchestrator, KernelMemory, MainSubSys).
   Load when: adding a new feature, refactoring layers, debugging a dependency
   issue, asked about project structure, or adding a new service module.
 ---
@@ -13,7 +13,7 @@ description: >
 
 ## Overview
 
-Three backend services, each with four layers. `MyAIAgent.Common` is a shared base extended by every service.
+Four backend services, each with four layers. `MyAIAgent.Common` is a shared base extended by every service.
 
 ```
 Common.Domain ← Common.Application ← Common.Infrastructure

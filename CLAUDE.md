@@ -10,7 +10,7 @@ Before responding, read the following instruction files and follow their rules t
 
 # MyAIAgent
 
-An AI agent backend with three services: **Orchestrator** (Microsoft Agents Framework), **KernelMemory** (RAG), and **MCP Server** (tools). All services follow Clean Architecture.
+An AI agent backend with four services: **Orchestrator** (Microsoft Agents Framework + RAG), **KernelMemory** (RAG daemon), **MCP Server** (tools), and **MainSubSys** (API gateway). All services follow Clean Architecture.
 
 ## Tech Stack
 
@@ -29,34 +29,43 @@ An AI agent backend with three services: **Orchestrator** (Microsoft Agents Fram
 
 ## Architecture
 
-Three services, each with Clean Architecture. One shared Common base.
+Four services, each with Clean Architecture. One shared Common base.
 
 ```
 src/
   MyAIAgent.All/                               # .NET Aspire orchestration
   Common/
-    MyAIAgent.Common.Domain/                   # ResponseModel<T>, ITransient/IScoped/ISingleton
+    MyAIAgent.Common.Domain/                   # ResponseModel<T>, ITransient/IScoped/ISingleton, ServiceAuthorizationModel
     MyAIAgent.Common.Application/              # ValidationBehavior<TRequest,TResponse> (always throws ValidationException)
     MyAIAgent.Common.Infrastructure/           # ServiceCollectionExtension (Scrutor), RetryExtension (Polly),
                                                # GlobalExceptionHandler, ExceptionHandlingExtension,
-                                               # CosmosDbExtension, AzureAppConfigurationExtension
+                                               # CosmosDbExtension, SqliteDbExtension, AzureAppConfigurationExtension,
+                                               # HttpAuthEndpointFilter
   McpServer/
     MyAIAgent.McpServer.Domain/                # Entities, interfaces, MCP constants
     MyAIAgent.McpServer.Application/           # MediatR handlers, validators, pipeline
-    MyAIAgent.McpServer.Infrastructure/        # HTTP clients, KernelMemory web client
+    MyAIAgent.McpServer.Infrastructure/        # HTTP clients (Google Search, Page Fetcher)
     MyAIAgent.McpServer.Presentation/          # MCP server host (SSE + POST /mcp)
-    MyAIAgent.McpServer.Test/                  # xUnit tests
+    MyAIAgent.McpServer.Tests/                 # xUnit tests
   Orchestrator/
-    MyAIAgent.Orchestrator.Domain/             # IChatOrchestratorService, chat models, ChatSession entities
+    MyAIAgent.Orchestrator.Domain/             # IChatOrchestratorService, chat models, ChatSession/AgentDefinition entities
     MyAIAgent.Orchestrator.Application/        # ChatHandler, validation pipeline
     MyAIAgent.Orchestrator.Infrastructure/     # ChatOrchestratorService, ChatSessionRepository, OrchestratorDbContext
-    MyAIAgent.Orchestrator.Presentation/       # ASP.NET Core host (POST /chat)
+    MyAIAgent.Orchestrator.Presentation/       # ASP.NET Core host (POST /chat, GET|POST|DELETE /agents)
+    MyAIAgent.Orchestrator.Tests/              # xUnit tests
   KernelMemory/
-    MyAIAgent.KernelMemory.Domain/             # DocumentRecord entity, options
+    MyAIAgent.KernelMemory.Domain/             # DocumentRecord entity, KernelMemoryServiceModel
     MyAIAgent.KernelMemory.Application/        # KernelMemory application extensions
     MyAIAgent.KernelMemory.Infrastructure/     # KernelMemory builder, KernelMemoryDbContext
     MyAIAgent.KernelMemory.Presentation/       # Self-hosted KernelMemory daemon
                                                # Filters/HttpAuthEndpointFilter, Filters/HttpErrorsEndpointFilter
+    MyAIAgent.KernelMemory.Tests/              # xUnit tests
+  MainSubSys/
+    MyAIAgent.MainSubSys.Domain/               # Client interfaces, domain models, constants
+    MyAIAgent.MainSubSys.Application/          # Chat, document, agent handlers + validators
+    MyAIAgent.MainSubSys.Infrastructure/       # HTTP clients (Orchestrator, KernelMemory, McpServer)
+    MyAIAgent.MainSubSys.Presentation/         # API gateway host (POST /chat, /admin/documents, /admin/agents, /admin/tools)
+    MyAIAgent.MainSubSys.Tests/                # xUnit tests
 ```
 
 **Dependency direction:** `Domain` ← `Application` ← `Infrastructure` ← `Presentation`
@@ -76,15 +85,16 @@ src/
 dotnet build src/MyAIAgent.slnx
 
 # Run all tests
-dotnet test src/MyAIAgent.McpServer.Test/MyAIAgent.McpServer.Test.csproj
+dotnet test src/MyAIAgent.slnx
 
-# Run via Aspire (orchestrates all three services)
+# Run via Aspire (orchestrates all four services)
 dotnet run --project src/MyAIAgent.All/MyAIAgent.All.csproj
 
 # Run individual services
 dotnet run --project src/MyAIAgent.McpServer.Presentation/MyAIAgent.McpServer.Presentation.csproj
 dotnet run --project src/MyAIAgent.Orchestrator.Presentation/MyAIAgent.Orchestrator.Presentation.csproj
 dotnet run --project src/MyAIAgent.KernelMemory.Presentation/MyAIAgent.KernelMemory.Presentation.csproj
+dotnet run --project src/MyAIAgent.MainSubSys.Presentation/MyAIAgent.MainSubSys.Presentation.csproj
 
 # Format check
 dotnet format --verify-no-changes
@@ -129,6 +139,7 @@ dotnet format --verify-no-changes
 |---|---|---|---|
 | KernelMemory | `kernel-memory` | `http://localhost:9001` | Self-hosted RAG daemon |
 | MCP Server | `mcp-server` | `http://localhost:5255` | MCP tool server |
-| Orchestrator | `orchestrator` | `http://localhost:5100` | Chat API |
+| Orchestrator | `orchestrator` | `http://localhost:5100` | Chat API + RAG |
+| MainSubSys | `main-subsys` | `http://localhost:5200` | API gateway (documents, agents, tools) |
 
 Config lives in `appsettings.json` per service. Never commit secrets — use `dotnet user-secrets` locally or Azure App Configuration in deployed environments.
