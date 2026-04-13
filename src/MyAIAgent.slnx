@@ -1,0 +1,42 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Common/">
+    <Project Path="MyAIAgent.Common.Application/MyAIAgent.Common.Application.csproj" />
+    <Project Path="MyAIAgent.Common.Domain/MyAIAgent.Common.Domain.csproj" />
+    <Project Path="MyAIAgent.Common.Infrastructure/MyAIAgent.Common.Infrastructure.csproj" />
+    <Project Path="MyAIAgent.Common.Tests/MyAIAgent.Common.Tests.csproj" />
+  </Folder>
+  <Folder Name="/MainSubSys/">
+    <Project Path="MyAIAgent.MainSubSys.Application/MyAIAgent.MainSubSys.Application.csproj" />
+    <Project Path="MyAIAgent.MainSubSys.Domain/MyAIAgent.MainSubSys.Domain.csproj" />
+    <Project Path="MyAIAgent.MainSubSys.Infrastructure/MyAIAgent.MainSubSys.Infrastructure.csproj" />
+    <Project Path="MyAIAgent.MainSubSys.Presentation/MyAIAgent.MainSubSys.Presentation.csproj" />
+    <Project Path="MyAIAgent.MainSubSys.Tests/MyAIAgent.MainSubSys.Tests.csproj" />
+  </Folder>
+  <Folder Name="/McpServer/">
+    <Project Path="MyAIAgent.McpServer.Application/MyAIAgent.McpServer.Application.csproj" />
+    <Project Path="MyAIAgent.McpServer.Domain/MyAIAgent.McpServer.Domain.csproj" />
+    <Project Path="MyAIAgent.McpServer.Infrastructure/MyAIAgent.McpServer.Infrastructure.csproj" />
+    <Project Path="MyAIAgent.McpServer.Presentation/MyAIAgent.McpServer.Presentation.csproj" />
+    <Project Path="MyAIAgent.McpServer.Tests/MyAIAgent.McpServer.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Orchestrator/">
+    <Project Path="MyAIAgent.Orchestrator.Application/MyAIAgent.Orchestrator.Application.csproj" />
+    <Project Path="MyAIAgent.Orchestrator.Domain/MyAIAgent.Orchestrator.Domain.csproj" />
+    <Project Path="MyAIAgent.Orchestrator.Infrastructure/MyAIAgent.Orchestrator.Infrastructure.csproj" />
+    <Project Path="MyAIAgent.Orchestrator.Presentation/MyAIAgent.Orchestrator.Presentation.csproj" />
+    <Project Path="MyAIAgent.Orchestrator.Tests/MyAIAgent.Orchestrator.Tests.csproj" />
+  </Folder>
+  <Folder Name="/RAG/">
+    <Project Path="MyAIAgent.KernelMemory.Application/MyAIAgent.KernelMemory.Application.csproj" />
+    <Project Path="MyAIAgent.KernelMemory.Domain/MyAIAgent.KernelMemory.Domain.csproj" />
+    <Project Path="MyAIAgent.KernelMemory.Infrastructure/MyAIAgent.KernelMemory.Infrastructure.csproj" />
+    <Project Path="MyAIAgent.KernelMemory.Presentation/MyAIAgent.KernelMemory.Presentation.csproj" />
+    <Project Path="MyAIAgent.KernelMemory.Tests/MyAIAgent.KernelMemory.Tests.csproj" />
+  </Folder>
+  <Project Path="MyAIAgent.All/MyAIAgent.All.csproj" />
+</Solution>

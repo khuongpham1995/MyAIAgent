@@ -73,7 +73,7 @@ src/
 
 ```bash
 # Build the solution
-dotnet build src/MyAIAgent.sln
+dotnet build src/MyAIAgent.slnx
 
 # Run all tests
 dotnet test src/MyAIAgent.McpServer.Test/MyAIAgent.McpServer.Test.csproj
