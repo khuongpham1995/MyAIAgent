@@ -12,6 +12,7 @@
       <ProjectReference Include="..\MyAIAgent.McpServer.Presentation\MyAIAgent.McpServer.Presentation.csproj" />
       <ProjectReference Include="..\MyAIAgent.Orchestrator.Presentation\MyAIAgent.Orchestrator.Presentation.csproj" />
       <ProjectReference Include="..\MyAIAgent.KernelMemory.Presentation\MyAIAgent.KernelMemory.Presentation.csproj" />
+      <ProjectReference Include="..\MyAIAgent.MainSubSys.Presentation\MyAIAgent.MainSubSys.Presentation.csproj" />
     </ItemGroup>
 
 </Project>

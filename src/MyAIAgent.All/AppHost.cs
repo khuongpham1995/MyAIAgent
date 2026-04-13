@@ -6,9 +6,15 @@ var mcpServer = builder.AddProject<Projects.MyAIAgent_McpServer_Presentation>("m
 var kernelMemory = builder.AddProject<Projects.MyAIAgent_KernelMemory_Presentation>("kernel-memory")
     .WithExternalHttpEndpoints();
 
-builder.AddProject<Projects.MyAIAgent_Orchestrator_Presentation>("orchestrator")
+var orchestrator = builder.AddProject<Projects.MyAIAgent_Orchestrator_Presentation>("orchestrator")
     .WithExternalHttpEndpoints()
     .WithReference(mcpServer)
     .WithReference(kernelMemory);
+
+builder.AddProject<Projects.MyAIAgent_MainSubSys_Presentation>("main-subsys")
+    .WithExternalHttpEndpoints()
+    .WithReference(orchestrator)
+    .WithReference(kernelMemory)
+    .WithReference(mcpServer);
 
 builder.Build().Run();
