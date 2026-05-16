@@ -134,6 +134,9 @@ _ReSharper*/
 *.[Rr]e[Ss]harper
 *.DotSettings.user
 
+# Roslyn language server cache
+*.lscache
+
 # TeamCity is a build add-in
 _TeamCity*
 
