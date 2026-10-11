@@ -1,41 +1,39 @@
 {
-  "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
-  },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx tsx .claude/hooks/pre-bash-guard.ts"
-          },
-          {
-            "type": "command",
-            "command": "npx tsx .claude/hooks/pre-commit-antipattern.ts"
-          }
-        ]
-      }
+  "model": "opusplan",
+  "permissions": {
+    "defaultMode": "plan",
+    "allow": [
+      "Bash(node scripts/ai/quality.mjs *)",
+      "Bash(node scripts/ai/candidate.mjs check *)",
+      "Bash(dotnet test src/MyAIAgent.slnx)",
+      "Bash(dotnet test src/MyAIAgent.MainSubSys.Tests/MyAIAgent.MainSubSys.Tests.csproj)",
+      "Bash(dotnet test src/MyAIAgent.Orchestrator.Tests/MyAIAgent.Orchestrator.Tests.csproj)",
+      "Bash(dotnet test src/MyAIAgent.KernelMemory.Tests/MyAIAgent.KernelMemory.Tests.csproj)",
+      "Bash(dotnet test src/MyAIAgent.McpServer.Tests/MyAIAgent.McpServer.Tests.csproj)"
     ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx tsx .claude/hooks/post-edit-format.ts"
-          },
-          {
-            "type": "command",
-            "command": "npx tsx .claude/hooks/post-scaffold-restore.ts"
-          },
-          {
-            "type": "command",
-            "command": "npx tsx .claude/hooks/post-edit-code-review.ts"
-          }
-        ]
-      }
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(gh pr create *)"
+    ],
+    "deny": [
+      "Bash(git push *--force*)",
+      "Bash(git push -f *)",
+      "Bash(git push * -f)",
+      "Bash(git push * -f *)",
+      "Bash(git add .)",
+      "Bash(git add . *)",
+      "Bash(git add -A*)",
+      "Bash(git add * -A*)",
+      "Bash(git add --all*)",
+      "Bash(git add * --all*)",
+      "Bash(git commit -a*)",
+      "Bash(git commit * -a*)",
+      "Bash(git commit *--amend*)",
+      "Bash(git *--no-verify*)",
+      "Bash(git commit -n *)",
+      "Bash(git commit * -n)",
+      "Bash(git commit * -n *)"
     ]
   }
 }

@@ -1,49 +1,20 @@
-# .claude — Claude Code Configuration
+# Claude adapter
 
-This directory configures Claude Code for the MyAIAgent .NET solution.
+Shared policy: `AGENTS.md` and `docs/ai/`. Start with `docs/ai/setup.md`.
 
-## Structure
+- `settings.json`: native Plan mode, `opusplan` model routing and native allow/ask/deny rules.
+- `commands/`: only `plan`, `build`, `verify`, and `commit` stage entrypoints.
+- `agents/`: only the read-only Sonnet `code-reviewer` and `security-reviewer`.
+- `skills/<name>`: symlinks to the shared `.agents/skills/<name>` directories.
+- `rules/shared`: symlink to `.agents/rules/`; no provider-specific rule copies.
 
-| Directory | Purpose |
-|---|---|
-| `agents/` | Specialized sub-agents invoked for specific tasks |
-| `commands/` | Slash commands (`/plan`, `/tdd`, `/code-review`, etc.) |
-| `hooks/` | Shell scripts triggered on tool use events |
-| `instructions/` | Always-loaded instruction and standards files |
-| `rules/common/` | Cross-cutting rules (git, testing, security, workflow) |
-| `rules/dotnet/` | .NET / C#-specific coding standards and architecture |
-| `skills/` | Domain context loaded on demand for specific areas |
-| `docs/` | Reference documentation for agents and task routing |
+Edit skills and rules at their canonical `.agents/` paths. Claude commands and
+agent definitions remain here because they use Claude-specific tools and metadata.
+Planning, implementation, test writing and build fixes run in the main session;
+they do not require separate project agents or extra commands.
 
-## Skills
-
-| Skill | Load when |
-|---|---|
-| `clean-architecture` | Adding features, debugging layer dependencies, new service modules |
-| `mcp-server` | Adding/modifying MCP tools, transport config |
-| `mediatr-cqrs` | Handlers, commands, queries, validators, pipeline behaviors |
-| `kernel-memory` | KernelMemory daemon, document ingestion, Q&A, RAG |
-| `orchestrator` | Orchestrator service, Microsoft Agents Framework, chat pipeline |
-| `resilience` | HTTP clients, retry policies, `IApiClient<T>` |
-
-## Quick Reference
-
-| When | Invoke |
-|---|---|
-| New feature (3+ files) | `/plan` |
-| New handler or tool | `/tdd` |
-| After writing code | `/code-review` |
-| Build or test failure | `/build-fix` |
-| Before PR | `/test-coverage` |
-
-## Services
-
-The solution has three backend services plus shared infrastructure:
-
-```
-MyAIAgent.Common          ← shared base (ResponseModel<T>, DI marker interfaces)
-MyAIAgent.McpServer.*     ← MCP tool server (Clean Architecture, 4 layers)
-MyAIAgent.Orchestrator.*  ← Chat API / AI agent (Clean Architecture, 4 layers)
-MyAIAgent.KernelMemory.*  ← RAG / KernelMemory daemon (Clean Architecture, 4 layers)
-MyAIAgent.AppHost         ← .NET Aspire orchestration
-```
+Verification is explicit through `node scripts/ai/quality.mjs`. Per-edit format and
+restore hooks were removed: they used nonexistent solution paths and unsupported
+input environment variables, hid failures, and depended on unpinned `npx tsx`.
+Native permissions prompt for publication and deny common unsafe Git forms.
+See `docs/ai/setup.md` for their limits and `docs/ai/evidence.md` for candidate checks.

@@ -2,6 +2,17 @@
 
 A modular AI agent backend built on **.NET 10** with Clean Architecture. Four independently deployable services orchestrated by .NET Aspire.
 
+## AI development workflow
+
+Use Plan (Opus/Astra) → Build with tests (Sonnet/Sol) → parallel code/security
+Verify (Sonnet/Sol) → Commit, with an optional draft PR. Start with the
+[setup guide](docs/ai/setup.md); shared policy lives in [AGENTS.md](AGENTS.md) and
+[the workflow](docs/ai/workflow.md).
+
+```bash
+node scripts/ai/quality.mjs
+```
+
 ## Service Topology
 
 ```mermaid
@@ -132,12 +143,12 @@ dotnet user-secrets set "KernelMemory:Services:AzureCosmosDbNoSQL:ConnectionStri
 ```bash
 dotnet build src/MyAIAgent.slnx
 dotnet test src/MyAIAgent.slnx
-dotnet format --verify-no-changes
+dotnet format src/MyAIAgent.slnx --verify-no-changes
 ```
 
 ## Contributing
 
-- Follow `.claude/rules/` coding standards
-- Run `/plan` before any change touching 3+ files
-- Run `/test-coverage` (`dotnet build` + `dotnet test` + format check) before every PR
+- Follow [AGENTS.md](AGENTS.md) and the [project conventions](docs/ai/project.md).
+- Follow the shared [Plan → Build → Verify → Commit workflow](docs/ai/workflow.md).
+- Run `node scripts/ai/quality.mjs` and both parallel reviewers before commit/PR.
 - Use conventional commit prefixes: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`
