@@ -75,9 +75,9 @@ blocked unless the user explicitly accepts a documented exception for this chang
 ## Commit and optional PR
 
 Only a direct user invocation of Commit or an explicit user request to commit
-authorizes a local commit of the verified task. A user-supplied `--push` or selection
-of **Commit + push** additionally requests pushing the task branch; `--pr` or
-**Commit + push + PR** also requests creating the PR.
+authorizes a local commit of the verified task. Selecting **Commit + push** (or
+explicitly asking to push) additionally requests pushing the task branch;
+**Commit + push + PR** (or an explicit PR request) also requests creating the PR.
 Automatic skill selection or an agent calling the command does not grant authorization. Check the user's actual
 request before any Git mutation; preserve authorization already given in the session.
 Configuring this workflow alone does not request committing or publishing it.
@@ -98,7 +98,7 @@ Configuring this workflow alone does not request committing or publishing it.
    active mode; otherwise show the same question and choices in plain text.
    Wait for an explicit answer before staging or committing. A default selection,
    timeout or missing answer is not consent. Ask once per task; an explicit
-   commit-only request, `--push`, `--pr`, or an earlier choice already supplies the answer.
+   delivery choice in the user's request, or an earlier choice already supplies the answer.
    This question selects the delivery scope; it does not bypass quality gates,
    destination checks or native execution permissions.
 2. Inspect status, staged/unstaged diffs and untracked task files. Stage explicit
@@ -129,7 +129,7 @@ Configuring this workflow alone does not request committing or publishing it.
    recorded in Risks; never silently bypass it. The candidate checker has no
    bypass flag: an explicitly accepted exception remains a documented manual
    exception, never a generated PASS.
-5. For **Commit + push** and **Commit + push + PR** (including `--push`/`--pr`),
+5. For **Commit + push** and **Commit + push + PR**,
    inspect remotes, branch, upstream, intended base and existing PRs.
    Use a task branch; never push the default/protected branch. If destination is
    ambiguous, ask before publishing. Push only that branch, without force. For

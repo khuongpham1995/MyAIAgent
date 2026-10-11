@@ -45,10 +45,9 @@ may change model selection; check the active session model instead of assuming.
    the available plan and runs tests/quality gates.
 3. `/verify` — two read-only Sonnet reviewers run concurrently; owner consolidates.
 4. `/commit` — after readiness checks, show **Commit only** / **Commit + push** /
-   **Commit + push + PR** and wait for the user's choice. `/commit --push` and
-   `/commit --pr` preselect the second and third: push a task branch, and for `--pr`
-   also open a draft PR (requires GitHub CLI authentication and an unambiguous
-   target). An explicit choice already made is not asked again.
+   **Commit + push + PR** and wait for the user's choice. The push options push a task branch, and the last one
+   also opens a draft PR (requires GitHub CLI authentication and an unambiguous
+   target). A choice the user already stated is not asked again.
 
 The only project subagents are `code-reviewer` and `security-reviewer`. They
 explicitly declare `model`; they do not inherit Opus by accident. Plan
@@ -100,7 +99,7 @@ $ai-workflow commit
 
 `$ai-workflow commit` uses the same delivery question as Claude. Use the host's
 question UI when available and permitted, or a plain-text question otherwise;
-wait for the answer. `$ai-workflow commit --push` / `--pr` preselect the push and push + PR options.
+wait for the answer.
 In an app, select Astra/Sol and
 Plan mode using the model/mode UI when CLI slash commands are unavailable. A prompt
 or skill cannot change the active model or native collaboration mode itself. Do not

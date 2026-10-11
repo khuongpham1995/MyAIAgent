@@ -17,12 +17,12 @@ Read `AGENTS.md`, `docs/ai/project.md`, then the requested stage in
   concurrently, using their project custom agent roles and the same candidate,
   scope and evidence. Pass both the candidate digest and quality SHA-256; preserve
   their returned records using `docs/ai/evidence.md`. Wait for both; no edits during review. Use `docs/ai/review.md`.
-- `commit [--push|--pr]`: Sonnet/Sol follows the shared Commit gate and stages only task-owned
+- `commit`: Sonnet/Sol follows the shared Commit gate and stages only task-owned
   changes. Only an explicit user commit request authorizes Git mutation.
   After readiness checks, use the shared delivery question: **Commit only**,
   **Commit + push** or **Commit + push + PR**. Wait for the choice unless the user
-  already selected one; `--push` and `--pr` preselect the latter two. Only those
-  options or another explicit publication request authorize push and draft PR.
+  already stated it in their request. Only the push options or another explicit
+  publication request authorize push and draft PR.
   Automatic skill selection grants no authorization.
   Run the evidence checker with both reviewer records and `--staged` before commit.
 
