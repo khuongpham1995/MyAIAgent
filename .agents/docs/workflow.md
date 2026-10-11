@@ -13,7 +13,7 @@ controls. Instructions cannot themselves change a host's native mode.
 
 ## Plan
 
-1. Read `AGENTS.md`, `docs/ai/project.md`, affected source and existing tests.
+1. Read `AGENTS.md`, `.agents/docs/project.md`, affected source and existing tests.
    Inspect branch, status, staged and unstaged changes; record pre-existing user work.
 2. Map services/layers and external contracts. Identify concrete acceptance criteria
    and regression, negative and integration tests needed.
@@ -48,6 +48,8 @@ persists after that transition; do not add another approval ritual.
 The quality command is an explicit deterministic check, not a Git hook or security
 audit. It does not enforce review or commit authorization. Failed gates remain
 blocked unless the user explicitly accepts a documented exception for this change.
+No project hooks are installed; do not add mutating per-edit hooks or hook
+dependencies installed over the network.
 
 ## Verify
 
@@ -59,7 +61,7 @@ blocked unless the user explicitly accepts a documented exception for this chang
 2. Launch **code-reviewer** and **security-reviewer** concurrently, using Sonnet/Sol,
    with the same `quality.json` path, candidate digest, quality SHA-256, scope,
    acceptance criteria and test evidence. Both read
-   `docs/ai/review.md`. Neither may edit, stage, format, build, restore, commit or
+   `.agents/docs/review.md`. Neither may edit, stage, format, build, restore, commit or
    dispatch mutating agents. They may inspect code, diffs and existing logs.
 3. Wait for both reports. Missing, timed-out or failed review is **BLOCKED**, not
    approval. If parallel agents are unavailable, disclose that limitation; never
@@ -78,7 +80,7 @@ Only a direct user invocation of Commit or an explicit user request to commit
 authorizes a local commit of the verified task. Selecting **Commit + push** (or
 explicitly asking to push) additionally requests pushing the task branch;
 **Commit + push + PR** (or an explicit PR request) also requests creating the PR.
-Automatic skill selection or an agent calling the command does not grant authorization. Check the user's actual
+Automatic skill selection or an agent invoking the stage does not grant authorization. Check the user's actual
 request before any Git mutation; preserve authorization already given in the session.
 Configuring this workflow alone does not request committing or publishing it.
 

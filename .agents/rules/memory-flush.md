@@ -2,7 +2,7 @@
 
 Preserve useful user corrections and durable architecture decisions in shared
 project documentation when they belong to the current task. Avoid duplicating facts
-already documented in `AGENTS.md`, `.agents/`, or `docs/ai/`.
+already documented in `AGENTS.md` or `.agents/`.
 
 Use the current client's task tracking for in-progress work. Native personal memory
 is optional and provider-specific; do not assume a particular memory tool exists,

@@ -5,25 +5,33 @@
 | Location | Owns |
 | --- | --- |
 | `AGENTS.md` | Shared working agreements and workflow entrypoint |
-| `docs/ai/project.md` | Real service layout, architecture and test strategy |
-| `docs/ai/workflow.md` | Stage gates, review concurrency, commit/PR policy |
-| `docs/ai/review.md` | Shared code/security review contracts |
+| `.agents/docs/project.md` | Real service layout, architecture and test strategy |
+| `.agents/docs/workflow.md` | Stage gates, review concurrency, commit/PR policy |
+| `.agents/docs/review.md` | Shared code/security review contracts |
+| `.agents/docs/evidence.md` | Candidate, quality and review evidence commands |
+| `.agents/skills/` | Four stage skills (`plan`, `build`, `verify`, `commit`) and domain skills |
+| `.agents/rules/` | Shared engineering, testing and security rules |
+| `CLAUDE.md`, `.claude/settings.json` | Shared instruction import, Opus Plan / Sonnet execution, permissions |
+| `.claude/agents/` | Two read-only Sonnet reviewers |
+| `.claude/skills`, `.claude/rules/shared` | Symlinks to `.agents/skills` and `.agents/rules` |
 | `.codex/config.toml`, `.codex/agents/` | Codex Sol default and two Sol reviewers; select Astra for main-session Plan |
-| `.agents/skills/` | Shared workflow and domain skills for both providers |
-| `.agents/rules/` | Shared engineering, testing, security and delivery rules |
-| `CLAUDE.md`, `.claude/settings.json` | Shared instruction import, Opus Plan / Sonnet execution |
-| `.claude/commands/`, `.claude/agents/` | Four Claude stage commands and two Sonnet reviewers |
 | `scripts/ai/quality.mjs`, `candidate.mjs` | Test/format evidence and candidate/review/staging checks |
 | `.github/pull_request_template.md` | Shared PR report format |
 
-Skills and rules have one canonical source under `.agents/`. Codex discovers
-`.agents/skills/` natively and reads shared Markdown rules as directed by `AGENTS.md`.
-Claude discovers each skill through `.claude/skills/<name>` symlinks and loads rules
-through `.claude/rules/shared`, pointing to `.agents/rules/`. These are references,
-not copies; edit only the canonical files. Model/tool metadata remains provider-specific.
+Everything shared has one canonical source under `.agents/`; `.claude/` and
+`.codex/` hold only tool-specific settings, reviewer definitions and pointers.
+Codex discovers `.agents/skills/` natively and reads shared Markdown rules as
+directed by `AGENTS.md`. Claude does not read `.agents/`, so `.claude/skills` is a
+symlink to `.agents/skills` and `.claude/rules/shared` a symlink to `.agents/rules`.
+These are references, not copies; edit only the canonical files. Claude documents
+symlinks for individual skill folders, not for the whole `skills` directory; the
+directory link was checked on Claude Code 2.1.236 by loading a skill through it.
+If a client stops following it, link each skill folder instead.
 
-When adding a shared skill, also add a relative `.claude/skills/<name>` symlink to
-`../../.agents/skills/<name>`. Rules added under `.agents/rules/` need no extra link.
+A skill or rule added under `.agents/` needs no extra link. Stage skills only point
+to `.agents/docs/workflow.md`; change stage policy there, not in the skill. Their
+`model` and `disable-model-invocation` frontmatter is read by Claude; Codex uses
+`commit/agents/openai.yaml` to keep `commit` from running by description match.
 Run `node --test scripts/ai/*.test.mjs` to check discovery links and references.
 On Windows, enable Developer Mode and Git symlink support before checkout; a clone
 that materializes symlinks as text files cannot load these adapters correctly.
@@ -40,14 +48,15 @@ Project settings also select these defaults. `opusplan` uses Opus in native Plan
 mode and Sonnet after leaving it. User, environment, organization or CLI overrides
 may change model selection; check the active session model instead of assuming.
 
+The stage commands are the shared skills, invoked by name:
+
 1. `/plan <task>` — enters native Plan mode and produces a concrete plan.
 2. Use Claude's native Plan exit/acceptance control, then `/build` — Sonnet implements
    the available plan and runs tests/quality gates.
 3. `/verify` — two read-only Sonnet reviewers run concurrently; owner consolidates.
-4. `/commit` — after readiness checks, show **Commit only** / **Commit + push** /
-   **Commit + push + PR** and wait for the user's choice. The push options push a task branch, and the last one
-   also opens a draft PR (requires GitHub CLI authentication and an unambiguous
-   target). A choice the user already stated is not asked again.
+4. `/commit` — after readiness checks, asks the delivery question defined in
+   [workflow.md](workflow.md) and waits for the user's choice. Publishing requires
+   GitHub CLI authentication and an unambiguous target.
 
 The only project subagents are `code-reviewer` and `security-reviewer`. They
 explicitly declare `model`; they do not inherit Opus by accident. Plan
@@ -85,19 +94,19 @@ In that session:
 
 ```text
 /plan
-$ai-workflow plan <task>
+$plan <task>
 ```
 
 At the native Plan-to-Build transition, leave Plan mode using the client control,
 select `gpt-6-sol` with `/model`, and run:
 
 ```text
-$ai-workflow build
-$ai-workflow verify
-$ai-workflow commit
+$build
+$verify
+$commit
 ```
 
-`$ai-workflow commit` uses the same delivery question as Claude. Use the host's
+`$commit` uses the same delivery question as Claude. Use the host's
 question UI when available and permitted, or a plain-text question otherwise;
 wait for the answer.
 In an app, select Astra/Sol and

@@ -6,8 +6,8 @@ A modular AI agent backend built on **.NET 10** with Clean Architecture. Four in
 
 Use Plan (Opus/Astra) → Build with tests (Sonnet/Sol) → parallel code/security
 Verify (Sonnet/Sol) → Commit, with an optional draft PR. Start with the
-[setup guide](docs/ai/setup.md); shared policy lives in [AGENTS.md](AGENTS.md) and
-[the workflow](docs/ai/workflow.md).
+[setup guide](.agents/docs/setup.md); shared policy lives in [AGENTS.md](AGENTS.md) and
+[the workflow](.agents/docs/workflow.md).
 
 ```bash
 node scripts/ai/quality.mjs
@@ -148,7 +148,7 @@ dotnet format src/MyAIAgent.slnx --verify-no-changes
 
 ## Contributing
 
-- Follow [AGENTS.md](AGENTS.md) and the [project conventions](docs/ai/project.md).
-- Follow the shared [Plan → Build → Verify → Commit workflow](docs/ai/workflow.md).
+- Follow [AGENTS.md](AGENTS.md) and the [project conventions](.agents/docs/project.md).
+- Follow the shared [Plan → Build → Verify → Commit workflow](.agents/docs/workflow.md).
 - Run `node scripts/ai/quality.mjs` and both parallel reviewers before commit/PR.
 - Use conventional commit prefixes: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`

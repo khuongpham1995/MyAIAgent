@@ -1,0 +1,3 @@
+# Codex: this skill runs only when the user names it ($commit), never by description match.
+policy:
+  allow_implicit_invocation: false
