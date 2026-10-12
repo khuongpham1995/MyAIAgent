@@ -1,0 +1,30 @@
+name: Run tests
+description: Run the full quality gate against the pull request or push comparison base.
+
+inputs:
+  base-ref:
+    description: Pull request target branch name.
+    required: false
+    default: ''
+  before-sha:
+    description: Previous commit SHA for a push event.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Run full quality gate
+      shell: bash
+      env:
+        BASE_REF: ${{ inputs.base-ref }}
+        BEFORE_SHA: ${{ inputs.before-sha }}
+      run: |
+        if [[ -n "$BASE_REF" ]]; then
+          base=$(git merge-base HEAD "origin/$BASE_REF")
+        elif [[ "$BEFORE_SHA" =~ ^[0-9a-f]{40}$ ]] && git cat-file -e "$BEFORE_SHA^{commit}"; then
+          base=$(git merge-base HEAD "$BEFORE_SHA")
+        else
+          base=HEAD
+        fi
+        node scripts/ai/quality.mjs --base "$base"
