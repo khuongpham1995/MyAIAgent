@@ -40,7 +40,7 @@ public sealed class ChatHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = BuildHandler(mockOrchestrator, mockRepo);
-        var command = new ChatCommand(null, "Hi");
+        var command = new ChatCommand(null, "Hi", "tenant:user");
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -49,14 +49,14 @@ public sealed class ChatHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Data!.Reply.Should().Be("Hello there!");
         result.Data.SessionId.Should().NotBeNullOrEmpty();
-        mockRepo.Verify(r => r.AddAsync(It.IsAny<ChatSession>(), It.IsAny<CancellationToken>()), Times.Once);
+        mockRepo.Verify(r => r.AddAsync(It.Is<ChatSession>(s => s.UserId == "tenant:user"), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task Handle_WhenExistingSessionId_ShouldUpdateSessionAndReturnReply()
     {
         // Arrange
-        var existingSession = new ChatSession { SessionId = "session-123", Title = "Existing" };
+        var existingSession = new ChatSession { SessionId = "session-123", UserId = "tenant:user", Title = "Existing" };
         var mockOrchestrator = new Mock<IChatOrchestratorService>();
         var mockRepo = new Mock<IChatSessionRepository>();
 
@@ -73,7 +73,7 @@ public sealed class ChatHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = BuildHandler(mockOrchestrator, mockRepo);
-        var command = new ChatCommand("session-123", "Hello again");
+        var command = new ChatCommand("session-123", "Hello again", "tenant:user");
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -86,6 +86,31 @@ public sealed class ChatHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenSessionBelongsToAnotherUser_ShouldRejectBeforeOrchestration()
+    {
+        var existingSession = new ChatSession { SessionId = "session-123", UserId = "tenant:owner" };
+        var mockOrchestrator = new Mock<IChatOrchestratorService>();
+        var mockRepo = new Mock<IChatSessionRepository>();
+        mockRepo
+            .Setup(r => r.FindBySessionIdAsync("session-123", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingSession);
+        var handler = BuildHandler(mockOrchestrator, mockRepo);
+
+        var result = await handler.Handle(
+            new ChatCommand("session-123", "Reveal the conversation", "tenant:other"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Chat session not found.");
+        mockOrchestrator.Verify(
+            service => service.ChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        mockRepo.Verify(
+            repository => repository.UpdateAsync(It.IsAny<ChatSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_WhenOrchestrationFails_ShouldReturnFailure()
     {
         // Arrange
@@ -95,7 +120,7 @@ public sealed class ChatHandlerTests
             .ReturnsAsync(Common.Domain.Models.ResponseModel<string>.Fail(message: "AI unavailable."));
 
         var handler = BuildHandler(mockOrchestrator);
-        var command = new ChatCommand(null, "Hi");
+        var command = new ChatCommand(null, "Hi", "tenant:user");
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -118,7 +143,7 @@ public sealed class ChatHandlerTests
             .ReturnsAsync(Common.Domain.Models.ResponseModel<string>.Succeed("OK"));
 
         var handler = BuildHandler(mockOrchestrator);
-        var command = new ChatCommand(null, "Ask something", AgentId: "agent-42");
+        var command = new ChatCommand(null, "Ask something", "tenant:user", AgentId: "agent-42");
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -145,7 +170,7 @@ public sealed class ChatHandlerTests
         var sender = provider.GetRequiredService<ISender>();
 
         // Act
-        var act = async () => await sender.Send(new ChatCommand(null, ""), CancellationToken.None);
+        var act = async () => await sender.Send(new ChatCommand(null, "", "tenant:user"), CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<ValidationException>();
@@ -170,7 +195,7 @@ public sealed class ChatHandlerTests
         var tooLongMessage = new string('x', 4001);
 
         // Act
-        var act = async () => await sender.Send(new ChatCommand(null, tooLongMessage), CancellationToken.None);
+        var act = async () => await sender.Send(new ChatCommand(null, tooLongMessage, "tenant:user"), CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<ValidationException>();

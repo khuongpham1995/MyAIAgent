@@ -33,6 +33,12 @@ public static class IoCExtension
         {
             client.DefaultRequestHeaders.UserAgent.ParseAdd("MyAIAgent");
             client.Timeout = TimeSpan.FromSeconds(30);
+        }).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            AllowAutoRedirect = false,
+            UseProxy = false,
+            UseCookies = false,
+            ConnectCallback = PublicPageAddressPolicy.ConnectAsync
         }).AddHttpRetryPolicy();
     }
 }

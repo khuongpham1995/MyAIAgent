@@ -10,7 +10,7 @@ namespace MyAIAgent.MainSubSys.Infrastructure.Extensions;
 
 public static class IoCExtension
 {
-    public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isDevelopment)
     {
         services
             .AddTransientAsMatchingInterfaces(typeof(IoCExtension).Assembly)
@@ -26,6 +26,10 @@ public static class IoCExtension
         var mcpServerBaseUrl = configuration[MainSubSysConstant.Config.McpServerBaseUrl]
             ?? throw new InvalidOperationException($"Configuration key '{MainSubSysConstant.Config.McpServerBaseUrl}' is missing");
 
+        var kernelMemoryAccessKey = configuration["KernelMemory:AccessKey"];
+        if (!isDevelopment && string.IsNullOrWhiteSpace(kernelMemoryAccessKey))
+            throw new InvalidOperationException("KernelMemory:AccessKey is required in production.");
+
         services.AddHttpClient<IOrchestratorClient, OrchestratorClient>(client =>
         {
             client.BaseAddress = new Uri(orchestratorBaseUrl);
@@ -36,6 +40,8 @@ public static class IoCExtension
         {
             client.BaseAddress = new Uri(kernelMemoryBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(120);
+            if (!string.IsNullOrWhiteSpace(kernelMemoryAccessKey))
+                client.DefaultRequestHeaders.Add("Authorization", kernelMemoryAccessKey);
         }).AddHttpRetryPolicy();
 
         services.AddHttpClient<IMcpServerClient, McpServerClient>(client =>

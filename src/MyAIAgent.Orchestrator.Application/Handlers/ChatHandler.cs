@@ -7,7 +7,7 @@ using MyAIAgent.Orchestrator.Domain.Models;
 
 namespace MyAIAgent.Orchestrator.Application.Handlers;
 
-public sealed record ChatCommand(string? SessionId, string UserMessage, string? AgentId = null)
+public sealed record ChatCommand(string? SessionId, string UserMessage, string UserId, string? AgentId = null)
     : IRequest<ResponseModel<ChatResponse>>;
 
 public sealed class ChatHandler(
@@ -25,10 +25,14 @@ public sealed class ChatHandler(
             ? await sessionRepository.FindBySessionIdAsync(command.SessionId!, cancellationToken)
             : null;
 
+        if (session is not null && session.UserId != command.UserId)
+            return ResponseModel<ChatResponse>.Fail(message: "Chat session not found.");
+
         var isNewSession = session is null;
         session ??= new ChatSession
         {
             SessionId = Guid.NewGuid().ToString(),
+            UserId = command.UserId,
             Title = command.UserMessage[..Math.Min(100, command.UserMessage.Length)],
             CreatedAt = now
         };
@@ -64,5 +68,7 @@ public sealed class ChatCommandValidator : AbstractValidator<ChatCommand>
         RuleFor(x => x.UserMessage)
             .NotEmpty().WithMessage("User message is required.")
             .MaximumLength(4000).WithMessage("User message must not exceed 4000 characters.");
+        RuleFor(x => x.UserId)
+            .NotEmpty().WithMessage("User identity is required.");
     }
 }

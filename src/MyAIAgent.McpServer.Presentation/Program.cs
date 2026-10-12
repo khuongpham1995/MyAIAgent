@@ -20,7 +20,9 @@ builder.Services
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseAzureAppConfiguration();
+app.UseAzureAppConfigurationWhenConfigured(app.Configuration);
+app.MapGet("/health/live", () => Results.Ok());
+app.MapGet("/health/ready", () => Results.Ok());
 app.MapMcp().AddEndpointFilter(app.Services.GetRequiredService<HttpAuthEndpointFilter>());
 
 await app.RunMcpServerAsync();

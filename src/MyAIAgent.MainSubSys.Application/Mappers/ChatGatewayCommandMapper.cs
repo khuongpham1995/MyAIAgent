@@ -5,6 +5,6 @@ namespace MyAIAgent.MainSubSys.Application.Mappers;
 
 public static class ChatGatewayCommandMapper
 {
-    public static ChatGatewayCommand ToCommand(this ChatGatewayRequestDto dto) =>
-        new(dto.SessionId, dto.UserMessage, dto.AgentId);
+    public static ChatGatewayCommand ToCommand(this ChatGatewayRequestDto dto, string userId) =>
+        new(dto.SessionId, dto.UserMessage, userId, dto.AgentId);
 }

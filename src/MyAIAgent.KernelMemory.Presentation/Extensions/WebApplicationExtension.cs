@@ -49,6 +49,8 @@ internal static class WebApplicationExtension
 
         app.MapGet("/health", () => Results.Ok("Service is healthy."))
             .WithName("Health Checker");
+        app.MapGet("/health/live", () => Results.Ok());
+        app.MapGet("/health/ready", () => Results.Ok());
     }
 
     private static void LogStartupDiagnostics(

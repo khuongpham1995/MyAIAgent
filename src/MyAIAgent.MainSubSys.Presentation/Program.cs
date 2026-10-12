@@ -8,15 +8,17 @@ using MyAIAgent.MainSubSys.Application.Handlers.Agent;
 using MyAIAgent.MainSubSys.Application.Mappers;
 using MyAIAgent.MainSubSys.Application.Models;
 using MyAIAgent.MainSubSys.Infrastructure.Extensions;
+using MyAIAgent.MainSubSys.Presentation;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddAzureAppConfiguration();
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment());
 builder.Services.AddGlobalExceptionHandling();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddOpenApi("kyle-ai-agent");
+builder.Services.AddGatewaySecurity(builder.Configuration, builder.Environment.IsDevelopment());
 
 // Allow large file uploads for document ingestion
 builder.Services.Configure<FormOptions>(options =>
@@ -27,22 +29,44 @@ builder.Services.Configure<FormOptions>(options =>
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseAzureAppConfiguration();
+app.UseAzureAppConfigurationWhenConfigured(app.Configuration);
 
-app.MapOpenApi();
-app.MapScalarApiReference(options =>
+if (!app.Environment.IsDevelopment())
 {
-    options.Title = "Kyle's AI Agent";
-    options.WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
-});
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
 
-app.MapPost("/chat", async (ChatGatewayRequestDto request, ISender sender, CancellationToken cancellationToken) =>
+app.MapGet("/health/live", () => Results.Ok());
+app.MapGet("/health/ready", () => Results.Ok());
+
+if (app.Environment.IsDevelopment())
 {
-    var result = await sender.Send(request.ToCommand(), cancellationToken);
+    app.MapOpenApi();
+    app.MapScalarApiReference(options =>
+    {
+        options.Title = "Kyle's AI Agent";
+        options.WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+    });
+}
+
+var chatEndpoint = app.MapPost("/chat", async (ChatGatewayRequestDto request, HttpContext context, ISender sender, CancellationToken cancellationToken) =>
+{
+    var userId = app.Environment.IsDevelopment()
+        ? "development:anonymous"
+        : $"{context.User.FindFirst("tid")!.Value}:{context.User.FindFirst("oid")!.Value}";
+    var result = await sender.Send(request.ToCommand(userId), cancellationToken);
     return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPost("/admin/documents", async (IFormFile file, ISender sender, CancellationToken cancellationToken, string? documentId = null) =>
+if (!app.Environment.IsDevelopment())
+    chatEndpoint.RequireAuthorization(GatewaySecurityExtensions.ChatPolicy);
+
+var admin = app.MapGroup("/admin");
+if (!app.Environment.IsDevelopment())
+    admin.RequireAuthorization(GatewaySecurityExtensions.AdminPolicy);
+
+admin.MapPost("/documents", async (IFormFile file, ISender sender, CancellationToken cancellationToken, string? documentId = null) =>
 {
     await using var stream = file.OpenReadStream();
     var command = new UploadDocumentCommand(file.FileName, stream, documentId);
@@ -50,19 +74,19 @@ app.MapPost("/admin/documents", async (IFormFile file, ISender sender, Cancellat
     return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapGet("/admin/tools", async (ISender sender, CancellationToken cancellationToken) =>
+admin.MapGet("/tools", async (ISender sender, CancellationToken cancellationToken) =>
 {
     var result = await sender.Send(new ListMcpToolsQuery(), cancellationToken);
     return Results.Ok(result);
 });
 
-app.MapGet("/admin/agents", async (ISender sender, CancellationToken cancellationToken) =>
+admin.MapGet("/agents", async (ISender sender, CancellationToken cancellationToken) =>
 {
     var result = await sender.Send(new ListAgentsQuery(), cancellationToken);
     return Results.Ok(result);
 });
 
-app.MapPost("/admin/agents", async (CreateAgentRequestDto request, ISender sender, CancellationToken cancellationToken) =>
+admin.MapPost("/agents", async (CreateAgentRequestDto request, ISender sender, CancellationToken cancellationToken) =>
 {
     var result = await sender.Send(request.ToCommand(), cancellationToken);
     return result.IsSuccess
@@ -70,7 +94,7 @@ app.MapPost("/admin/agents", async (CreateAgentRequestDto request, ISender sende
         : Results.BadRequest(result);
 });
 
-app.MapDelete("/admin/agents/{id}", async (string id, ISender sender, CancellationToken cancellationToken) =>
+admin.MapDelete("/agents/{id}", async (string id, ISender sender, CancellationToken cancellationToken) =>
 {
     var result = await sender.Send(new DeleteAgentCommand(id), cancellationToken);
     return result.IsSuccess ? Results.NoContent() : Results.NotFound(result);

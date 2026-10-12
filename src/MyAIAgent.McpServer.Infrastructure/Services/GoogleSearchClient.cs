@@ -23,16 +23,20 @@ public sealed class GoogleSearchClient(
         var searchEngineId = configuration["GoogleSearch:SearchEngineId"]
             ?? throw new InvalidOperationException("Configuration key 'GoogleSearch:SearchEngineId' is missing");
 
-        var url = $"{BaseUrl}?key={apiKey}&cx={searchEngineId}&q={Uri.EscapeDataString(query)}&num={top}";
+        var url = $"{BaseUrl}?cx={Uri.EscapeDataString(searchEngineId)}&q={Uri.EscapeDataString(query)}&num={top}";
 
         GoogleSearchResponse? response;
         try
         {
-            response = await httpClient.GetFromJsonAsync<GoogleSearchResponse>(url, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("X-Goog-Api-Key", apiKey);
+            using var result = await httpClient.SendAsync(request, cancellationToken);
+            result.EnsureSuccessStatusCode();
+            response = await result.Content.ReadFromJsonAsync<GoogleSearchResponse>(cancellationToken);
         }
         catch (HttpRequestException ex)
         {
-            logger.LogError(ex, "Google Custom Search request failed for query {Query}", query);
+            logger.LogError(ex, "Google Custom Search request failed");
             yield break;
         }
 

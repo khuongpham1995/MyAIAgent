@@ -8,6 +8,7 @@ public interface IOrchestratorClient
     Task<ResponseModel<ChatGatewayResponse>> ChatAsync(
         string? sessionId,
         string userMessage,
+        string userId,
         string? agentId,
         CancellationToken cancellationToken);
 

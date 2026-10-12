@@ -34,14 +34,14 @@ public sealed class ChatGatewayPipelineTests
         // Arrange
         var mockClient = new Mock<IOrchestratorClient>();
         mockClient
-            .Setup(c => c.ChatAsync(null, "Hello pipeline", null, It.IsAny<CancellationToken>()))
+            .Setup(c => c.ChatAsync(null, "Hello pipeline", "tenant:user", null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(ResponseModel<ChatGatewayResponse>.Succeed(
                 new ChatGatewayResponse("Pipeline reply", "pipeline-session")));
 
         var sender = BuildSender(mockClient.Object);
 
         // Act
-        var result = await sender.Send(new ChatGatewayCommand(null, "Hello pipeline"), CancellationToken.None);
+        var result = await sender.Send(new ChatGatewayCommand(null, "Hello pipeline", "tenant:user"), CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -57,7 +57,7 @@ public sealed class ChatGatewayPipelineTests
         var longMessage = new string('x', 4001);
 
         // Act
-        var act = async () => await sender.Send(new ChatGatewayCommand(null, longMessage), CancellationToken.None);
+        var act = async () => await sender.Send(new ChatGatewayCommand(null, longMessage, "tenant:user"), CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<ValidationException>()
@@ -71,7 +71,7 @@ public sealed class ChatGatewayPipelineTests
         var sender = BuildSender(new Mock<IOrchestratorClient>().Object);
 
         // Act
-        var act = async () => await sender.Send(new ChatGatewayCommand(null, "   "), CancellationToken.None);
+        var act = async () => await sender.Send(new ChatGatewayCommand(null, "   ", "tenant:user"), CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<ValidationException>();

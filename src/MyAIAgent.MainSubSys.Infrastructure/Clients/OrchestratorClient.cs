@@ -15,6 +15,7 @@ public sealed class OrchestratorClient(
     public async Task<ResponseModel<ChatGatewayResponse>> ChatAsync(
         string? sessionId,
         string userMessage,
+        string userId,
         string? agentId,
         CancellationToken cancellationToken)
     {
@@ -22,7 +23,7 @@ public sealed class OrchestratorClient(
         {
             var response = await httpClient.PostAsJsonAsync(
                 "/chat",
-                new { sessionId, userMessage, agentId },
+                new { sessionId, userMessage, userId, agentId },
                 cancellationToken);
 
             response.EnsureSuccessStatusCode();

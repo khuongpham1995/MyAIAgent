@@ -6,7 +6,7 @@ using MyAIAgent.MainSubSys.Domain.Models;
 
 namespace MyAIAgent.MainSubSys.Application.Handlers.Chat;
 
-public sealed record ChatGatewayCommand(string? SessionId, string UserMessage, string? AgentId = null)
+public sealed record ChatGatewayCommand(string? SessionId, string UserMessage, string UserId, string? AgentId = null)
     : IRequest<ResponseModel<ChatGatewayResponse>>;
 
 public sealed class ChatGatewayHandler(IOrchestratorClient orchestratorClient)
@@ -18,6 +18,7 @@ public sealed class ChatGatewayHandler(IOrchestratorClient orchestratorClient)
         await orchestratorClient.ChatAsync(
             command.SessionId,
             command.UserMessage,
+            command.UserId,
             command.AgentId,
             cancellationToken);
 }
@@ -29,5 +30,7 @@ public sealed class ChatGatewayCommandValidator : AbstractValidator<ChatGatewayC
         RuleFor(x => x.UserMessage)
             .NotEmpty().WithMessage("User message is required.")
             .MaximumLength(4000).WithMessage("User message must not exceed 4000 characters.");
+        RuleFor(x => x.UserId)
+            .NotEmpty().WithMessage("User identity is required.");
     }
 }

@@ -23,13 +23,14 @@ public sealed class ChatGatewayHandlerTests
             .Setup(c => c.ChatAsync(
                 It.IsAny<string?>(),
                 It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(ResponseModel<ChatGatewayResponse>.Succeed(
                 new ChatGatewayResponse("Hello!", "session-1")));
 
         var handler = new ChatGatewayHandler(mockClient.Object);
-        var command = new ChatGatewayCommand(null, "Hello");
+        var command = new ChatGatewayCommand(null, "Hello", "tenant:user");
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -49,12 +50,13 @@ public sealed class ChatGatewayHandlerTests
             .Setup(c => c.ChatAsync(
                 It.IsAny<string?>(),
                 It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(ResponseModel<ChatGatewayResponse>.Fail(message: "Chat request failed."));
 
         var handler = new ChatGatewayHandler(mockClient.Object);
-        var command = new ChatGatewayCommand(null, "Hello");
+        var command = new ChatGatewayCommand(null, "Hello", "tenant:user");
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -80,7 +82,7 @@ public sealed class ChatGatewayHandlerTests
         var sender = provider.GetRequiredService<ISender>();
 
         // Act
-        var act = async () => await sender.Send(new ChatGatewayCommand(null, ""), CancellationToken.None);
+        var act = async () => await sender.Send(new ChatGatewayCommand(null, "", "tenant:user"), CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<ValidationException>();
@@ -95,6 +97,7 @@ public sealed class ChatGatewayHandlerTests
             .Setup(c => c.ChatAsync(
                 "existing-session",
                 "Follow up",
+                "tenant:user",
                 null,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(ResponseModel<ChatGatewayResponse>.Succeed(
@@ -104,11 +107,11 @@ public sealed class ChatGatewayHandlerTests
 
         // Act
         var result = await handler.Handle(
-            new ChatGatewayCommand("existing-session", "Follow up"),
+            new ChatGatewayCommand("existing-session", "Follow up", "tenant:user"),
             CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        mockClient.Verify(c => c.ChatAsync("existing-session", "Follow up", null, It.IsAny<CancellationToken>()), Times.Once);
+        mockClient.Verify(c => c.ChatAsync("existing-session", "Follow up", "tenant:user", null, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

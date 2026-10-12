@@ -13,6 +13,9 @@ Verify (Sonnet/Sol) → Commit, with an optional draft PR. Start with the
 node scripts/ai/quality.mjs
 ```
 
+Azure Container Apps deployment and rollback setup is documented in
+[the deployment guide](docs/deployment.md).
+
 ## Service Topology
 
 ```mermaid

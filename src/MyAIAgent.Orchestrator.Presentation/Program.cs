@@ -20,7 +20,9 @@ builder.Services.AddSingleton(TimeProvider.System);
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseAzureAppConfiguration();
+app.UseAzureAppConfigurationWhenConfigured(app.Configuration);
+app.MapGet("/health/live", () => Results.Ok());
+app.MapGet("/health/ready", () => Results.Ok());
 
 if (app.Environment.IsDevelopment())
     await app.Services.EnsureDbCreatedAsync<OrchestratorDbContext>();

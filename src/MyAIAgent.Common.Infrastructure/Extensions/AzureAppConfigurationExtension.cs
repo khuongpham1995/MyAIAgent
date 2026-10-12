@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
@@ -21,5 +22,15 @@ public static class AzureAppConfigurationExtension
         builder.Services.AddAzureAppConfiguration();
 
         return builder;
+    }
+
+    public static IApplicationBuilder UseAzureAppConfigurationWhenConfigured(
+        this IApplicationBuilder app,
+        IConfiguration configuration)
+    {
+        if (string.IsNullOrEmpty(configuration["ConnectionStrings:AppConfig"]))
+            return app;
+
+        return app.UseAzureAppConfiguration();
     }
 }
