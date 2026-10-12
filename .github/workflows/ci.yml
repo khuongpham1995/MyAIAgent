@@ -36,7 +36,7 @@ jobs:
           node scripts/ai/quality.mjs --base "$base"
       - name: Compile infrastructure templates
         run: |
-          az bicep install --version 0.48.1
+          az bicep install --version v0.47.16
           for template in infra/*.bicep; do
             az bicep build --file "$template" --outfile "/tmp/$(basename "$template" .bicep).json"
           done
