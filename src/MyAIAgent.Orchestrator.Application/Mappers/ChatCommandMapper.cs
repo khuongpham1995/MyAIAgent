@@ -1,4 +1,4 @@
-using MyAIAgent.Orchestrator.Application.Handlers;
+using MyAIAgent.Orchestrator.Application.Handlers.Chat;
 using MyAIAgent.Orchestrator.Application.Models;
 
 namespace MyAIAgent.Orchestrator.Application.Mappers;

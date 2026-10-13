@@ -2,7 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using MyAIAgent.McpServer.Domain.Interfaces;
+using MyAIAgent.McpServer.Application.Interfaces;
 using MyAIAgent.McpServer.Domain.Models;
 namespace MyAIAgent.McpServer.Infrastructure.Services;
 

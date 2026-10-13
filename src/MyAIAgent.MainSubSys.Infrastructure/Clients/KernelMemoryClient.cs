@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.MainSubSys.Domain.Constants;
-using MyAIAgent.MainSubSys.Domain.Interfaces;
+using MyAIAgent.MainSubSys.Application.Interfaces;
 using MyAIAgent.MainSubSys.Domain.Models;
 
 namespace MyAIAgent.MainSubSys.Infrastructure.Clients;

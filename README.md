@@ -55,9 +55,9 @@ graph RL
     end
 
     subgraph Service ["[Service].* (per service)"]
-        D["Domain<br/>Entities · Interfaces · Constants"]
-        A["Application<br/>Handlers · Validators · Mappers"]
-        I["Infrastructure<br/>Services · HTTP Clients · DbContext"]
+        D["Domain<br/>Entities · Models · Constants"]
+        A["Application<br/>Handlers · Validators · Interfaces · Mappers"]
+        I["Infrastructure<br/>Services · Repositories · HTTP Clients · DbContext"]
         P["Presentation<br/>Program.cs · Endpoints · MCP Tools"]
     end
 

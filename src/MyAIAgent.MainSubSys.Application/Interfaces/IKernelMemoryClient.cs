@@ -1,7 +1,7 @@
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.MainSubSys.Domain.Models;
 
-namespace MyAIAgent.MainSubSys.Domain.Interfaces;
+namespace MyAIAgent.MainSubSys.Application.Interfaces;
 
 public interface IKernelMemoryClient
 {

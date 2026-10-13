@@ -7,7 +7,7 @@ using Moq;
 using MyAIAgent.Common.Application.Behaviors;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.MainSubSys.Application.Handlers.Chat;
-using MyAIAgent.MainSubSys.Domain.Interfaces;
+using MyAIAgent.MainSubSys.Application.Interfaces;
 using MyAIAgent.MainSubSys.Domain.Models;
 
 namespace MyAIAgent.MainSubSys.Tests.Integration.Application;

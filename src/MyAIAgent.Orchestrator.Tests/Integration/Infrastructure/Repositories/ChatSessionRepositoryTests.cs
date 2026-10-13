@@ -1,6 +1,8 @@
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using MyAIAgent.Orchestrator.Domain.Entities;
 using MyAIAgent.Orchestrator.Infrastructure.Repositories;
+using MyAIAgent.Orchestrator.Infrastructure.Data;
 using MyAIAgent.Orchestrator.Tests.Integration.Infrastructure;
 
 namespace MyAIAgent.Orchestrator.Tests.Integration.Infrastructure.Repositories;
@@ -25,6 +27,7 @@ public sealed class ChatSessionRepositoryTests
 
         // Act
         await repository.AddAsync(session, CancellationToken.None);
+        await new OrchestratorUnitOfWork(factory.Context).SaveChangesAsync(CancellationToken.None);
 
         // Assert
         var persisted = await repository.FindBySessionIdAsync("session-add-001", CancellationToken.None);
@@ -54,6 +57,7 @@ public sealed class ChatSessionRepositoryTests
             ]
         };
         await repository.AddAsync(session, CancellationToken.None);
+        await new OrchestratorUnitOfWork(factory.Context).SaveChangesAsync(CancellationToken.None);
 
         // Act
         var result = await repository.FindBySessionIdAsync("session-find-001", CancellationToken.None);
@@ -96,6 +100,8 @@ public sealed class ChatSessionRepositoryTests
             CreatedAt = DateTimeOffset.UtcNow
         };
         await repository.AddAsync(session, CancellationToken.None);
+        var unitOfWork = new OrchestratorUnitOfWork(factory.Context);
+        await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
         // Act
         session.Title = "Updated Title";
@@ -105,12 +111,34 @@ public sealed class ChatSessionRepositoryTests
             Content = "Updated response",
             CreatedAt = DateTimeOffset.UtcNow
         });
-        await repository.UpdateAsync(session, CancellationToken.None);
+        await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
         // Assert
         var updated = await repository.FindBySessionIdAsync("session-update-001", CancellationToken.None);
         updated.Should().NotBeNull();
         updated!.Title.Should().Be("Updated Title");
         updated.Messages.Should().ContainSingle(m => m.Role == "assistant" && m.Content == "Updated response");
+    }
+
+    [Fact]
+    public async Task AddAsync_BeforeUnitOfWorkCommit_ShouldNotPersistSession()
+    {
+        using var factory = OrchestratorDbContextFactory.Create();
+        await factory.Context.Database.EnsureCreatedAsync();
+        var repository = new ChatSessionRepository(factory.Context);
+        var session = new ChatSession { SessionId = "session-pending", UserId = "user-001" };
+
+        await repository.AddAsync(session, CancellationToken.None);
+
+        using var otherContext = factory.CreateAdditionalContext();
+        var beforeCommit = await otherContext.ChatSessions
+            .AnyAsync(item => item.SessionId == session.SessionId);
+        beforeCommit.Should().BeFalse();
+
+        await new OrchestratorUnitOfWork(factory.Context).SaveChangesAsync(CancellationToken.None);
+
+        var afterCommit = await otherContext.ChatSessions
+            .AnyAsync(item => item.SessionId == session.SessionId);
+        afterCommit.Should().BeTrue();
     }
 }

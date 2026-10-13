@@ -40,12 +40,12 @@ Dependency direction is inward: **Domain ← Application ← Infrastructure ← 
 | Inbound HTTP DTOs | Application | `ChatRequestDto`, `CreateAgentRequestDto` |
 | Commands / Queries | Application | `ChatCommand`, `CreateAgentCommand` |
 | Application interfaces | Application | `IAgentBuilderService` |
-| Infrastructure interfaces (cross-layer) | Domain | `IChatOrchestratorService`, `IAgentRepository` |
+| Ports consumed by Application | Application | `IChatOrchestratorService`, `IAgentRepository`, `IUnitOfWork` |
 | Infrastructure interfaces (internal-only) | Same file as implementation | `IAgentHelper` in `AgentHelper.cs` |
 
 > **Rule:** Inbound HTTP request DTOs belong in `[Service].Application/Models/`. They are mapped to Commands/Queries at the Application boundary. Domain must not hold HTTP-contract types.
 
-> **Rule:** If an Infrastructure interface is consumed only within the Infrastructure layer (i.e., no Application or Domain code depends on it), declare it in the same `.cs` file as its implementation. Only promote it to Domain when a higher layer needs to depend on the abstraction.
+> **Rule:** If an Infrastructure interface is consumed only within the Infrastructure layer, declare it in the same `.cs` file as its implementation. Promote it to Application when a handler needs the abstraction.
 
 ## Anti-patterns
 

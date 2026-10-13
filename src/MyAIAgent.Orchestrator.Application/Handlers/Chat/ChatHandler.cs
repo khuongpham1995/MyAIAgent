@@ -2,17 +2,15 @@ using FluentValidation;
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Orchestrator.Domain.Entities;
-using MyAIAgent.Orchestrator.Domain.Interfaces;
+using MyAIAgent.Orchestrator.Application.Interfaces;
 using MyAIAgent.Orchestrator.Domain.Models;
 
-namespace MyAIAgent.Orchestrator.Application.Handlers;
-
-public sealed record ChatCommand(string? SessionId, string UserMessage, string UserId, string? AgentId = null)
-    : IRequest<ResponseModel<ChatResponse>>;
+namespace MyAIAgent.Orchestrator.Application.Handlers.Chat;
 
 public sealed class ChatHandler(
     IChatOrchestratorService orchestratorService,
     IChatSessionRepository sessionRepository,
+    IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
     : IRequestHandler<ChatCommand, ResponseModel<ChatResponse>>
 {
@@ -54,21 +52,9 @@ public sealed class ChatHandler(
 
         if (isNewSession)
             await sessionRepository.AddAsync(session, cancellationToken);
-        else
-            await sessionRepository.UpdateAsync(session, cancellationToken);
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return ResponseModel<ChatResponse>.Succeed(new ChatResponse(reply, session.SessionId));
-    }
-}
-
-public sealed class ChatCommandValidator : AbstractValidator<ChatCommand>
-{
-    public ChatCommandValidator()
-    {
-        RuleFor(x => x.UserMessage)
-            .NotEmpty().WithMessage("User message is required.")
-            .MaximumLength(4000).WithMessage("User message must not exceed 4000 characters.");
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("User identity is required.");
     }
 }

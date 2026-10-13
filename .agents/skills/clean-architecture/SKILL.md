@@ -29,8 +29,8 @@ Layer and cross-service boundary rules → `.agents/rules/dotnet/architecture.md
 
 | Layer | Responsibility | Key types |
 |---|---|---|
-| Domain | Entities, interfaces, constants. No external dependencies. | Records, `interface I*Service`, `*Constant` |
-| Application | Business logic only. References Domain + Common.Application. | `IRequest<ResponseModel<T>>`, `IRequestHandler<,>`, `AbstractValidator<T>` |
+| Domain | Entities, models, constants. No external dependencies. | Records, `*Constant` |
+| Application | Business logic and ports for external dependencies. References Domain + Common.Application. | `IRequest<ResponseModel<T>>`, `IRequestHandler<,>`, `AbstractValidator<T>`, `interface I*Service` |
 | Infrastructure | Adapts external systems to domain interfaces. | `*Service : I*Service, IScoped`, `PageFetcher`, `DbContext` |
 | Presentation | Composition root + HTTP surface. | `Program.cs`, `McpTools/`, `Filters/` |
 
@@ -60,10 +60,10 @@ Each service has:
 ```
 1. Domain/Constants/     → add constants if needed
 2. Domain/Entities/      → add entity record if new data shape required
-3. Domain/Interfaces/    → add interface if new external dependency introduced
+3. Application/Interfaces/ → add a port if a handler needs an external dependency
 4. Application/Handlers/ → add IRequest<ResponseModel<T>> + handler + validator
 5. Application/Mappers/  → add mapper if new DTO → Command mapping needed
-6. Infrastructure/       → implement new interface from step 3
+6. Infrastructure/       → implement new port from step 3
 7. Presentation/         → add HTTP endpoint or [McpServerTool] method
 8. Test/                 → add unit tests mirroring Application + Infrastructure structure
 ```

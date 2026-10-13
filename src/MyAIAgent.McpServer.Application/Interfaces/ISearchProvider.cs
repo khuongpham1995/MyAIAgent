@@ -1,6 +1,6 @@
 using MyAIAgent.McpServer.Domain.Models;
 
-namespace MyAIAgent.McpServer.Domain.Interfaces;
+namespace MyAIAgent.McpServer.Application.Interfaces;
 
 public interface ISearchProvider
 {

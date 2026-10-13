@@ -6,8 +6,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MyAIAgent.Common.Application.Behaviors;
 using MyAIAgent.Orchestrator.Application.Handlers.Agents;
+using MyAIAgent.Orchestrator.Application.Interfaces;
 using MyAIAgent.Orchestrator.Domain.Entities;
-using MyAIAgent.Orchestrator.Domain.Interfaces;
 
 namespace MyAIAgent.Orchestrator.Tests.Unit.Application.Handlers.Agents;
 
@@ -24,7 +24,8 @@ public sealed class CreateAgentHandlerTests
             .Callback<AgentDefinition, CancellationToken>((a, _) => persisted = a)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateAgentHandler(mockRepo.Object);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var handler = new CreateAgentHandler(mockRepo.Object, unitOfWork.Object);
         var command = new CreateAgentCommand(
             "My Agent",
             "You are helpful.",
@@ -42,6 +43,7 @@ public sealed class CreateAgentHandlerTests
         persisted!.Name.Should().Be("My Agent");
         persisted.AgentTools.Should().HaveCount(2);
         persisted.AgentTools.Should().AllSatisfy(t => t.IsEnabled.Should().BeTrue());
+        unitOfWork.Verify(work => work.SaveChangesAsync(CancellationToken.None), Times.Once);
     }
 
     [Fact]
@@ -52,7 +54,7 @@ public sealed class CreateAgentHandlerTests
         mockRepo.Setup(r => r.AddAsync(It.IsAny<AgentDefinition>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateAgentHandler(mockRepo.Object);
+        var handler = new CreateAgentHandler(mockRepo.Object, new Mock<IUnitOfWork>().Object);
         var command = new CreateAgentCommand("Agent", "Instructions.", string.Empty, false);
 
         // Act
@@ -60,6 +62,37 @@ public sealed class CreateAgentHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_WhenRepositoryFails_ShouldNotCommit()
+    {
+        var repository = new Mock<IAgentRepository>();
+        repository.Setup(item => item.AddAsync(It.IsAny<AgentDefinition>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Storage failed"));
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var handler = new CreateAgentHandler(repository.Object, unitOfWork.Object);
+
+        var action = async () => await handler.Handle(
+            new CreateAgentCommand("Agent", "Instructions", string.Empty, false), CancellationToken.None);
+
+        await action.Should().ThrowAsync<InvalidOperationException>();
+        unitOfWork.Verify(work => work.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenCalled_ShouldForwardCancellationTokenToRepositoryAndCommit()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var repository = new Mock<IAgentRepository>();
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var handler = new CreateAgentHandler(repository.Object, unitOfWork.Object);
+
+        await handler.Handle(
+            new CreateAgentCommand("Agent", "Instructions", string.Empty, false), cancellation.Token);
+
+        repository.Verify(item => item.AddAsync(It.IsAny<AgentDefinition>(), cancellation.Token), Times.Once);
+        unitOfWork.Verify(work => work.SaveChangesAsync(cancellation.Token), Times.Once);
     }
 
     [Fact]
@@ -74,6 +107,7 @@ public sealed class CreateAgentHandlerTests
         services.AddSingleton(new Mock<IAgentRepository>().Object);
         services.AddSingleton(new Mock<IChatOrchestratorService>().Object);
         services.AddSingleton(new Mock<IChatSessionRepository>().Object);
+        services.AddSingleton(new Mock<IUnitOfWork>().Object);
         services.AddSingleton(TimeProvider.System);
 
         var provider = services.BuildServiceProvider();
@@ -99,6 +133,7 @@ public sealed class CreateAgentHandlerTests
         services.AddSingleton(new Mock<IAgentRepository>().Object);
         services.AddSingleton(new Mock<IChatOrchestratorService>().Object);
         services.AddSingleton(new Mock<IChatSessionRepository>().Object);
+        services.AddSingleton(new Mock<IUnitOfWork>().Object);
         services.AddSingleton(TimeProvider.System);
 
         var provider = services.BuildServiceProvider();

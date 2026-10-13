@@ -5,7 +5,7 @@ using ChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using ChatResponse = Microsoft.Extensions.AI.ChatResponse;
 using Moq;
 using MyAIAgent.Orchestrator.Domain.Entities;
-using MyAIAgent.Orchestrator.Domain.Interfaces;
+using MyAIAgent.Orchestrator.Application.Interfaces;
 using MyAIAgent.Orchestrator.Domain.Models;
 using MyAIAgent.Orchestrator.Infrastructure.Helpers;
 using MyAIAgent.Orchestrator.Infrastructure.Services;

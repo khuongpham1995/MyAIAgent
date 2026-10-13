@@ -4,8 +4,7 @@ using MyAIAgent.Common.Application.Extensions;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Common.Infrastructure.Extensions;
 using MyAIAgent.Common.Infrastructure.Filters;
-
-using MyAIAgent.McpServer.Domain.Interfaces;
+using MyAIAgent.McpServer.Application.Interfaces;
 using MyAIAgent.McpServer.Infrastructure.Services;
 
 namespace MyAIAgent.McpServer.Infrastructure.Extensions;

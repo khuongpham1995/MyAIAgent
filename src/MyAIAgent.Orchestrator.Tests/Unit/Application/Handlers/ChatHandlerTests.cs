@@ -5,9 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MyAIAgent.Common.Application.Behaviors;
-using MyAIAgent.Orchestrator.Application.Handlers;
+using MyAIAgent.Orchestrator.Application.Handlers.Chat;
+using MyAIAgent.Orchestrator.Application.Interfaces;
 using MyAIAgent.Orchestrator.Domain.Entities;
-using MyAIAgent.Orchestrator.Domain.Interfaces;
 using MyAIAgent.Orchestrator.Domain.Models;
 
 namespace MyAIAgent.Orchestrator.Tests.Unit.Application.Handlers;
@@ -16,11 +16,13 @@ public sealed class ChatHandlerTests
 {
     private static ChatHandler BuildHandler(
         Mock<IChatOrchestratorService>? orchestrator = null,
-        Mock<IChatSessionRepository>? sessionRepo = null)
+        Mock<IChatSessionRepository>? sessionRepo = null,
+        Mock<IUnitOfWork>? unitOfWork = null)
     {
         return new ChatHandler(
             (orchestrator ?? new Mock<IChatOrchestratorService>()).Object,
             (sessionRepo ?? new Mock<IChatSessionRepository>()).Object,
+            (unitOfWork ?? new Mock<IUnitOfWork>()).Object,
             TimeProvider.System);
     }
 
@@ -39,7 +41,8 @@ public sealed class ChatHandlerTests
             .Setup(r => r.AddAsync(It.IsAny<ChatSession>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var handler = BuildHandler(mockOrchestrator, mockRepo);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var handler = BuildHandler(mockOrchestrator, mockRepo, unitOfWork);
         var command = new ChatCommand(null, "Hi", "tenant:user");
 
         // Act
@@ -50,6 +53,7 @@ public sealed class ChatHandlerTests
         result.Data!.Reply.Should().Be("Hello there!");
         result.Data.SessionId.Should().NotBeNullOrEmpty();
         mockRepo.Verify(r => r.AddAsync(It.Is<ChatSession>(s => s.UserId == "tenant:user"), It.IsAny<CancellationToken>()), Times.Once);
+        unitOfWork.Verify(work => work.SaveChangesAsync(CancellationToken.None), Times.Once);
     }
 
     [Fact]
@@ -68,11 +72,8 @@ public sealed class ChatHandlerTests
             .Setup(r => r.FindBySessionIdAsync("session-123", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingSession);
 
-        mockRepo
-            .Setup(r => r.UpdateAsync(It.IsAny<ChatSession>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        var handler = BuildHandler(mockOrchestrator, mockRepo);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var handler = BuildHandler(mockOrchestrator, mockRepo, unitOfWork);
         var command = new ChatCommand("session-123", "Hello again", "tenant:user");
 
         // Act
@@ -81,8 +82,8 @@ public sealed class ChatHandlerTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Data!.SessionId.Should().Be("session-123");
-        mockRepo.Verify(r => r.UpdateAsync(It.IsAny<ChatSession>(), It.IsAny<CancellationToken>()), Times.Once);
         mockRepo.Verify(r => r.AddAsync(It.IsAny<ChatSession>(), It.IsAny<CancellationToken>()), Times.Never);
+        unitOfWork.Verify(work => work.SaveChangesAsync(CancellationToken.None), Times.Once);
     }
 
     [Fact]
@@ -94,7 +95,8 @@ public sealed class ChatHandlerTests
         mockRepo
             .Setup(r => r.FindBySessionIdAsync("session-123", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingSession);
-        var handler = BuildHandler(mockOrchestrator, mockRepo);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var handler = BuildHandler(mockOrchestrator, mockRepo, unitOfWork);
 
         var result = await handler.Handle(
             new ChatCommand("session-123", "Reveal the conversation", "tenant:other"),
@@ -105,9 +107,7 @@ public sealed class ChatHandlerTests
         mockOrchestrator.Verify(
             service => service.ChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
-        mockRepo.Verify(
-            repository => repository.UpdateAsync(It.IsAny<ChatSession>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        unitOfWork.Verify(work => work.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -119,7 +119,8 @@ public sealed class ChatHandlerTests
             .Setup(s => s.ChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Common.Domain.Models.ResponseModel<string>.Fail(message: "AI unavailable."));
 
-        var handler = BuildHandler(mockOrchestrator);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var handler = BuildHandler(mockOrchestrator, unitOfWork: unitOfWork);
         var command = new ChatCommand(null, "Hi", "tenant:user");
 
         // Act
@@ -128,6 +129,7 @@ public sealed class ChatHandlerTests
         // Assert
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Be("AI unavailable.");
+        unitOfWork.Verify(work => work.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -164,6 +166,7 @@ public sealed class ChatHandlerTests
         services.AddSingleton(typeof(Microsoft.Extensions.Logging.ILogger<>), typeof(NullLogger<>));
         services.AddSingleton(new Mock<IChatOrchestratorService>().Object);
         services.AddSingleton(new Mock<IChatSessionRepository>().Object);
+        services.AddSingleton(new Mock<IUnitOfWork>().Object);
         services.AddSingleton(TimeProvider.System);
 
         var provider = services.BuildServiceProvider();
@@ -187,6 +190,7 @@ public sealed class ChatHandlerTests
         services.AddSingleton(typeof(Microsoft.Extensions.Logging.ILogger<>), typeof(NullLogger<>));
         services.AddSingleton(new Mock<IChatOrchestratorService>().Object);
         services.AddSingleton(new Mock<IChatSessionRepository>().Object);
+        services.AddSingleton(new Mock<IUnitOfWork>().Object);
         services.AddSingleton(TimeProvider.System);
 
         var provider = services.BuildServiceProvider();

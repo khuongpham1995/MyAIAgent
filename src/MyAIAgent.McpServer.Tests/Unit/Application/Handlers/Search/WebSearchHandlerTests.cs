@@ -9,7 +9,7 @@ using Moq;
 using MyAIAgent.Common.Application.Behaviors;
 using MyAIAgent.Common.Tests;
 using MyAIAgent.McpServer.Application.Handlers.Search;
-using MyAIAgent.McpServer.Domain.Interfaces;
+using MyAIAgent.McpServer.Application.Interfaces;
 using MyAIAgent.McpServer.Domain.Models;
 
 namespace MyAIAgent.McpServer.Tests.Unit.Application.Handlers.Search;

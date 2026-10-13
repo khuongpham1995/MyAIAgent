@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MyAIAgent.Common.Application.Extensions;
 using MyAIAgent.Common.Infrastructure.Extensions;
 using MyAIAgent.MainSubSys.Domain.Constants;
-using MyAIAgent.MainSubSys.Domain.Interfaces;
+using MyAIAgent.MainSubSys.Application.Interfaces;
 using MyAIAgent.MainSubSys.Infrastructure.Clients;
 
 namespace MyAIAgent.MainSubSys.Infrastructure.Extensions;

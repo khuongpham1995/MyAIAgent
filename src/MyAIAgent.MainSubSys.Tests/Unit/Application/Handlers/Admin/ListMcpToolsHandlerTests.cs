@@ -2,7 +2,7 @@ using FluentAssertions;
 using Moq;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.MainSubSys.Application.Handlers.Admin;
-using MyAIAgent.MainSubSys.Domain.Interfaces;
+using MyAIAgent.MainSubSys.Application.Interfaces;
 using MyAIAgent.MainSubSys.Domain.Models;
 
 namespace MyAIAgent.MainSubSys.Tests.Unit.Application.Handlers.Admin;

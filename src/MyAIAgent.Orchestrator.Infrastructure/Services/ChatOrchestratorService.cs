@@ -2,7 +2,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Common.Domain.ServiceLifetime;
-using MyAIAgent.Orchestrator.Domain.Interfaces;
+using MyAIAgent.Orchestrator.Application.Interfaces;
 using MyAIAgent.Orchestrator.Domain.Models;
 using MyAIAgent.Orchestrator.Infrastructure.Helpers;
 
