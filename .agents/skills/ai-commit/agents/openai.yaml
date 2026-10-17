@@ -1,0 +1,6 @@
+interface:
+  display_name: "AI Commit"
+  short_description: "Commit verified changes with a delivery choice"
+  default_prompt: "Use $ai-commit for this MyAIAgent task."
+policy:
+  allow_implicit_invocation: false

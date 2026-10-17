@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Verify"
+  short_description: "Run both Sol reviewers on tested changes"
+  default_prompt: "Use $ai-verify for this MyAIAgent task."

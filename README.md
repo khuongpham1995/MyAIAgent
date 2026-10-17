@@ -9,16 +9,20 @@ Verify (Sonnet/Sol) → Commit, with an optional draft PR. Start with the
 [setup guide](.agents/docs/setup.md); shared policy lives in [AGENTS.md](AGENTS.md) and
 [the workflow](.agents/docs/workflow.md).
 
-| Stage | Claude Code | Codex |
+| Stage | Claude Code (terminal / IDE) | Codex (terminal / app / IDE) |
 | --- | --- | --- |
-| Plan | Turn on native Plan mode; Opus; `/plan <task>` | Select Astra, turn on native Plan mode with `/plan`, then `$plan <task>` |
-| Build | Leave Plan mode; Sonnet; `/build` | Leave Plan mode, select Sol, then `$build` |
-| Verify | Sonnet; `/verify` | Sol; `$verify` |
-| Commit | Sonnet; `/commit` | Sol; `$commit` |
+| Plan | `/ai-plan <task>` → native Plan mode, Opus via `opusplan` | Select Astra, enable native Plan mode, invoke `$ai-plan <task>` |
+| Build | Accept/exit native Plan mode, then `/ai-build` → Sonnet | Exit Plan mode, select Sol, invoke `$ai-build` |
+| Verify | `/ai-verify` → two Sonnet reviewers | `$ai-verify` → two Sol reviewers |
+| Commit | `/ai-commit` → Sonnet | `$ai-commit` with Sol selected |
 
-These are repository skills, not shell commands. Claude exposes them with `/`;
-Codex uses `$` for skills and reserves `/plan` for its native mode control.
-See the setup guide for how to turn on Claude's native Plan mode before `/plan`.
+These are skill commands in the conversation composer, not shell commands.
+The `ai-` prefix keeps native `/plan` and bundled review commands available.
+In Codex use `/skills` or the app's skill picker; repository Markdown cannot
+register arbitrary native slash commands or automatically change Astra/Sol.
+Claude can enter Plan mode through `EnterPlanMode`; if the host lacks that tool,
+use its Plan mode control first. See [setup](.agents/docs/setup.md) for discovery,
+model confirmation, and surface-specific controls.
 At the Commit stage, the assistant asks one question with the three delivery
 choices defined in [the workflow](.agents/docs/workflow.md) before staging or
 committing.

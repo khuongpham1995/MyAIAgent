@@ -9,59 +9,82 @@
 | `.agents/docs/workflow.md` | Stage gates, review concurrency, commit/PR policy |
 | `.agents/docs/review.md` | Shared code/security review contracts |
 | `.agents/docs/evidence.md` | Candidate, quality and review evidence commands |
-| `.agents/skills/` | Four stage skills (`plan`, `build`, `verify`, `commit`) and domain skills |
+| `.agents/skills/` | Four stage skills (`ai-plan`, `ai-build`, `ai-verify`, `ai-commit`) and domain skills |
 | `.agents/rules/` | Shared engineering, testing and security rules |
 | `CLAUDE.md`, `.claude/settings.json` | Shared instruction import, Opus Plan / Sonnet execution, permissions |
 | `.claude/agents/` | Two read-only Sonnet reviewers |
-| `.claude/skills`, `.claude/rules/shared` | Symlinks to `.agents/skills` and `.agents/rules` |
+| `.claude/skills`, `.claude/rules/shared` | Per-skill links to `.agents/skills/*` and one shared rules link |
 | `.codex/config.toml`, `.codex/agents/` | Codex Sol default and two Sol reviewers; select Astra for main-session Plan |
 | `scripts/ai/quality.mjs`, `candidate.mjs` | Test/format evidence and candidate/review/staging checks |
 | `.github/pull_request_template.md` | Shared PR report format |
 
 Everything shared has one canonical source under `.agents/`; `.claude/` and
-`.codex/` hold only tool-specific settings, reviewer definitions and pointers.
-Codex discovers `.agents/skills/` natively and reads shared Markdown rules as
-directed by `AGENTS.md`. Claude does not read `.agents/`, so `.claude/skills` is a
-symlink to `.agents/skills` and `.claude/rules/shared` a symlink to `.agents/rules`.
-These are references, not copies; edit only the canonical files. Claude documents
-symlinks for individual skill folders, not for the whole `skills` directory; the
-directory link was checked on Claude Code 2.1.236 by loading a skill through it.
-If a client stops following it, link each skill folder instead.
+`.codex/` contain only provider settings, reviewer definitions and discovery links.
+Codex discovers `.agents/skills/` natively. Claude discovers one directory symlink
+per skill under `.claude/skills/`, using its documented symlink layout. When adding
+or renaming a shared skill, update its Claude link; the configuration test checks
+that both inventories match. Edit the canonical skill, never a separate copy.
+File explorers may expand these links as if they were duplicate folders. They
+resolve to the same files; do not delete them merely to hide that visual repetition.
+Reviewer adapters retain each client's required format and model/tool settings;
+their instructions point to the single contract in [review.md](review.md).
 
-A skill or rule added under `.agents/` needs no extra link. Stage skills only point
-to `.agents/docs/workflow.md`; change stage policy there, not in the skill. Their
-`model` and `disable-model-invocation` frontmatter is read by Claude; Codex uses
-`commit/agents/openai.yaml` to keep `commit` from running by description match.
-Run `node --test scripts/ai/*.test.mjs` to check discovery links and references.
-On Windows, enable Developer Mode and Git symlink support before checkout; a clone
-that materializes symlinks as text files cannot load these adapters correctly.
+The four commands are `ai-plan`, `ai-build`, `ai-verify`, and `ai-commit`.
+The prefix avoids shadowing native `/plan` and bundled `/verify`. Old unprefixed
+stage skills were removed. Stage policy stays in [workflow.md](workflow.md).
+Claude reads the skill's `model` and `disable-model-invocation` frontmatter;
+Codex reads `agents/openai.yaml` for picker labels and explicit-only commit policy.
+Neither metadata file can switch Codex's parent-session model or native mode.
+
+## Native mode/model preflight
+
+Before each stage, use the host's actual mode/model state when exposed. Do not
+infer it from skill text, the requested model, or a read-only sandbox. If state
+is unavailable or mismatched, tell the user the exact native control needed and
+wait for confirmation rather than claiming the requested routing ran.
+
+| Stage | Claude | Codex |
+| --- | --- | --- |
+| Plan | Native Plan mode, Opus (`opusplan`) | Native Plan mode, `gpt-6-astra` |
+| Build / Verify / Commit | Outside Plan mode, Sonnet | Default mode, `gpt-6-sol` |
+
+Mode changes must use the host's controls. Claude's `EnterPlanMode` tool can enter
+Plan mode; call it before planning when available and Plan mode is not already active. Accepting/exiting
+Plan uses the native Plan completion control (`ExitPlanMode` when available).
+A skill's model override selects Claude's model during that skill; it does not
+prove a permanent change to the session's default model.
+Codex has no documented repository setting equivalent to `opusplan`: switching
+Astra to Sol in this setup still needs the client model control. A custom App Server
+integration can set `collaborationMode.settings.model` per turn, but is not installed
+here and has not been tested across app/IDE surfaces. Do not add an invented
+`plan_mode_model` key, a prompt pretending to be a mode change, or a wrapper
+that merely changes the sandbox. No custom runtime or UI automation is installed.
 
 ## Claude Code
 
-From the repository root:
+Start from the real checkout directory (on this machine,
+`/Volumes/KHUONG/Repositories/MyAIAgent`):
 
 ```bash
 claude --model opusplan --permission-mode plan
 ```
 
-Project settings also select these defaults. `opusplan` uses Opus in native Plan
-mode and Sonnet after leaving it. User, environment, organization or CLI overrides
-may change model selection; check the active session model instead of assuming.
-For an existing session, select `opusplan` with `/model` and press `Shift+Tab`
-until the status bar shows Plan mode on before invoking the planning skill.
-The project skill `/plan` replaces Claude's built-in `/plan` command in local
-terminal sessions, so invoking the skill alone does not turn on native Plan mode.
+Project settings select the same defaults. User, environment, organization and
+CLI overrides can change the result. In an existing terminal session use
+`/model opusplan`; `/plan` or Shift+Tab enters native Plan mode. In the Claude
+IDE extension use its model and permission-mode controls.
 
-The stage commands are the shared skills, invoked by name:
+1. `/ai-plan <task>` selects `opusplan` and requests native Plan mode if needed.
+2. Accept/exit native Plan mode, then `/ai-build` selects Sonnet and runs Build.
+3. `/ai-verify` selects Sonnet and dispatches both project reviewers concurrently.
+4. `/ai-commit` selects Sonnet and follows the single delivery question and gates
+   in [workflow.md](workflow.md).
 
-1. `/plan <task>` — invokes the planning skill while native Plan mode is active;
-   Opus handles planning.
-2. Use Claude's native Plan exit/acceptance control, then `/build` — Sonnet implements
-   the available plan and runs tests/quality gates.
-3. `/verify` — two read-only Sonnet reviewers run concurrently; owner consolidates.
-4. `/commit` — after readiness checks, asks the delivery question defined in
-   [workflow.md](workflow.md) and waits for the user's choice. Publishing requires
-   GitHub CLI authentication and an unambiguous target.
+Type `/ai-` to find the four commands. Skills are Claude's supported custom command
+mechanism; a separate commands directory would duplicate discovery. Terminal and
+IDE sessions must open this repository and trust it. A remote/cloud session must
+have the repository's configuration in its checkout. A plain Claude chat does not
+load these local files.
 
 The only project subagents are `code-reviewer` and `security-reviewer`. They
 explicitly declare `model`; they do not inherit Opus by accident. Plan
@@ -83,57 +106,59 @@ reference below. Native prompts are separate from user task authorization.
 
 ## Codex
 
-Use a current Codex client supporting repository config, local skills, native
-`/plan` and custom subagents. The local CLI checked on 2026-10-13 is **0.162.1**.
-No global settings are modified.
-Trust the repository through the client's normal trust flow to load `.codex/`.
+Use a current client supporting repository configuration, skills and custom agents.
+The installed CLI checked on 2026-10-17 is **0.162.1**; Claude Code is **2.1.287**.
+The bundled Codex model catalog includes both requested IDs. Account availability
+still needs confirmation in the model picker. No global settings are modified.
+Trust/open the real checkout to load `.codex/` and `.agents/skills/`.
 
-Start planning with the requested Astra family:
+In a terminal:
 
 ```bash
 codex --model gpt-6-astra
 ```
 
-In that session, turn on native Plan mode before invoking the planning skill:
+Then use the native controls and repository skills in the composer:
 
 ```text
 /plan
-$plan <task>
+$ai-plan <task>
 ```
 
-`/plan` changes Codex's native mode; `$plan` loads this repository's planning
-skill. In Codex CLI, the other stages use `$build`, `$verify` and `$commit`
-instead of Claude-style direct slash names. Use `/skills` to discover the
-installed skills. These names are not shell commands.
+At the native Plan completion control, leave Plan mode. Use `/model` to select
+`gpt-6-sol`, then invoke `$ai-build`, `$ai-verify`, or `$ai-commit` for the requested
+stage. `/status` shows the current model; `/skills` lists the repository skills.
+There are no repository-defined `/build`, `/verify` or `/commit` native commands.
+The four `$ai-*` entries are the supported command interface for this project.
 
-At the native Plan-to-Build transition, leave Plan mode using the client control,
-select `gpt-6-sol` with `/model`, and run:
+In Codex app/IDE, open this project, choose Astra in the model selector and enable
+Plan mode in the composer, then select **AI Plan** in the skill picker (or invoke
+`$ai-plan` where supported). After accepting the plan, choose Sol and Default mode
+before **AI Build**, **AI Verify**, or **AI Commit**. CLI slash controls are not
+available on every app surface. The shared skills and reviewer contracts stay the
+same; UI model/mode controls belong to the host. Existing sessions may require a
+reload/new chat after skill renames. A web chat without this checkout cannot load
+repository-local skills.
 
-```text
-$build
-$verify
-$commit
-```
+`ai-commit` is explicit-only, so it may be absent from the automatic skill catalog;
+invoke `$ai-commit` or select its skill file explicitly. It never auto-authorizes
+Git writes. Fresh sessions need the plan and quality/review evidence from the
+previous session. Project config defaults to Sol; that default does not change an
+already-running session. Model/mode changes only count after client confirmation.
 
-`$commit` remains available for explicit invocation even though its
-`allow_implicit_invocation: false` policy prevents automatic selection. It uses
-the same delivery question as Claude. Use the host's
-question UI when available and permitted, or a plain-text question otherwise;
-wait for the answer.
-In an app, select Astra/Sol and
-Plan mode using the model/mode UI when CLI slash commands are unavailable. A prompt
-or skill cannot change the active model or native collaboration mode itself. Do not
-claim those switched unless the client confirms it. If the model is unavailable,
-report that and choose a replacement only with the user's direction.
+## Discovery troubleshooting
 
-The project defaults to `gpt-6-sol`; it deliberately preserves the requested Sol
-model rather than silently selecting a newer variant. Planning runs in the main
-session with Astra and native Plan mode; no separate planner agent is configured.
-Fresh sessions must receive the concrete plan and test/review evidence explicitly.
-
-No legacy `[profiles.*]` blocks are used. Current Codex (0.134.0+) resolves named
-profiles from user-level `~/.codex/<name>.config.toml`; project config cannot define
-them. Explicit CLI/UI model selection keeps this setup repository-local.
+- Open the repository root, trust it, then restart/reload the client after renames.
+- Check the four `ai-*` directories under `.agents/skills/` and their Claude links.
+  Run `node --test scripts/ai/shared-config.test.mjs` for filesystem consistency;
+  this test alone does not prove a client loaded a skill.
+- Claude: type `/ai-`; inspect higher-priority personal/enterprise skills if a name
+  resolves elsewhere. Do not start with skills disabled or safe mode enabled.
+- Codex: use `/skills` or the skill picker; do not look for Claude-style `/ai-*`.
+- On Windows enable Git symlink support/Developer Mode before cloning.
+- This machine's old `/Users/kylepham184/Repositories/MyAIAgent` path is a symlink.
+  Open `/Volumes/KHUONG/Repositories/MyAIAgent` directly: a sandbox writable root
+  containing a symlink can fail before any command executes.
 
 ## Quality and troubleshooting
 
@@ -163,10 +188,11 @@ reviewers, prove concurrency, or enforce server-side branch protections.
 
 ## Official references
 
-Checked 2026-10-11; installed-client capabilities and account model access may differ.
+Checked 2026-10-17; installed-client capabilities and account model access may differ.
 
 - [Codex configuration and profile migration](https://learn.chatgpt.com/docs/config-file/config-advanced)
 - [Codex custom agents](https://learn.chatgpt.com/docs/agent-configuration/subagents)
+- [Codex App Server mode/model controls](https://learn.chatgpt.com/docs/app-server#turns)
 - [Codex native Plan command](https://learn.chatgpt.com/docs/developer-commands?surface=cli)
 - [Codex local skill discovery](https://learn.chatgpt.com/docs/build-skills)
 - [GPT-6 Sol model](https://developers.openai.com/api/docs/models/gpt-6-sol)

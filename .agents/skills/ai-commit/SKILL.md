@@ -1,9 +1,11 @@
 ---
-name: commit
+name: ai-commit
 description: Commit a verified MyAIAgent task after asking the user how to deliver it. Run only when the user asks to commit.
 model: sonnet
 disable-model-invocation: true
 ---
+
+First follow **Native mode/model preflight** in `.agents/docs/setup.md`.
 
 Follow **Commit and optional PR** in `.agents/docs/workflow.md` and the commit
 check in `.agents/docs/evidence.md`. Only the user's own request authorizes Git

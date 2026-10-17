@@ -19,5 +19,5 @@ For C# or project-reference changes, also read the relevant `.agents/rules/dotne
 Apply `.agents/rules/memory-flush.md` when preserving durable decisions.
 Codex discovers shared skills natively; it loads these Markdown rules through this
 instruction, not a `.codex/rules` policy file. Claude discovers the same files via
-the `.claude/skills` and `.claude/rules/shared` symlinks. Edit canonical `.agents/`
+per-skill symlinks under `.claude/skills/` and the `.claude/rules/shared` symlink. Edit canonical `.agents/`
 files only. Source code and project files resolve stale examples in references.

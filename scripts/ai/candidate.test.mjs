@@ -107,3 +107,32 @@ for (const flag of ['--assume-unchanged', '--skip-worktree']) {
     assert.throws(() => captureCandidate(root), /flags/);
   });
 }
+
+for (const kind of ['file', 'symlink']) {
+  test(`replacing a tracked ${kind} with a directory captures children and survives staging`, t => {
+    const root = fixture(t);
+    if (kind === 'symlink') symlinkSync('example.cs', join(root, 'adapter'));
+    else writeFileSync(join(root, 'adapter'), 'old');
+    git(root, ['add', '--', 'adapter']);
+    commit(root);
+    unlinkSync(join(root, 'adapter'));
+    mkdirSync(join(root, 'adapter'));
+    writeFileSync(join(root, 'adapter', 'child'), 'new');
+    const candidate = captureCandidate(root);
+    assert.equal(candidate.files.find(f => f.path === 'adapter').mode, 'deleted');
+    assert.equal(candidate.files.find(f => f.path === 'adapter/child').sha256, hash('new'));
+    git(root, ['add', '--', 'adapter']);
+    assert.equal(captureCandidate(root).digest, candidate.digest);
+    writeFileSync(join(root, 'adapter', 'child'), 'unreviewed');
+    assert.throws(() => assertCurrent(candidate, root), /changed/);
+  });
+}
+
+test('a staged gitlink cannot masquerade as a deleted baseline file', t => {
+  const root = fixture(t);
+  const head = git(root, ['rev-parse', 'HEAD']).trim();
+  unlinkSync(join(root, 'example.cs'));
+  mkdirSync(join(root, 'example.cs'));
+  git(root, ['update-index', '--add', '--cacheinfo', `160000,${head},example.cs`]);
+  assert.throws(() => captureCandidate(root), /submodules/);
+});
