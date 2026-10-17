@@ -30,7 +30,7 @@ files for current versions; do not copy package versions from examples.
 - Place feature DTOs and result contracts in `Application/{Feature}/`, ports in
   `Application/Common/Interfaces/`, and DI registration at each layer's root
   `IoCExtension.cs`. Keep the existing `Presentation` project names.
-- Domain entities inherit `Common.Domain/Common/BaseEntity<TKey>` for their shared key.
+- Domain entities inherit `Common.Domain/Abstractions/BaseEntity<TKey>` for their shared key.
   Shared audit base types are available when the entity actually needs those fields.
 - Infrastructure owns external clients and persistence; follow existing typed
   `HttpClient` registrations and interfaces rather than inventing abstractions.

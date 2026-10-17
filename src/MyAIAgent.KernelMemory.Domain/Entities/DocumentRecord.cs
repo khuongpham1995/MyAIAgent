@@ -1,4 +1,4 @@
-using MyAIAgent.Common.Domain.Common;
+using MyAIAgent.Common.Domain.Abstractions;
 
 namespace MyAIAgent.KernelMemory.Domain.Entities;
 

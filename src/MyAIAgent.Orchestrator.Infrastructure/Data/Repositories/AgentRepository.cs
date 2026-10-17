@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using MyAIAgent.Common.Domain.Common;
+using MyAIAgent.Common.Domain.Abstractions;
 using MyAIAgent.Orchestrator.Domain.Entities;
 using MyAIAgent.Orchestrator.Application.Common.Interfaces;
 

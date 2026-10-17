@@ -48,7 +48,7 @@ Dependency direction is inward: **Domain ← Application ← Infrastructure ← 
 
 Each service keeps the existing `Presentation` project name. Application and Infrastructure
 register services from a root `IoCExtension.cs`. Keep the shared base entity and lifetime
-markers in `Common.Domain/Common/`; place repositories under `Infrastructure/Data/Repositories/`
+markers in `Common.Domain/Abstractions/`; place repositories under `Infrastructure/Data/Repositories/`
 and external adapters under `Infrastructure/Services/` when a service needs them. Add only
 folders backed by actual code; tenant databases, migrations, controllers, and audit
 interceptors are optional components, not required scaffolding.

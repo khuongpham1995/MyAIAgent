@@ -37,7 +37,7 @@ Layer and cross-service boundary rules → `.agents/rules/dotnet/architecture.md
 ## Common Layer Contents
 
 ### `MyAIAgent.Common.Domain`
-`Common/BaseEntity<TKey>`, `Common/AuditableEntity<TKey>`, `Common/FullAuditableEntity<TKey>`, `ResponseModel<T>`, `ITransient`, `IScoped`, `ISingleton`
+`Abstractions/BaseEntity<TKey>`, `Abstractions/AuditableEntity<TKey>`, `Abstractions/FullAuditableEntity<TKey>`, `ResponseModel<T>`, `ITransient`, `IScoped`, `ISingleton`
 
 ### `MyAIAgent.Common.Application`
 `ValidationBehavior<TRequest, TResponse>` — always throws `ValidationException`. See `Common.Application/Behaviors/ValidationBehavior.cs`.

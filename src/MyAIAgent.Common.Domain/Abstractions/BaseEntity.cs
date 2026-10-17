@@ -1,4 +1,4 @@
-namespace MyAIAgent.Common.Domain.Common;
+namespace MyAIAgent.Common.Domain.Abstractions;
 
 public abstract class BaseEntity<TKey>
 {
