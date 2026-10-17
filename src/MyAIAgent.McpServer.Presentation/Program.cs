@@ -1,7 +1,7 @@
 using MyAIAgent.Common.Infrastructure.Extensions;
 using MyAIAgent.Common.Infrastructure.Filters;
-using MyAIAgent.McpServer.Application.Extensions;
-using MyAIAgent.McpServer.Infrastructure.Extensions;
+using MyAIAgent.McpServer.Application;
+using MyAIAgent.McpServer.Infrastructure;
 using MyAIAgent.McpServer.Presentation.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,7 +20,9 @@ builder.Services
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseAzureAppConfiguration();
+app.UseAzureAppConfigurationWhenConfigured(app.Configuration);
+app.MapGet("/health/live", () => Results.Ok());
+app.MapGet("/health/ready", () => Results.Ok());
 app.MapMcp().AddEndpointFilter(app.Services.GetRequiredService<HttpAuthEndpointFilter>());
 
 await app.RunMcpServerAsync();

@@ -29,6 +29,14 @@ public sealed class OrchestratorDbContextFactory : IDisposable
         return new OrchestratorDbContextFactory(connection, context);
     }
 
+    public OrchestratorDbContext CreateAdditionalContext()
+    {
+        var options = new DbContextOptionsBuilder<OrchestratorDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        return new OrchestratorDbContext(options);
+    }
+
     public void Dispose()
     {
         Context.Dispose();

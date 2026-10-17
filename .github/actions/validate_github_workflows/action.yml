@@ -1,0 +1,9 @@
+name: Validate GitHub workflows
+description: Check workflow syntax with the pinned actionlint image.
+
+runs:
+  using: composite
+  steps:
+    - name: Run actionlint
+      shell: bash
+      run: docker run --rm --volume "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.12 -color

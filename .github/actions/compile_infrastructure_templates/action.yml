@@ -1,0 +1,13 @@
+name: Compile infrastructure templates
+description: Compile the Bicep templates with the pinned CLI version.
+
+runs:
+  using: composite
+  steps:
+    - name: Compile Bicep templates
+      shell: bash
+      run: |
+        az bicep install --version v0.47.16
+        for template in infra/*.bicep; do
+          az bicep build --file "$template" --outfile "$RUNNER_TEMP/$(basename "$template" .bicep).json"
+        done

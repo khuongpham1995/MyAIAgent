@@ -1,12 +1,16 @@
 using MediatR;
+using MapsterMapper;
 using MyAIAgent.Common.Infrastructure.Extensions;
-using MyAIAgent.Orchestrator.Application.Extensions;
-using MyAIAgent.Orchestrator.Application.Handlers.Agents;
-using MyAIAgent.Orchestrator.Application.Mappers;
-using MyAIAgent.Orchestrator.Application.Models;
+using MyAIAgent.Orchestrator.Application;
+using MyAIAgent.Orchestrator.Application.Agents.Commands.CreateAgent;
+using MyAIAgent.Orchestrator.Application.Agents.Commands.DeleteAgent;
+using MyAIAgent.Orchestrator.Application.Agents.Queries.ListAgents;
+using MyAIAgent.Orchestrator.Application.Chat.Commands.Chat;
+using MyAIAgent.Orchestrator.Application.Agents;
+using MyAIAgent.Orchestrator.Application.Chat;
 using MyAIAgent.Orchestrator.Infrastructure.Data;
 using MyAIAgent.Common.Infrastructure.Filters;
-using MyAIAgent.Orchestrator.Infrastructure.Extensions;
+using MyAIAgent.Orchestrator.Infrastructure;
 using MyAIAgent.Orchestrator.Presentation.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,16 +24,18 @@ builder.Services.AddSingleton(TimeProvider.System);
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseAzureAppConfiguration();
+app.UseAzureAppConfigurationWhenConfigured(app.Configuration);
+app.MapGet("/health/live", () => Results.Ok());
+app.MapGet("/health/ready", () => Results.Ok());
 
 if (app.Environment.IsDevelopment())
     await app.Services.EnsureDbCreatedAsync<OrchestratorDbContext>();
 
 var api = app.MapGroup("").AddEndpointFilter(app.Services.GetRequiredService<HttpAuthEndpointFilter>());
 
-api.MapPost("/chat", async (ChatRequestDto request, ISender sender, CancellationToken cancellationToken) =>
+api.MapPost("/chat", async (ChatRequestDto request, ISender sender, IMapper mapper, CancellationToken cancellationToken) =>
 {
-    var result = await sender.Send(request.ToCommand(), cancellationToken);
+    var result = await sender.Send(mapper.Map<ChatCommand>(request), cancellationToken);
     return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 });
 
@@ -39,9 +45,9 @@ api.MapGet("/agents", async (ISender sender, CancellationToken cancellationToken
     return Results.Ok(result);
 });
 
-api.MapPost("/agents", async (CreateAgentRequestDto request, ISender sender, CancellationToken cancellationToken) =>
+api.MapPost("/agents", async (CreateAgentRequestDto request, ISender sender, IMapper mapper, CancellationToken cancellationToken) =>
 {
-    var result = await sender.Send(request.ToCommand(), cancellationToken);
+    var result = await sender.Send(mapper.Map<CreateAgentCommand>(request), cancellationToken);
     return result.IsSuccess
         ? Results.Created($"/agents/{result.Data}", result)
         : Results.BadRequest(result);

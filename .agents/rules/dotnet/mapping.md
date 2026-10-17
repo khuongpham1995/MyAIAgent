@@ -7,39 +7,18 @@ description: >
 
 # Mapping Rules
 
-## Where Mappers Live
+Keep application contract mappings in **`Application/Common/Mappings/`** as Mapster
+`IRegister` classes. DTOs and entities stay free of mapping interfaces. Register
+one application-owned `TypeAdapterConfig` per service, scan the Application
+assembly, compile the mappings at startup, and resolve `MapsterMapper.IMapper`
+through DI.
 
-Mappers belong in **`Application/Mappers/`** — they translate between Presentation DTOs and Application Commands/Queries. This is the only layer boundary where mapping is needed.
+- Map inbound DTOs to commands at the Presentation boundary using the injected mapper.
+- Map entities to response models in handlers using the injected mapper when needed.
+- Keep mapping expressions pure. Business decisions and I/O belong in handlers or services.
+- Declare a mapping for each application-contract pair, even when members share names.
+- Pass authenticated identity through a trusted application source type; never map it from a client-controlled DTO field.
 
-- `Presentation DTO → Application Command/Query` — use a mapper
-- `Application → Presentation Response` — return `ResponseModel<T>` directly; mapper optional
-- `Infrastructure → Domain` — domain interfaces handle this
-
-Never put mappers in `Presentation/`, `Infrastructure/`, or `Domain/`.
-
-## Naming Convention
-
-| Item | Convention | Example |
-|---|---|---|
-| File | `[SourceType]Mapper.cs` | `ChatCommandMapper.cs` |
-| Class | `static`, same name as file | `public static class ChatCommandMapper` |
-| Method | `To[TargetType]()` extension on source | `ToCommand()`, `ToQuery()`, `ToResponse()` |
-
-## Rules
-
-- `static` class — no constructor, no DI
-- Extension method on the **source** type (the DTO)
-- Pure function — no side effects, no external calls
-- One mapper class per source type
-- Expression body for single-line mappings
-
-## Usage
-
-Call the mapper in `Program.cs` when dispatching to MediatR: `request.ToCommand()`.
-
-## Anti-patterns
-
-- Never map inside a handler — mixes mapping with business logic
-- Never use AutoMapper or reflection-based mapping — hidden coupling, runtime errors
-- Never construct a command inline in an endpoint — always use the `Mappers/` extension method
-- Never put mapping logic in domain entities — domain must not reference Application types
+Do not use parameterless `Adapt<T>()` or static mapping extensions in application
+code: they can bypass the DI-owned configuration. Do not put mapping rules in
+Presentation, Infrastructure, Domain, or the DTOs themselves.

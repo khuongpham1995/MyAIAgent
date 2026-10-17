@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare solution for testing
+        uses: ./.github/actions/netcore_tests/prepare_solution_for_testing
+      - name: Run full quality gate
+        uses: ./.github/actions/netcore_tests/run_tests
+        with:
+          base-ref: ${{ github.base_ref }}
+          before-sha: ${{ github.event.before }}
+      - name: Compile infrastructure templates
+        uses: ./.github/actions/compile_infrastructure_templates
+      - name: Validate GitHub workflows
+        uses: ./.github/actions/validate_github_workflows

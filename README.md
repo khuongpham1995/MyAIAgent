@@ -9,9 +9,26 @@ Verify (Sonnet/Sol) → Commit, with an optional draft PR. Start with the
 [setup guide](.agents/docs/setup.md); shared policy lives in [AGENTS.md](AGENTS.md) and
 [the workflow](.agents/docs/workflow.md).
 
+| Stage | Claude Code | Codex |
+| --- | --- | --- |
+| Plan | Turn on native Plan mode; Opus; `/plan <task>` | Select Astra, turn on native Plan mode with `/plan`, then `$plan <task>` |
+| Build | Leave Plan mode; Sonnet; `/build` | Leave Plan mode, select Sol, then `$build` |
+| Verify | Sonnet; `/verify` | Sol; `$verify` |
+| Commit | Sonnet; `/commit` | Sol; `$commit` |
+
+These are repository skills, not shell commands. Claude exposes them with `/`;
+Codex uses `$` for skills and reserves `/plan` for its native mode control.
+See the setup guide for how to turn on Claude's native Plan mode before `/plan`.
+At the Commit stage, the assistant asks one question with the three delivery
+choices defined in [the workflow](.agents/docs/workflow.md) before staging or
+committing.
+
 ```bash
 node scripts/ai/quality.mjs
 ```
+
+Azure Container Apps deployment and rollback setup is documented in
+[the deployment guide](docs/deployment.md).
 
 ## Service Topology
 
@@ -52,9 +69,9 @@ graph RL
     end
 
     subgraph Service ["[Service].* (per service)"]
-        D["Domain<br/>Entities · Interfaces · Constants"]
-        A["Application<br/>Handlers · Validators · Mappers"]
-        I["Infrastructure<br/>Services · HTTP Clients · DbContext"]
+        D["Domain<br/>Entities · Models · Constants"]
+        A["Application<br/>Handlers · Validators · Interfaces · Mappers"]
+        I["Infrastructure<br/>Services · Repositories · HTTP Clients · DbContext"]
         P["Presentation<br/>Program.cs · Endpoints · MCP Tools"]
     end
 

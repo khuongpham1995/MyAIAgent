@@ -19,18 +19,18 @@ description: >
 
 ```
 MyAIAgent.Orchestrator.Domain/
-  Interfaces/IChatOrchestratorService.cs  ← Task<ResponseModel<string>> ChatAsync(...)
-  Interfaces/IChatSessionRepository.cs   ← find/add/update ChatSession
   Entities/ChatSession.cs                ← EF Core Cosmos entity (partition: SessionId)
   Entities/ChatSessionMessage.cs         ← owned entity (Role, Content, CreatedAt)
   Models/ChatMessage.cs                  ← role + content (for AI calls)
   Models/ChatRequest.cs                  ← UserMessage + History
-  Models/ChatRequestDto.cs               ← (SessionId?, UserMessage) — HTTP input
   Models/ChatResponse.cs                 ← (Reply, SessionId)
 
 MyAIAgent.Orchestrator.Application/
-  Handlers/ChatHandler.cs                ← ChatCommand + handler + validator
-  Mappers/ChatCommandMapper.cs           ← ChatRequestDto.ToCommand()
+  Chat/Commands/Chat/                   ← ChatCommand, ChatHandler, ChatCommandValidator
+  Interfaces/IChatOrchestratorService.cs ← chat service port
+  Interfaces/IChatSessionRepository.cs   ← session persistence port
+  Models/ChatRequestDto.cs               ← HTTP input
+  Common/Mappings/ChatMapping.cs         ← Mapster mapping for ChatRequestDto → ChatCommand
   Extensions/IoCExtension.cs
 
 MyAIAgent.Orchestrator.Infrastructure/
@@ -47,18 +47,18 @@ MyAIAgent.Orchestrator.Presentation/
 ## Chat Flow
 
 1. `POST /chat` receives `ChatRequestDto(SessionId?, UserMessage)`
-2. `request.ToCommand()` maps to `ChatCommand`
+2. The injected Mapster mapper maps the request to `ChatCommand`
 3. `ChatHandler` looks up session by `SessionId` (or creates new), builds history, calls `IChatOrchestratorService.ChatAsync`
 4. Appends user + assistant messages to session, persists via `IChatSessionRepository`
 5. Returns `ResponseModel<ChatResponse(Reply, SessionId)>`
 
-See `Application/Handlers/ChatHandler.cs` for the current implementation.
+See `Application/Chat/Commands/Chat/ChatHandler.cs` for the current implementation.
 
 ## AI Provider
 
 `ChatOrchestratorService` uses `IChatClient` from `Microsoft.Extensions.AI`. The provider (AzureOpenAI or OpenAI) is selected at startup via `AiProvider:Type` configuration.
 
-`IoCExtension.AddInfrastructure` registers `IChatClient` as a singleton based on configuration. See `Infrastructure/Extensions/IoCExtension.cs`.
+`IoCExtension.AddInfrastructure` registers `IChatClient` as a singleton based on configuration. See `Infrastructure/IoCExtension.cs`.
 
 ## Presentation Bootstrap
 

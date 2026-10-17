@@ -19,6 +19,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\MyAIAgent.Common.Infrastructure\MyAIAgent.Common.Infrastructure.csproj"/>
+        <ProjectReference Include="..\MyAIAgent.Orchestrator.Application\MyAIAgent.Orchestrator.Application.csproj"/>
         <ProjectReference Include="..\MyAIAgent.Orchestrator.Domain\MyAIAgent.Orchestrator.Domain.csproj"/>
     </ItemGroup>
 

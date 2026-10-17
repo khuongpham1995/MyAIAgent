@@ -1,8 +1,11 @@
+using MyAIAgent.Common.Domain.Abstractions;
+
 namespace MyAIAgent.Orchestrator.Domain.Entities;
 
-public sealed class AgentDefinition
+public sealed class AgentDefinition : BaseEntity<string>
 {
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public AgentDefinition() : base(Guid.NewGuid().ToString()) { }
+
     public string Name { get; set; } = string.Empty;
     public string Instructions { get; set; } = string.Empty;
     public string McpServerEndpoint { get; set; } = string.Empty;

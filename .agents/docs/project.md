@@ -23,8 +23,19 @@ files for current versions; do not copy package versions from examples.
   Common projects must not reference services; sibling services communicate over HTTP.
 - Presentation dispatches through MediatR `ISender`; Application owns commands,
   queries, inbound DTOs, mappers and FluentValidation. Preserve response/error contracts.
+- Keep each command/query, handler and validator in its own request folder under
+  `Application/{Feature}/Commands/` or `Application/{Feature}/Queries/`.
+- Keep Mapster `IRegister` mappings in `Application/Common/Mappings/`; scan and
+  compile the service Application assembly once, then inject `IMapper` at call sites.
+- Place feature DTOs and result contracts in `Application/{Feature}/`, ports in
+  `Application/Common/Interfaces/`, and DI registration at each layer's root
+  `IoCExtension.cs`. Keep the existing `Presentation` project names.
+- Domain entities inherit `Common.Domain/Abstractions/BaseEntity<TKey>` for their shared key.
+  Shared audit base types are available when the entity actually needs those fields.
 - Infrastructure owns external clients and persistence; follow existing typed
   `HttpClient` registrations and interfaces rather than inventing abstractions.
+  Place adapters in `Infrastructure/Services/` and repository implementations in
+  `Infrastructure/Data/Repositories/`.
 - Follow local C# style: records for messages, primary constructors for DI,
   file-scoped namespaces, sealed classes where appropriate, async/await and propagated
   cancellation. Use injected `TimeProvider` for behavior that depends on time.

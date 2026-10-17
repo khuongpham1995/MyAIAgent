@@ -6,7 +6,7 @@ description: HTTP client registration, Polly retry behavior and cancellation in 
 # HTTP resilience (MyAIAgent)
 
 Use typed clients registered with `AddHttpClient<TInterface, TImplementation>` in
-`src/MyAIAgent.<Service>.Infrastructure/Extensions/IoCExtension.cs`. Infrastructure
+`src/MyAIAgent.<Service>.Infrastructure/IoCExtension.cs`. Infrastructure
 implementations receive `HttpClient`; handlers depend on the service's interfaces.
 For concrete examples inspect `ISearchProvider`/`GoogleSearchClient`,
 `IPageFetcher`/`PageFetcher`, and MainSubSys clients. Do not invent a generic

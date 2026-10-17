@@ -1,0 +1,12 @@
+name: Prepare solution for testing
+description: Install the Node.js and .NET SDK versions used by the quality gate.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'

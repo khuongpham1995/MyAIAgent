@@ -23,7 +23,8 @@ Mirror the source layout inside the test project. Each service has its own test 
 ```
 src/MyAIAgent.[Service].Tests/
   Unit/
-    Application/Handlers/   → handler + validator unit tests
+    Application/{Feature}/Commands/{RequestName}/ or Queries/{RequestName}/
+                            → handler + validator unit tests
     Infrastructure/          → service + client unit tests
   Integration/
     Application/             → full MediatR pipeline tests (real behavior + validator)

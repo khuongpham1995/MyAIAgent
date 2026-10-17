@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MyAIAgent.Common.Infrastructure.Data;
 using MyAIAgent.KernelMemory.Domain.Entities;
+using MyAIAgent.KernelMemory.Infrastructure.Data.Configurations;
 
 namespace MyAIAgent.KernelMemory.Infrastructure.Data;
 
@@ -11,11 +12,6 @@ public sealed class KernelMemoryDbContext(DbContextOptions<KernelMemoryDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        if (IsCosmosProvider)
-        {
-            modelBuilder.Entity<DocumentRecord>()
-                        .ToContainer("DocumentRecords")
-                        .HasPartitionKey(x => x.IndexName);
-        }
+        modelBuilder.ApplyConfiguration(new DocumentRecordConfiguration(IsCosmosProvider));
     }
 }

@@ -13,6 +13,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\MyAIAgent.Common.Infrastructure\MyAIAgent.Common.Infrastructure.csproj" />
+        <ProjectReference Include="..\MyAIAgent.MainSubSys.Application\MyAIAgent.MainSubSys.Application.csproj" />
         <ProjectReference Include="..\MyAIAgent.MainSubSys.Domain\MyAIAgent.MainSubSys.Domain.csproj" />
     </ItemGroup>
 

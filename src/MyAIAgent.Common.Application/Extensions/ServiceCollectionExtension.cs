@@ -1,6 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using MyAIAgent.Common.Domain.ServiceLifetime;
+using MyAIAgent.Common.Domain.Abstractions;
 using Scrutor;
 
 namespace MyAIAgent.Common.Application.Extensions;

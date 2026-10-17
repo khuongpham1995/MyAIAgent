@@ -4,9 +4,9 @@ using Microsoft.KernelMemory;
 using Microsoft.KernelMemory.Configuration;
 using Microsoft.KernelMemory.Diagnostics;
 using MyAIAgent.Common.Infrastructure.Extensions;
-using MyAIAgent.KernelMemory.Application.Extensions;
+using MyAIAgent.KernelMemory.Application;
 using MyAIAgent.KernelMemory.Infrastructure.Data;
-using MyAIAgent.KernelMemory.Infrastructure.Extensions;
+using MyAIAgent.KernelMemory.Infrastructure;
 using MyAIAgent.KernelMemory.Presentation.Extensions;
 using static MyAIAgent.KernelMemory.Infrastructure.Extensions.KernelMemoryPipelineExtension;
 
@@ -26,6 +26,10 @@ builder.Services.AddGlobalExceptionHandling();
 
 var config = builder.Configuration.GetSection("KernelMemory").Get<KernelMemoryConfig>()
     ?? throw new InvalidOperationException("KernelMemory configuration section is missing.");
+
+if (!builder.Environment.IsDevelopment()
+    && !string.Equals(config.DocumentStorageType, "AzureBlobs", StringComparison.OrdinalIgnoreCase))
+    throw new InvalidOperationException("KernelMemory:DocumentStorageType must be AzureBlobs in production.");
 
 builder.AddKernelMemory(
     memoryBuilder =>
@@ -53,7 +57,7 @@ builder.AddKernelMemory(
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseAzureAppConfiguration();
+app.UseAzureAppConfigurationWhenConfigured(app.Configuration);
 
 if (app.Environment.IsDevelopment())
     await app.Services.EnsureDbCreatedAsync<KernelMemoryDbContext>();

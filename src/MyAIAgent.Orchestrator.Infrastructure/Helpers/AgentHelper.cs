@@ -2,7 +2,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol.Transport;
-using MyAIAgent.Common.Domain.ServiceLifetime;
+using MyAIAgent.Common.Domain.Abstractions;
 using MyAIAgent.Orchestrator.Domain.Entities;
 
 namespace MyAIAgent.Orchestrator.Infrastructure.Helpers;

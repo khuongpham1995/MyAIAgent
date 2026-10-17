@@ -12,6 +12,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\MyAIAgent.Common.Infrastructure\MyAIAgent.Common.Infrastructure.csproj" />
+        <ProjectReference Include="..\MyAIAgent.McpServer.Application\MyAIAgent.McpServer.Application.csproj" />
         <ProjectReference Include="..\MyAIAgent.McpServer.Domain\MyAIAgent.McpServer.Domain.csproj" />
     </ItemGroup>
 

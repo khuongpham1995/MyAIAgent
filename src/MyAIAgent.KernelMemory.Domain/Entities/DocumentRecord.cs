@@ -1,8 +1,11 @@
+using MyAIAgent.Common.Domain.Abstractions;
+
 namespace MyAIAgent.KernelMemory.Domain.Entities;
 
-public sealed class DocumentRecord
+public sealed class DocumentRecord : BaseEntity<string>
 {
-    public string Id { get; init; } = Guid.NewGuid().ToString();
+    public DocumentRecord() : base(Guid.NewGuid().ToString()) { }
+
     public string DocumentId { get; init; } = string.Empty;
     public string IndexName { get; init; } = string.Empty;
     public string FileName { get; init; } = string.Empty;
