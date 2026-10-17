@@ -1,4 +1,4 @@
-using MyAIAgent.MainSubSys.Application.Handlers.Chat;
+using MyAIAgent.MainSubSys.Application.Chat.Commands.ChatGateway;
 using MyAIAgent.MainSubSys.Application.Models;
 
 namespace MyAIAgent.MainSubSys.Application.Mappers;

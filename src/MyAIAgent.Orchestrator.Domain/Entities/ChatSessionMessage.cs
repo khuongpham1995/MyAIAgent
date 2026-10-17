@@ -1,8 +1,11 @@
+using MyAIAgent.Common.Domain.Entities;
+
 namespace MyAIAgent.Orchestrator.Domain.Entities;
 
-public sealed class ChatSessionMessage
+public sealed class ChatSessionMessage : BaseEntity<string>
 {
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public ChatSessionMessage() : base(Guid.NewGuid().ToString()) { }
+
     public string Role { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; set; }

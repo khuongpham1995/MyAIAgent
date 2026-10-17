@@ -1,4 +1,6 @@
-using MyAIAgent.MainSubSys.Application.Handlers.Agent;
+using MyAIAgent.MainSubSys.Application.Agents.Commands.CreateAgent;
+using MyAIAgent.MainSubSys.Application.Agents.Commands.DeleteAgent;
+using MyAIAgent.MainSubSys.Application.Agents.Queries.ListAgents;
 using MyAIAgent.MainSubSys.Application.Models;
 
 namespace MyAIAgent.MainSubSys.Application.Mappers;

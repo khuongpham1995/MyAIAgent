@@ -23,6 +23,9 @@ files for current versions; do not copy package versions from examples.
   Common projects must not reference services; sibling services communicate over HTTP.
 - Presentation dispatches through MediatR `ISender`; Application owns commands,
   queries, inbound DTOs, mappers and FluentValidation. Preserve response/error contracts.
+- Keep each command/query, handler and validator in its own request folder under
+  `Application/{Feature}/Commands/` or `Application/{Feature}/Queries/`.
+- Domain entities inherit `Common.Domain`'s `BaseEntity<TKey>` for their shared key.
 - Infrastructure owns external clients and persistence; follow existing typed
   `HttpClient` registrations and interfaces rather than inventing abstractions.
 - Follow local C# style: records for messages, primary constructors for DI,

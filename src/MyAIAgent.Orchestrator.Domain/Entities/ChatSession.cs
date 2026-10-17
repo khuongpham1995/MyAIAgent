@@ -1,8 +1,11 @@
+using MyAIAgent.Common.Domain.Entities;
+
 namespace MyAIAgent.Orchestrator.Domain.Entities;
 
-public sealed class ChatSession
+public sealed class ChatSession : BaseEntity<string>
 {
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public ChatSession() : base(Guid.NewGuid().ToString()) { }
+
     public string SessionId { get; set; } = string.Empty;
     public string UserId { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;

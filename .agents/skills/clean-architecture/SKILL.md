@@ -37,7 +37,7 @@ Layer and cross-service boundary rules → `.agents/rules/dotnet/architecture.md
 ## Common Layer Contents
 
 ### `MyAIAgent.Common.Domain`
-`ResponseModel<T>`, `ITransient`, `IScoped`, `ISingleton`
+`BaseEntity<TKey>`, `ResponseModel<T>`, `ITransient`, `IScoped`, `ISingleton`
 
 ### `MyAIAgent.Common.Application`
 `ValidationBehavior<TRequest, TResponse>` — always throws `ValidationException`. See `Common.Application/Behaviors/ValidationBehavior.cs`.
@@ -59,9 +59,10 @@ Each service has:
 
 ```
 1. Domain/Constants/     → add constants if needed
-2. Domain/Entities/      → add entity record if new data shape required
+2. Domain/Entities/      → add an entity inheriting BaseEntity<TKey> if new data shape required
 3. Application/Interfaces/ → add a port if a handler needs an external dependency
-4. Application/Handlers/ → add IRequest<ResponseModel<T>> + handler + validator
+4. Application/{Feature}/Commands/{RequestName}/ or Queries/{RequestName}/
+   → add the request, handler and validator as separate files in one folder
 5. Application/Mappers/  → add mapper if new DTO → Command mapping needed
 6. Infrastructure/       → implement new port from step 3
 7. Presentation/         → add HTTP endpoint or [McpServerTool] method

@@ -1,6 +1,6 @@
 using MediatR;
 using ModelContextProtocol.Server;
-using MyAIAgent.McpServer.Application.Handlers.Search;
+using MyAIAgent.McpServer.Application.Search.Queries.WebSearch;
 using MyAIAgent.McpServer.Domain.Constants;
 using System.ComponentModel;
 

@@ -15,7 +15,10 @@ description: >
 - **Command** — mutates state. `sealed record *Command([params]) : IRequest<ResponseModel<T>>`
 - **Query** — read-only. `sealed record *Query([params]) : IRequest<ResponseModel<T>>`
 
-Place in `Application/Handlers/[Entity]/`.
+Place each request in `Application/{Feature}/Commands/{RequestName}/` or
+`Application/{Feature}/Queries/{RequestName}/`. Keep the request, handler, and
+validator in separate files in that request folder, with namespaces matching
+the path. Do not use a shared `Application/Handlers/` folder.
 
 ## Handler
 
@@ -28,7 +31,8 @@ Place in `Application/Handlers/[Entity]/`.
 
 ## Validator
 
-`sealed class *Validator : AbstractValidator<TCommand>` — co-locate with the handler file.
+`sealed class *Validator : AbstractValidator<TRequest>` — place beside the request
+and handler in the same Command/Query folder.
 
 - Add a rule for every user-controlled input field
 - Always use `.WithMessage()` — never rely on defaults

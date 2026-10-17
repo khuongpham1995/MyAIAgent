@@ -1,7 +1,9 @@
 using MediatR;
 using MyAIAgent.Common.Infrastructure.Extensions;
 using MyAIAgent.Orchestrator.Application.Extensions;
-using MyAIAgent.Orchestrator.Application.Handlers.Agents;
+using MyAIAgent.Orchestrator.Application.Agents.Commands.CreateAgent;
+using MyAIAgent.Orchestrator.Application.Agents.Commands.DeleteAgent;
+using MyAIAgent.Orchestrator.Application.Agents.Queries.ListAgents;
 using MyAIAgent.Orchestrator.Application.Mappers;
 using MyAIAgent.Orchestrator.Application.Models;
 using MyAIAgent.Orchestrator.Infrastructure.Data;

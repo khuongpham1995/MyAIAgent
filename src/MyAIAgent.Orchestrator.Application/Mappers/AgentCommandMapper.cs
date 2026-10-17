@@ -1,4 +1,6 @@
-using MyAIAgent.Orchestrator.Application.Handlers.Agents;
+using MyAIAgent.Orchestrator.Application.Agents.Commands.CreateAgent;
+using MyAIAgent.Orchestrator.Application.Agents.Commands.DeleteAgent;
+using MyAIAgent.Orchestrator.Application.Agents.Queries.ListAgents;
 using MyAIAgent.Orchestrator.Application.Models;
 
 namespace MyAIAgent.Orchestrator.Application.Mappers;
