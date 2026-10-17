@@ -1,6 +1,6 @@
 using Mapster;
 using MyAIAgent.MainSubSys.Application.Chat.Commands.ChatGateway;
-using MyAIAgent.MainSubSys.Application.Models;
+using MyAIAgent.MainSubSys.Application.Chat;
 
 namespace MyAIAgent.MainSubSys.Application.Common.Mappings;
 

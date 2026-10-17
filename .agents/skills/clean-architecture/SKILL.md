@@ -13,7 +13,7 @@ description: >
 
 ## Overview
 
-Four backend services, each with four layers. `MyAIAgent.Common` is a shared base extended by every service.
+Four backend services, each with four layers. `MyAIAgent.Common.*` provides shared base types and infrastructure helpers.
 
 ```
 Common.Domain ← Common.Application ← Common.Infrastructure
@@ -29,7 +29,7 @@ Layer and cross-service boundary rules → `.agents/rules/dotnet/architecture.md
 
 | Layer | Responsibility | Key types |
 |---|---|---|
-| Domain | Entities, models, constants. No external dependencies. | Records, `*Constant` |
+| Domain | Entities, domain value objects, constants. No application contracts. | `BaseEntity<TKey>` descendants, `*Constant` |
 | Application | Business logic and ports for external dependencies. References Domain + Common.Application. | `IRequest<ResponseModel<T>>`, `IRequestHandler<,>`, `AbstractValidator<T>`, `interface I*Service` |
 | Infrastructure | Adapts external systems to domain interfaces. | `*Service : I*Service, IScoped`, `PageFetcher`, `DbContext` |
 | Presentation | Composition root + HTTP surface. | `Program.cs`, `McpTools/`, `Filters/` |
@@ -37,13 +37,13 @@ Layer and cross-service boundary rules → `.agents/rules/dotnet/architecture.md
 ## Common Layer Contents
 
 ### `MyAIAgent.Common.Domain`
-`BaseEntity<TKey>`, `ResponseModel<T>`, `ITransient`, `IScoped`, `ISingleton`
+`Common/BaseEntity<TKey>`, `Common/AuditableEntity<TKey>`, `Common/FullAuditableEntity<TKey>`, `ResponseModel<T>`, `ITransient`, `IScoped`, `ISingleton`
 
 ### `MyAIAgent.Common.Application`
 `ValidationBehavior<TRequest, TResponse>` — always throws `ValidationException`. See `Common.Application/Behaviors/ValidationBehavior.cs`.
 
 ### `MyAIAgent.Common.Infrastructure`
-`ServiceCollectionExtension` (Scrutor scan), `RetryExtension` (Polly), `GlobalExceptionHandler` (`IExceptionHandler`), `ExceptionHandlingExtension`, `CosmosDbExtension`, `AzureAppConfigurationExtension`
+`RetryExtension` (Polly), `GlobalExceptionHandler` (`IExceptionHandler`), `ExceptionHandlingExtension`, `CosmosDbExtension`, `AzureAppConfigurationExtension`
 
 Do not duplicate any of these in service projects.
 
@@ -52,21 +52,21 @@ Do not duplicate any of these in service projects.
 Marker interfaces and manual registration exceptions → `.agents/rules/dotnet/di.md`
 
 Each service has:
-- `Application/Extensions/IoCExtension.cs` — registers MediatR + FluentValidation + Scrutor scan
-- `Infrastructure/Extensions/IoCExtension.cs` — registers SDK clients, HttpClients, DbContext
+- `Application/IoCExtension.cs` — registers MediatR + FluentValidation + Scrutor scan; Mapster where mappings exist
+- `Infrastructure/IoCExtension.cs` — registers SDK clients, HttpClients, DbContext
 
 ## Adding a Feature — Step by Step
 
 ```
 1. Domain/Constants/     → add constants if needed
 2. Domain/Entities/      → add an entity inheriting BaseEntity<TKey> if new data shape required
-3. Application/Interfaces/ → add a port if a handler needs an external dependency
+3. Application/Common/Interfaces/ → add a port if a handler needs an external dependency
 4. Application/{Feature}/Commands/{RequestName}/ or Queries/{RequestName}/
    → add the request, handler and validator as separate files in one folder
 5. Application/Common/Mappings/ → add a Mapster IRegister mapping for each application contract pair
-6. Infrastructure/       → implement new port from step 3
+6. Infrastructure/Services/ or Data/Repositories/ → implement new port from step 3
 7. Presentation/         → add HTTP endpoint or [McpServerTool] method
-8. Test/                 → add unit tests mirroring Application + Infrastructure structure
+8. Tests/                → add unit tests mirroring Application + Infrastructure structure
 ```
 
 Mapper conventions → `.agents/rules/dotnet/mapping.md`

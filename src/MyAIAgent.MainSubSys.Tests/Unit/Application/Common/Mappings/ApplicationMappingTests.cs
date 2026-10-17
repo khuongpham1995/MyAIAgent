@@ -3,8 +3,9 @@ using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using MyAIAgent.MainSubSys.Application.Agents.Commands.CreateAgent;
 using MyAIAgent.MainSubSys.Application.Chat.Commands.ChatGateway;
-using MyAIAgent.MainSubSys.Application.Extensions;
-using MyAIAgent.MainSubSys.Application.Models;
+using MyAIAgent.MainSubSys.Application;
+using MyAIAgent.MainSubSys.Application.Agents;
+using MyAIAgent.MainSubSys.Application.Chat;
 
 namespace MyAIAgent.MainSubSys.Tests.Unit.Application.Common.Mappings;
 

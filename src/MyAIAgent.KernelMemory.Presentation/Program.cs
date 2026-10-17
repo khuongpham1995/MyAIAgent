@@ -4,9 +4,9 @@ using Microsoft.KernelMemory;
 using Microsoft.KernelMemory.Configuration;
 using Microsoft.KernelMemory.Diagnostics;
 using MyAIAgent.Common.Infrastructure.Extensions;
-using MyAIAgent.KernelMemory.Application.Extensions;
+using MyAIAgent.KernelMemory.Application;
 using MyAIAgent.KernelMemory.Infrastructure.Data;
-using MyAIAgent.KernelMemory.Infrastructure.Extensions;
+using MyAIAgent.KernelMemory.Infrastructure;
 using MyAIAgent.KernelMemory.Presentation.Extensions;
 using static MyAIAgent.KernelMemory.Infrastructure.Extensions.KernelMemoryPipelineExtension;
 

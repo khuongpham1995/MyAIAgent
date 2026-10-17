@@ -1,8 +1,7 @@
 using MediatR;
 using MapsterMapper;
 using MyAIAgent.Common.Domain.Models;
-using MyAIAgent.Orchestrator.Application.Interfaces;
-using MyAIAgent.Orchestrator.Domain.Models;
+using MyAIAgent.Orchestrator.Application.Common.Interfaces;
 
 namespace MyAIAgent.Orchestrator.Application.Agents.Queries.ListAgents;
 

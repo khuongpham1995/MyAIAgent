@@ -9,8 +9,8 @@ using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.MainSubSys.Application.Agents.Commands.CreateAgent;
 using MyAIAgent.MainSubSys.Application.Agents.Commands.DeleteAgent;
 using MyAIAgent.MainSubSys.Application.Agents.Queries.ListAgents;
-using MyAIAgent.MainSubSys.Application.Interfaces;
-using MyAIAgent.MainSubSys.Domain.Models;
+using MyAIAgent.MainSubSys.Application.Common.Interfaces;
+using MyAIAgent.MainSubSys.Application.Agents;
 
 namespace MyAIAgent.MainSubSys.Tests.Unit.Application.Agents;
 

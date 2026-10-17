@@ -1,9 +1,7 @@
-using FluentValidation;
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Orchestrator.Domain.Entities;
-using MyAIAgent.Orchestrator.Application.Interfaces;
-using MyAIAgent.Orchestrator.Domain.Models;
+using MyAIAgent.Orchestrator.Application.Common.Interfaces;
 
 namespace MyAIAgent.Orchestrator.Application.Chat.Commands.Chat;
 

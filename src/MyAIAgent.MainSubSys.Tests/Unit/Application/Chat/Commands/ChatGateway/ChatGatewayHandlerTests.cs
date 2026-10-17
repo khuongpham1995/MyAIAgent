@@ -7,8 +7,8 @@ using Moq;
 using MyAIAgent.Common.Application.Behaviors;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.MainSubSys.Application.Chat.Commands.ChatGateway;
-using MyAIAgent.MainSubSys.Application.Interfaces;
-using MyAIAgent.MainSubSys.Domain.Models;
+using MyAIAgent.MainSubSys.Application.Common.Interfaces;
+using MyAIAgent.MainSubSys.Application.Chat;
 
 namespace MyAIAgent.MainSubSys.Tests.Unit.Application.Chat.Commands.ChatGateway;
 

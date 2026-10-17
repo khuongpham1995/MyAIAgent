@@ -1,8 +1,7 @@
 using Mapster;
 using MyAIAgent.Orchestrator.Application.Agents.Commands.CreateAgent;
-using MyAIAgent.Orchestrator.Application.Models;
+using MyAIAgent.Orchestrator.Application.Agents;
 using MyAIAgent.Orchestrator.Domain.Entities;
-using MyAIAgent.Orchestrator.Domain.Models;
 
 namespace MyAIAgent.Orchestrator.Application.Common.Mappings;
 

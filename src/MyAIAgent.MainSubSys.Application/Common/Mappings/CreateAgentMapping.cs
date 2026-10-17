@@ -1,6 +1,6 @@
 using Mapster;
 using MyAIAgent.MainSubSys.Application.Agents.Commands.CreateAgent;
-using MyAIAgent.MainSubSys.Application.Models;
+using MyAIAgent.MainSubSys.Application.Agents;
 
 namespace MyAIAgent.MainSubSys.Application.Common.Mappings;
 

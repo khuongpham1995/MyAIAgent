@@ -1,8 +1,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using MyAIAgent.Orchestrator.Domain.Entities;
-using MyAIAgent.Orchestrator.Infrastructure.Data;
-using MyAIAgent.Orchestrator.Infrastructure.Repositories;
+using MyAIAgent.Orchestrator.Infrastructure.Data.Repositories;
 
 namespace MyAIAgent.Orchestrator.Tests.Integration.Infrastructure.Repositories;
 

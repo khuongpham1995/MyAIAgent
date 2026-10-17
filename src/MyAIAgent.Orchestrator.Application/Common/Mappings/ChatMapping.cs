@@ -1,6 +1,6 @@
 using Mapster;
 using MyAIAgent.Orchestrator.Application.Chat.Commands.Chat;
-using MyAIAgent.Orchestrator.Application.Models;
+using MyAIAgent.Orchestrator.Application.Chat;
 
 namespace MyAIAgent.Orchestrator.Application.Common.Mappings;
 

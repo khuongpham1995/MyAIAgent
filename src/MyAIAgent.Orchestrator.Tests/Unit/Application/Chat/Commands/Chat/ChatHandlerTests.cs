@@ -7,9 +7,9 @@ using Moq;
 using MyAIAgent.Common.Application.Behaviors;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Orchestrator.Application.Chat.Commands.Chat;
-using MyAIAgent.Orchestrator.Application.Interfaces;
+using MyAIAgent.Orchestrator.Application.Common.Interfaces;
 using MyAIAgent.Orchestrator.Domain.Entities;
-using MyAIAgent.Orchestrator.Domain.Models;
+using MyAIAgent.Orchestrator.Application.Chat;
 
 namespace MyAIAgent.Orchestrator.Tests.Unit.Application.Chat.Commands.Chat;
 

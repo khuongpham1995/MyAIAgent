@@ -1,15 +1,16 @@
 using MediatR;
 using MapsterMapper;
 using MyAIAgent.Common.Infrastructure.Extensions;
-using MyAIAgent.Orchestrator.Application.Extensions;
+using MyAIAgent.Orchestrator.Application;
 using MyAIAgent.Orchestrator.Application.Agents.Commands.CreateAgent;
 using MyAIAgent.Orchestrator.Application.Agents.Commands.DeleteAgent;
 using MyAIAgent.Orchestrator.Application.Agents.Queries.ListAgents;
 using MyAIAgent.Orchestrator.Application.Chat.Commands.Chat;
-using MyAIAgent.Orchestrator.Application.Models;
+using MyAIAgent.Orchestrator.Application.Agents;
+using MyAIAgent.Orchestrator.Application.Chat;
 using MyAIAgent.Orchestrator.Infrastructure.Data;
 using MyAIAgent.Common.Infrastructure.Filters;
-using MyAIAgent.Orchestrator.Infrastructure.Extensions;
+using MyAIAgent.Orchestrator.Infrastructure;
 using MyAIAgent.Orchestrator.Presentation.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);

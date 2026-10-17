@@ -46,7 +46,7 @@ and handler in the same Command/Query folder.
 
 ## IoC Registration
 
-`Application/Extensions/IoCExtension.cs` registers MediatR, `ValidationBehavior`, and all validators via `AddValidatorsFromAssembly`. No manual per-handler registration needed.
+`Application/IoCExtension.cs` registers MediatR, `ValidationBehavior`, and all validators via `AddValidatorsFromAssembly`. No manual per-handler registration needed.
 
 ## Response Model
 

@@ -6,9 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MyAIAgent.Common.Application.Behaviors;
 using MyAIAgent.Orchestrator.Application.Agents.Commands.CreateAgent;
-using MyAIAgent.Orchestrator.Application.Agents.Commands.DeleteAgent;
-using MyAIAgent.Orchestrator.Application.Agents.Queries.ListAgents;
-using MyAIAgent.Orchestrator.Application.Interfaces;
+using MyAIAgent.Orchestrator.Application.Common.Interfaces;
 using MyAIAgent.Orchestrator.Domain.Entities;
 
 namespace MyAIAgent.Orchestrator.Tests.Unit.Application.Agents.Commands.CreateAgent;

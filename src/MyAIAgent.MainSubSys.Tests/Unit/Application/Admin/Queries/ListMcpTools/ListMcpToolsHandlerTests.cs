@@ -1,10 +1,9 @@
 using FluentAssertions;
 using Moq;
 using MyAIAgent.Common.Domain.Models;
-using MyAIAgent.MainSubSys.Application.Admin.Commands.UploadDocument;
 using MyAIAgent.MainSubSys.Application.Admin.Queries.ListMcpTools;
-using MyAIAgent.MainSubSys.Application.Interfaces;
-using MyAIAgent.MainSubSys.Domain.Models;
+using MyAIAgent.MainSubSys.Application.Common.Interfaces;
+using MyAIAgent.MainSubSys.Application.Admin;
 
 namespace MyAIAgent.MainSubSys.Tests.Unit.Application.Admin.Queries.ListMcpTools;
 

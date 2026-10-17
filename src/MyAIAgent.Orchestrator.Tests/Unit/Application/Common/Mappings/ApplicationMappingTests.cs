@@ -3,10 +3,10 @@ using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using MyAIAgent.Orchestrator.Application.Agents.Commands.CreateAgent;
 using MyAIAgent.Orchestrator.Application.Chat.Commands.Chat;
-using MyAIAgent.Orchestrator.Application.Extensions;
-using MyAIAgent.Orchestrator.Application.Models;
+using MyAIAgent.Orchestrator.Application;
+using MyAIAgent.Orchestrator.Application.Agents;
+using MyAIAgent.Orchestrator.Application.Chat;
 using MyAIAgent.Orchestrator.Domain.Entities;
-using MyAIAgent.Orchestrator.Domain.Models;
 
 namespace MyAIAgent.Orchestrator.Tests.Unit.Application.Common.Mappings;
 

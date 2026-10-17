@@ -1,7 +1,6 @@
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
-using MyAIAgent.MainSubSys.Application.Interfaces;
-using MyAIAgent.MainSubSys.Domain.Models;
+using MyAIAgent.MainSubSys.Application.Common.Interfaces;
 
 namespace MyAIAgent.MainSubSys.Application.Agents.Queries.ListAgents;
 

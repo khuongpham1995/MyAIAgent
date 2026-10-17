@@ -1,7 +1,5 @@
-using FluentValidation;
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
-using MyAIAgent.MainSubSys.Application.Interfaces;
 
 namespace MyAIAgent.MainSubSys.Application.Agents.Commands.DeleteAgent;
 

@@ -1,4 +1,4 @@
-using MyAIAgent.Common.Domain.Entities;
+using MyAIAgent.Common.Domain.Common;
 
 namespace MyAIAgent.KernelMemory.Domain.Entities;
 

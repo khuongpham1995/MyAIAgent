@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
-using MyAIAgent.McpServer.Application.Interfaces;
-using MyAIAgent.McpServer.Domain.Models;
+using MyAIAgent.McpServer.Application.Common.Interfaces;
+using MyAIAgent.McpServer.Application.Search;
 
 namespace MyAIAgent.McpServer.Infrastructure.Services;
 

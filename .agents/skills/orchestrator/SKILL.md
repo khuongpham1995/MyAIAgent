@@ -58,7 +58,7 @@ See `Application/Chat/Commands/Chat/ChatHandler.cs` for the current implementati
 
 `ChatOrchestratorService` uses `IChatClient` from `Microsoft.Extensions.AI`. The provider (AzureOpenAI or OpenAI) is selected at startup via `AiProvider:Type` configuration.
 
-`IoCExtension.AddInfrastructure` registers `IChatClient` as a singleton based on configuration. See `Infrastructure/Extensions/IoCExtension.cs`.
+`IoCExtension.AddInfrastructure` registers `IChatClient` as a singleton based on configuration. See `Infrastructure/IoCExtension.cs`.
 
 ## Presentation Bootstrap
 

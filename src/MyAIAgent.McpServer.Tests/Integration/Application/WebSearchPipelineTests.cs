@@ -8,8 +8,8 @@ using Moq;
 using MyAIAgent.Common.Application.Behaviors;
 using MyAIAgent.Common.Tests;
 using MyAIAgent.McpServer.Application.Search.Queries.WebSearch;
-using MyAIAgent.McpServer.Application.Interfaces;
-using MyAIAgent.McpServer.Domain.Models;
+using MyAIAgent.McpServer.Application.Common.Interfaces;
+using MyAIAgent.McpServer.Application.Search;
 
 namespace MyAIAgent.McpServer.Tests.Integration.Application;
 
