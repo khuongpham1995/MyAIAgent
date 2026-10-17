@@ -47,10 +47,15 @@ claude --model opusplan --permission-mode plan
 Project settings also select these defaults. `opusplan` uses Opus in native Plan
 mode and Sonnet after leaving it. User, environment, organization or CLI overrides
 may change model selection; check the active session model instead of assuming.
+For an existing session, select `opusplan` with `/model` and press `Shift+Tab`
+until the status bar shows Plan mode on before invoking the planning skill.
+The project skill `/plan` replaces Claude's built-in `/plan` command in local
+terminal sessions, so invoking the skill alone does not turn on native Plan mode.
 
 The stage commands are the shared skills, invoked by name:
 
-1. `/plan <task>` — enters native Plan mode and produces a concrete plan.
+1. `/plan <task>` — invokes the planning skill while native Plan mode is active;
+   Opus handles planning.
 2. Use Claude's native Plan exit/acceptance control, then `/build` — Sonnet implements
    the available plan and runs tests/quality gates.
 3. `/verify` — two read-only Sonnet reviewers run concurrently; owner consolidates.
@@ -79,9 +84,8 @@ reference below. Native prompts are separate from user task authorization.
 ## Codex
 
 Use a current Codex client supporting repository config, local skills, native
-`/plan` and custom subagents. The CLI found during setup was **0.44.0**; it is too
-old to validate this configuration end to end. Upgrade through your normal Codex
-installation channel before using this workflow. No global settings are modified.
+`/plan` and custom subagents. The local CLI checked on 2026-10-13 is **0.162.1**.
+No global settings are modified.
 Trust the repository through the client's normal trust flow to load `.codex/`.
 
 Start planning with the requested Astra family:
@@ -90,12 +94,17 @@ Start planning with the requested Astra family:
 codex --model gpt-6-astra
 ```
 
-In that session:
+In that session, turn on native Plan mode before invoking the planning skill:
 
 ```text
 /plan
 $plan <task>
 ```
+
+`/plan` changes Codex's native mode; `$plan` loads this repository's planning
+skill. In Codex CLI, the other stages use `$build`, `$verify` and `$commit`
+instead of Claude-style direct slash names. Use `/skills` to discover the
+installed skills. These names are not shell commands.
 
 At the native Plan-to-Build transition, leave Plan mode using the client control,
 select `gpt-6-sol` with `/model`, and run:
@@ -106,7 +115,9 @@ $verify
 $commit
 ```
 
-`$commit` uses the same delivery question as Claude. Use the host's
+`$commit` remains available for explicit invocation even though its
+`allow_implicit_invocation: false` policy prevents automatic selection. It uses
+the same delivery question as Claude. Use the host's
 question UI when available and permitted, or a plain-text question otherwise;
 wait for the answer.
 In an app, select Astra/Sol and
