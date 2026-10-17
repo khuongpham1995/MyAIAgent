@@ -37,13 +37,21 @@ function aiConfigFilesMatching(pattern, { except = [] } = {}) {
 }
 
 const sharedSkills = join(repoRoot, '.agents/skills');
-const stageSkills = ['plan', 'build', 'verify', 'commit'];
+const stageSkills = ['ai-plan', 'ai-build', 'ai-verify', 'ai-commit'];
 const testFile = 'scripts/ai/shared-config.test.mjs';
 
-test('Claude discovers shared skills through one directory symlink', () => {
+test('Claude discovers each canonical skill through a supported folder symlink', () => {
   const adapter = join(repoRoot, '.claude/skills');
-  assert.ok(lstatSync(adapter).isSymbolicLink());
-  assert.equal(realpathSync(adapter), realpathSync(sharedSkills));
+  assert.ok(lstatSync(adapter).isDirectory());
+  assert.deepEqual(readdirSync(adapter).sort(), readdirSync(sharedSkills).sort());
+  for (const name of readdirSync(sharedSkills)) {
+    assert.ok(lstatSync(join(adapter, name)).isSymbolicLink());
+    assert.equal(realpathSync(join(adapter, name)), realpathSync(join(sharedSkills, name)));
+  }
+  // Keep native commands (especially /plan) and bundled /verify available.
+  for (const name of ['plan', 'build', 'verify', 'commit']) {
+    assert.ok(!existsSync(join(adapter, name)), name);
+  }
 });
 
 test('every shared skill declares a name matching its directory', () => {
@@ -57,10 +65,10 @@ test('every shared skill declares a name matching its directory', () => {
 });
 
 test('the commit skill cannot run without the user naming it', () => {
-  const fields = frontmatter(join(sharedSkills, 'commit/SKILL.md'));
+  const fields = frontmatter(join(sharedSkills, 'ai-commit/SKILL.md'));
   assert.equal(fields['disable-model-invocation'], 'true');
-  const policy = readFileSync(join(sharedSkills, 'commit/agents/openai.yaml'), 'utf8');
-  assert.ok(/^policy:\r?\n\s+allow_implicit_invocation: false\s*$/m.test(policy), 'commit/agents/openai.yaml');
+  const policy = readFileSync(join(sharedSkills, 'ai-commit/agents/openai.yaml'), 'utf8');
+  assert.ok(/^policy:\r?\n\s+allow_implicit_invocation: false\s*$/m.test(policy), 'ai-commit/agents/openai.yaml');
 });
 
 test('Claude rule discovery points to the canonical shared rules without copies', () => {

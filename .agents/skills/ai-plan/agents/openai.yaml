@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Plan"
+  short_description: "Plan the task with Astra in native Plan mode"
+  default_prompt: "Use $ai-plan for this MyAIAgent task."

@@ -20,7 +20,7 @@ export function git(root, args) {
 }
 const paths = output => output.split('\0').filter(Boolean);
 
-function fileState(root, path) {
+function fileState(root, path, baselineFiles) {
   // Never follow a replaced parent directory outside the repository.
   let parent = root;
   for (const segment of path.split('/').slice(0, -1)) {
@@ -32,6 +32,9 @@ function fileState(root, path) {
   const stat = lstatSync(fullPath, { throwIfNoEntry: false });
   if (!stat) return { path, mode: 'deleted', sha256: null };
   if (stat.isSymbolicLink()) return { path, mode: '120000', sha256: hash(readlinkSync(fullPath)) };
+  // Git records a file-to-directory replacement as deletion plus new child paths.
+  // Only baseline blobs qualify; directories representing gitlinks still fail.
+  if (stat.isDirectory() && baselineFiles.has(path)) return { path, mode: 'deleted', sha256: null };
   if (!stat.isFile()) throw new Error(`Unsupported candidate entry (including submodules): ${path}`);
   return { path, mode: stat.mode & 0o111 ? '100755' : '100644', sha256: hash(readFileSync(fullPath)) };
 }
@@ -49,7 +52,15 @@ export function captureCandidate(root = repoRoot, base = 'HEAD') {
     ...paths(git(root, ['diff', '--cached', '--name-only', '-z', '--no-renames', baseCommit, '--'])),
     ...paths(git(root, ['ls-files', '--others', '--exclude-standard', '-z'])),
   ])].sort();
-  const manifest = { version: 1, head, base: baseCommit, files: changed.map(path => fileState(root, path)) };
+  const baselineFiles = new Set(paths(git(root, ['ls-tree', '-r', '-z', baseCommit]))
+    .filter(entry => /^(100644|100755|120000) blob /.test(entry))
+    .map(entry => entry.slice(entry.indexOf('\t') + 1)));
+  const submodules = new Set(paths(git(root, ['ls-files', '--stage', '-z']))
+    .filter(entry => entry.startsWith('160000 '))
+    .map(entry => entry.slice(entry.indexOf('\t') + 1)));
+  if (changed.some(path => submodules.has(path))) throw new Error('Changed submodules are not supported.');
+  const manifest = { version: 1, head, base: baseCommit,
+    files: changed.map(path => fileState(root, path, baselineFiles)) };
   // The digest represents final content, modes and deletions, independent of staging.
   return { ...manifest, digest: hash(JSON.stringify(manifest)) };
 }

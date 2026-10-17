@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Build"
+  short_description: "Implement the plan with Sol and run tests"
+  default_prompt: "Use $ai-build for this MyAIAgent task."
