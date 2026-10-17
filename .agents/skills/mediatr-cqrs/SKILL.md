@@ -54,4 +54,6 @@ All handlers return `ResponseModel<T>` (defined once in `Common.Domain`). Do not
 
 ## Mapper Convention
 
-DTO → Command mapping lives in `Application/Mappers/`. See `.agents/rules/dotnet/mapping.md`.
+DTO → Command and entity → response mapping use Mapster `IRegister` classes in
+`Application/Common/Mappings/`. Inject `MapsterMapper.IMapper` at the mapping site.
+See `.agents/rules/dotnet/mapping.md`.

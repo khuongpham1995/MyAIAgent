@@ -63,7 +63,7 @@ Each service has:
 3. Application/Interfaces/ → add a port if a handler needs an external dependency
 4. Application/{Feature}/Commands/{RequestName}/ or Queries/{RequestName}/
    → add the request, handler and validator as separate files in one folder
-5. Application/Mappers/  → add mapper if new DTO → Command mapping needed
+5. Application/Common/Mappings/ → add a Mapster IRegister mapping for each application contract pair
 6. Infrastructure/       → implement new port from step 3
 7. Presentation/         → add HTTP endpoint or [McpServerTool] method
 8. Test/                 → add unit tests mirroring Application + Infrastructure structure

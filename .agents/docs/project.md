@@ -25,6 +25,8 @@ files for current versions; do not copy package versions from examples.
   queries, inbound DTOs, mappers and FluentValidation. Preserve response/error contracts.
 - Keep each command/query, handler and validator in its own request folder under
   `Application/{Feature}/Commands/` or `Application/{Feature}/Queries/`.
+- Keep Mapster `IRegister` mappings in `Application/Common/Mappings/`; scan and
+  compile the service Application assembly once, then inject `IMapper` at call sites.
 - Domain entities inherit `Common.Domain`'s `BaseEntity<TKey>` for their shared key.
 - Infrastructure owns external clients and persistence; follow existing typed
   `HttpClient` registrations and interfaces rather than inventing abstractions.

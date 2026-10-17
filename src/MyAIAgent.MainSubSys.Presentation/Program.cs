@@ -1,4 +1,5 @@
 using MediatR;
+using MapsterMapper;
 using Microsoft.AspNetCore.Http.Features;
 using MyAIAgent.Common.Infrastructure.Extensions;
 using Scalar.AspNetCore;
@@ -8,7 +9,7 @@ using MyAIAgent.MainSubSys.Application.Admin.Queries.ListMcpTools;
 using MyAIAgent.MainSubSys.Application.Agents.Commands.CreateAgent;
 using MyAIAgent.MainSubSys.Application.Agents.Commands.DeleteAgent;
 using MyAIAgent.MainSubSys.Application.Agents.Queries.ListAgents;
-using MyAIAgent.MainSubSys.Application.Mappers;
+using MyAIAgent.MainSubSys.Application.Chat.Commands.ChatGateway;
 using MyAIAgent.MainSubSys.Application.Models;
 using MyAIAgent.MainSubSys.Infrastructure.Extensions;
 using MyAIAgent.MainSubSys.Presentation;
@@ -53,12 +54,13 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-var chatEndpoint = app.MapPost("/chat", async (ChatGatewayRequestDto request, HttpContext context, ISender sender, CancellationToken cancellationToken) =>
+var chatEndpoint = app.MapPost("/chat", async (ChatGatewayRequestDto request, HttpContext context, ISender sender, IMapper mapper, CancellationToken cancellationToken) =>
 {
     var userId = app.Environment.IsDevelopment()
         ? "development:anonymous"
         : $"{context.User.FindFirst("tid")!.Value}:{context.User.FindFirst("oid")!.Value}";
-    var result = await sender.Send(request.ToCommand(userId), cancellationToken);
+    var command = mapper.Map<ChatGatewayCommand>(new AuthenticatedChatGatewayRequest(request, userId));
+    var result = await sender.Send(command, cancellationToken);
     return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
 });
 
@@ -89,9 +91,9 @@ admin.MapGet("/agents", async (ISender sender, CancellationToken cancellationTok
     return Results.Ok(result);
 });
 
-admin.MapPost("/agents", async (CreateAgentRequestDto request, ISender sender, CancellationToken cancellationToken) =>
+admin.MapPost("/agents", async (CreateAgentRequestDto request, ISender sender, IMapper mapper, CancellationToken cancellationToken) =>
 {
-    var result = await sender.Send(request.ToCommand(), cancellationToken);
+    var result = await sender.Send(mapper.Map<CreateAgentCommand>(request), cancellationToken);
     return result.IsSuccess
         ? Results.Created($"/admin/agents/{result.Data}", result)
         : Results.BadRequest(result);

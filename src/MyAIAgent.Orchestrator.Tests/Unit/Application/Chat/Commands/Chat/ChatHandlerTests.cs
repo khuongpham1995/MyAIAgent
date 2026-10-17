@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MyAIAgent.Common.Application.Behaviors;
+using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Orchestrator.Application.Chat.Commands.Chat;
 using MyAIAgent.Orchestrator.Application.Interfaces;
 using MyAIAgent.Orchestrator.Domain.Entities;
@@ -35,7 +36,7 @@ public sealed class ChatHandlerTests
 
         mockOrchestrator
             .Setup(s => s.ChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Common.Domain.Models.ResponseModel<string>.Succeed("Hello there!"));
+            .ReturnsAsync(ResponseModel<string>.Succeed("Hello there!"));
 
         mockRepo
             .Setup(r => r.AddAsync(It.IsAny<ChatSession>(), It.IsAny<CancellationToken>()))
@@ -66,7 +67,7 @@ public sealed class ChatHandlerTests
 
         mockOrchestrator
             .Setup(s => s.ChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Common.Domain.Models.ResponseModel<string>.Succeed("Reply"));
+            .ReturnsAsync(ResponseModel<string>.Succeed("Reply"));
 
         mockRepo
             .Setup(r => r.FindBySessionIdAsync("session-123", It.IsAny<CancellationToken>()))
@@ -117,7 +118,7 @@ public sealed class ChatHandlerTests
         var mockOrchestrator = new Mock<IChatOrchestratorService>();
         mockOrchestrator
             .Setup(s => s.ChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Common.Domain.Models.ResponseModel<string>.Fail(message: "AI unavailable."));
+            .ReturnsAsync(ResponseModel<string>.Fail(message: "AI unavailable."));
 
         var unitOfWork = new Mock<IUnitOfWork>();
         var handler = BuildHandler(mockOrchestrator, unitOfWork: unitOfWork);
@@ -142,7 +143,7 @@ public sealed class ChatHandlerTests
         mockOrchestrator
             .Setup(s => s.ChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
             .Callback<ChatRequest, CancellationToken>((req, _) => capturedRequest = req)
-            .ReturnsAsync(Common.Domain.Models.ResponseModel<string>.Succeed("OK"));
+            .ReturnsAsync(ResponseModel<string>.Succeed("OK"));
 
         var handler = BuildHandler(mockOrchestrator);
         var command = new ChatCommand(null, "Ask something", "tenant:user", AgentId: "agent-42");

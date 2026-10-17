@@ -30,7 +30,7 @@ MyAIAgent.Orchestrator.Application/
   Interfaces/IChatOrchestratorService.cs ← chat service port
   Interfaces/IChatSessionRepository.cs   ← session persistence port
   Models/ChatRequestDto.cs               ← HTTP input
-  Mappers/ChatCommandMapper.cs           ← ChatRequestDto.ToCommand()
+  Common/Mappings/ChatMapping.cs         ← Mapster mapping for ChatRequestDto → ChatCommand
   Extensions/IoCExtension.cs
 
 MyAIAgent.Orchestrator.Infrastructure/
@@ -47,7 +47,7 @@ MyAIAgent.Orchestrator.Presentation/
 ## Chat Flow
 
 1. `POST /chat` receives `ChatRequestDto(SessionId?, UserMessage)`
-2. `request.ToCommand()` maps to `ChatCommand`
+2. The injected Mapster mapper maps the request to `ChatCommand`
 3. `ChatHandler` looks up session by `SessionId` (or creates new), builds history, calls `IChatOrchestratorService.ChatAsync`
 4. Appends user + assistant messages to session, persists via `IChatSessionRepository`
 5. Returns `ResponseModel<ChatResponse(Reply, SessionId)>`
