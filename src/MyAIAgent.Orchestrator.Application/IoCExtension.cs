@@ -28,6 +28,7 @@ public static class IoCExtension
                 cfg.RegisterServicesFromAssemblies(assembly);
             })
             .AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>))
+            .AddTransient(typeof(IStreamPipelineBehavior<,>), typeof(StreamValidationBehavior<,>))
             .AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
     }
 }

@@ -7,7 +7,7 @@ param registryResourceGroup string
 param environmentName string
 param vaultName string
 param identityName string
-param imageMain string
+param imageGateway string
 param imageOrchestrator string
 param imageKernelMemory string
 param imageMcp string
@@ -18,10 +18,22 @@ param azureOpenAiDeployment string
 param azureEmbeddingDeployment string
 param azureTextDeployment string
 param googleSearchEngineId string
+// Public chat stays disabled while the issuer, audience, JWKS URI and signing-key secret are all empty.
+param publicChatIssuer string = ''
+param publicChatAudience string = ''
+param publicChatJwksUri string = ''
+// Name of a Key Vault secret holding an HS256 key; leave empty when publicChatJwksUri is used instead.
+param publicChatJwtVaultEntry string = ''
+param publicChatAgentId string = ''
+param publicChatAllowedOrigin string = ''
+// Endpoint of the Azure AI Search service from search.bicep (https://<name>.search.windows.net).
+param searchEndpoint string
 param location string = resourceGroup().location
 
-var prefix = 'myaia-${stage}'
-var mainName = '${prefix}-mainsubsys'
+var prefix = 'myaiagent-${stage}'
+// Staging uses the test database and index, production the prod ones (see cosmos.bicep and search.bicep).
+var dataName = stage == 'production' ? 'myaiagent-prod' : 'myaiagent-test'
+var gatewayName = '${prefix}-gateway'
 var orchestratorName = '${prefix}-orchestrator'
 var kernelMemoryName = '${prefix}-kernelmemory'
 var mcpName = '${prefix}-mcpserver'
@@ -45,16 +57,22 @@ resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' 
 
 var services = [
   {
-    name: mainName
-    image: imageMain
+    name: gatewayName
+    image: imageGateway
     external: true
     cpu: json('0.5')
     memory: '1Gi'
     maxReplicas: 2
-    secrets: [
-      { name: 'kernel-memory-key', vaultSecret: 'kernel-memory-key' }
-    ]
-    env: [
+    secrets: concat(
+      [
+        { name: 'kernel-memory-key', vaultSecret: 'kernel-memory-key' }
+        { name: 'orchestrator-key', vaultSecret: 'orchestrator-key' }
+      ],
+      empty(publicChatJwtVaultEntry) ? [] : [
+        { name: 'public-chat-signing-key', vaultSecret: publicChatJwtVaultEntry }
+      ]
+    )
+    env: concat([
       { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
       { name: 'Authentication__TenantId', value: tenantId }
       { name: 'Authentication__Audience', value: audience }
@@ -62,7 +80,17 @@ var services = [
       { name: 'KernelMemory__BaseUrl', value: 'http://${kernelMemoryName}' }
       { name: 'McpServer__BaseUrl', value: 'http://${mcpName}' }
       { name: 'KernelMemory__AccessKey', secretRef: 'kernel-memory-key' }
-    ]
+      { name: 'Orchestrator__AccessKey', secretRef: 'orchestrator-key' }
+      { name: 'PublicChat__Jwt__Issuer', value: publicChatIssuer }
+      { name: 'PublicChat__Jwt__Audience', value: publicChatAudience }
+      { name: 'PublicChat__Jwt__JwksUri', value: publicChatJwksUri }
+      { name: 'PublicChat__AgentId', value: publicChatAgentId }
+      { name: 'PublicChat__AllowedOrigins__0', value: publicChatAllowedOrigin }
+      // The Container Apps ingress is the only way in, so its X-Forwarded-For entry identifies the client.
+      { name: 'PublicChat__TrustForwardedHeaders', value: 'true' }
+    ], empty(publicChatJwtVaultEntry) ? [] : [
+      { name: 'PublicChat__Jwt__SigningKey', secretRef: 'public-chat-signing-key' }
+    ])
   }
   {
     name: orchestratorName
@@ -74,10 +102,16 @@ var services = [
     secrets: [
       { name: 'cosmos-connection', vaultSecret: 'cosmos-connection' }
       { name: 'azure-openai-key', vaultSecret: 'azure-openai-key' }
+      { name: 'orchestrator-key', vaultSecret: 'orchestrator-key' }
+      { name: 'orchestrator-rotation-key', vaultSecret: 'orchestrator-rotation-key' }
     ]
     env: [
       { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
       { name: 'ConnectionStrings__CosmosDb', secretRef: 'cosmos-connection' }
+      { name: 'CosmosDb__DatabaseName', value: dataName }
+      { name: 'ServiceAuthorization__Enabled', value: 'true' }
+      { name: 'ServiceAuthorization__AccessKey1', secretRef: 'orchestrator-key' }
+      { name: 'ServiceAuthorization__AccessKey2', secretRef: 'orchestrator-rotation-key' }
       { name: 'AzureOpenAI__Endpoint', value: azureOpenAiEndpoint }
       { name: 'AzureOpenAI__DeploymentName', value: azureOpenAiDeployment }
       { name: 'AzureOpenAI__ApiKey', secretRef: 'azure-openai-key' }
@@ -95,6 +129,7 @@ var services = [
       { name: 'cosmos-connection', vaultSecret: 'cosmos-connection' }
       { name: 'azure-openai-key', vaultSecret: 'azure-openai-key' }
       { name: 'blob-connection', vaultSecret: 'blob-connection' }
+      { name: 'search-admin-key', vaultSecret: 'search-admin-key' }
       { name: 'kernel-memory-key', vaultSecret: 'kernel-memory-key' }
       { name: 'kernel-memory-rotation-key', vaultSecret: 'kernel-memory-rotation-key' }
     ]
@@ -105,7 +140,10 @@ var services = [
       { name: 'KernelMemory__ContentStorageType', value: 'AzureBlobs' }
       { name: 'KernelMemory__Services__AzureBlobs__Auth', value: 'ConnectionString' }
       { name: 'KernelMemory__Services__AzureBlobs__ConnectionString', secretRef: 'blob-connection' }
-      { name: 'KernelMemory__Services__AzureCosmosDbNoSQL__ConnectionString', secretRef: 'cosmos-connection' }
+      { name: 'CosmosDb__DatabaseName', value: dataName }
+      { name: 'KernelMemory__DefaultIndexName', value: dataName }
+      { name: 'KernelMemory__Services__AzureAISearch__Endpoint', value: searchEndpoint }
+      { name: 'KernelMemory__Services__AzureAISearch__APIKey', secretRef: 'search-admin-key' }
       { name: 'KernelMemory__Services__AzureOpenAIEmbedding__Endpoint', value: azureOpenAiEndpoint }
       { name: 'KernelMemory__Services__AzureOpenAIEmbedding__Deployment', value: azureEmbeddingDeployment }
       { name: 'KernelMemory__Services__AzureOpenAIEmbedding__APIKey', secretRef: 'azure-openai-key' }

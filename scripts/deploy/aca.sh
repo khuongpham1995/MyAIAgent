@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -ne 5 ]]; then
-  echo 'Usage: aca.sh staging|production <main-image> <orchestrator-image> <kernel-memory-image> <mcp-image>' >&2
+  echo 'Usage: aca.sh staging|production <gateway-image> <orchestrator-image> <kernel-memory-image> <mcp-image>' >&2
   exit 2
 fi
 
@@ -25,10 +25,11 @@ fi
 : "${AZURE_EMBEDDING_DEPLOYMENT:?}"
 : "${AZURE_TEXT_DEPLOYMENT:?}"
 : "${GOOGLE_SEARCH_ENGINE_ID:?}"
+: "${SEARCH_ENDPOINT:?}"
 
 az deployment group create \
   --only-show-errors \
-  --name "myaia-${stage}-${GITHUB_RUN_ID:-local}" \
+  --name "myaiagent-${stage}-${GITHUB_RUN_ID:-local}" \
   --resource-group "$RESOURCE_GROUP" \
   --template-file infra/apps.bicep \
   --parameters \
@@ -45,7 +46,14 @@ az deployment group create \
     azureEmbeddingDeployment="$AZURE_EMBEDDING_DEPLOYMENT" \
     azureTextDeployment="$AZURE_TEXT_DEPLOYMENT" \
     googleSearchEngineId="$GOOGLE_SEARCH_ENGINE_ID" \
-    imageMain="$2" \
+    searchEndpoint="$SEARCH_ENDPOINT" \
+    publicChatIssuer="${PUBLIC_CHAT_ISSUER:-}" \
+    publicChatAudience="${PUBLIC_CHAT_AUDIENCE:-}" \
+    publicChatJwksUri="${PUBLIC_CHAT_JWKS_URI:-}" \
+    publicChatJwtVaultEntry="${PUBLIC_CHAT_SIGNING_KEY_SECRET:-}" \
+    publicChatAgentId="${PUBLIC_CHAT_AGENT_ID:-}" \
+    publicChatAllowedOrigin="${PUBLIC_CHAT_ALLOWED_ORIGIN:-}" \
+    imageGateway="$2" \
     imageOrchestrator="$3" \
     imageKernelMemory="$4" \
     imageMcp="$5" \

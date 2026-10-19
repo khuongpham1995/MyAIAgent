@@ -4,7 +4,7 @@ targetScope = 'resourceGroup'
 param stage string
 param location string = resourceGroup().location
 
-var prefix = 'myaia-${stage}'
+var prefix = 'myaiagent-${stage}'
 var stageShort = stage == 'production' ? 'p' : 's'
 var keyVaultSecretsUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
 
@@ -34,7 +34,7 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
 }
 
 resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: 'myaia${stageShort}${uniqueString(resourceGroup().id)}'
+  name: 'myaiagent${stageShort}${uniqueString(resourceGroup().id)}'
   location: location
   properties: {
     tenantId: subscription().tenantId

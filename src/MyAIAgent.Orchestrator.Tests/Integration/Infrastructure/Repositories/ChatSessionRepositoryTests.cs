@@ -7,101 +7,101 @@ namespace MyAIAgent.Orchestrator.Tests.Integration.Infrastructure.Repositories;
 
 public sealed class ChatSessionRepositoryTests
 {
-    [Fact]
+    [CosmosFact]
     public async Task AddAsync_WhenSessionIsNew_ShouldPersistSession()
     {
-        // Arrange
-        using var factory = OrchestratorDbContextFactory.Create();
-        await factory.Context.Database.EnsureCreatedAsync();
-
-        var repository = new ChatSessionRepository(factory.Context);
+        await using var database = await CosmosTestDatabase.CreateAsync();
+        await using var context = database.CreateContext();
+        var repository = new ChatSessionRepository(context);
         var session = new ChatSession
         {
-            SessionId = "session-add-001",
-            UserId = "user-001",
+            SessionId = database.NewSessionId(),
+            UserId = database.NewUserId(),
             Title = "Test Session",
             CreatedAt = DateTimeOffset.UtcNow
         };
 
-        // Act
         await repository.AddAsync(session, CancellationToken.None);
-        await new OrchestratorUnitOfWork(factory.Context).SaveChangesAsync(CancellationToken.None);
+        await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
 
-        // Assert
-        var persisted = await repository.FindBySessionIdAsync("session-add-001", CancellationToken.None);
+        var persisted = await repository.FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None);
         persisted.Should().NotBeNull();
-        persisted!.SessionId.Should().Be("session-add-001");
-        persisted.UserId.Should().Be("user-001");
+        persisted!.SessionId.Should().Be(session.SessionId);
+        persisted.UserId.Should().Be(session.UserId);
         persisted.Title.Should().Be("Test Session");
     }
 
-    [Fact]
-    public async Task FindBySessionIdAsync_WhenSessionExists_ShouldReturnSession()
+    [CosmosFact]
+    public async Task FindForUserAsync_WhenSessionExists_ShouldReturnSessionWithMessages()
     {
-        // Arrange
-        using var factory = OrchestratorDbContextFactory.Create();
-        await factory.Context.Database.EnsureCreatedAsync();
-
-        var repository = new ChatSessionRepository(factory.Context);
+        await using var database = await CosmosTestDatabase.CreateAsync();
+        await using var context = database.CreateContext();
+        var repository = new ChatSessionRepository(context);
         var session = new ChatSession
         {
-            SessionId = "session-find-001",
-            UserId = "user-002",
+            SessionId = database.NewSessionId(),
+            UserId = database.NewUserId(),
             Title = "Find Me",
             CreatedAt = DateTimeOffset.UtcNow,
-            Messages =
-            [
-                new ChatSessionMessage { Role = "user", Content = "Hello", CreatedAt = DateTimeOffset.UtcNow }
-            ]
+            Messages = [new ChatSessionMessage { Role = "user", Content = "Hello", CreatedAt = DateTimeOffset.UtcNow }]
         };
         await repository.AddAsync(session, CancellationToken.None);
-        await new OrchestratorUnitOfWork(factory.Context).SaveChangesAsync(CancellationToken.None);
+        await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
 
-        // Act
-        var result = await repository.FindBySessionIdAsync("session-find-001", CancellationToken.None);
+        await using var otherContext = database.CreateContext();
+        var result = await new ChatSessionRepository(otherContext)
+            .FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None);
 
-        // Assert
         result.Should().NotBeNull();
-        result!.SessionId.Should().Be("session-find-001");
-        result.Messages.Should().ContainSingle(m => m.Role == "user" && m.Content == "Hello");
+        result!.Messages.Should().ContainSingle(m => m.Role == "user" && m.Content == "Hello");
     }
 
-    [Fact]
-    public async Task FindBySessionIdAsync_WhenSessionNotFound_ShouldReturnNull()
+    [CosmosFact]
+    public async Task FindForUserAsync_WhenSessionNotFound_ShouldReturnNull()
     {
-        // Arrange
-        using var factory = OrchestratorDbContextFactory.Create();
-        await factory.Context.Database.EnsureCreatedAsync();
+        await using var database = await CosmosTestDatabase.CreateAsync();
+        await using var context = database.CreateContext();
 
-        var repository = new ChatSessionRepository(factory.Context);
+        var result = await new ChatSessionRepository(context)
+            .FindForUserAsync(database.NewSessionId(), database.NewUserId(), CancellationToken.None);
 
-        // Act
-        var result = await repository.FindBySessionIdAsync("nonexistent-session", CancellationToken.None);
-
-        // Assert
         result.Should().BeNull();
     }
 
-    [Fact]
+    [CosmosFact]
+    public async Task FindForUserAsync_WhenSessionBelongsToAnotherUser_ShouldReturnNull()
+    {
+        await using var database = await CosmosTestDatabase.CreateAsync();
+        await using var context = database.CreateContext();
+        var repository = new ChatSessionRepository(context);
+        var session = new ChatSession { SessionId = database.NewSessionId(), UserId = database.NewUserId() };
+        await repository.AddAsync(session, CancellationToken.None);
+        await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
+
+        await using var otherContext = database.CreateContext();
+        var result = await new ChatSessionRepository(otherContext)
+            .FindForUserAsync(session.SessionId, database.NewUserId(), CancellationToken.None);
+
+        result.Should().BeNull();
+    }
+
+    [CosmosFact]
     public async Task UpdateAsync_WhenSessionIsModified_ShouldPersistChanges()
     {
-        // Arrange
-        using var factory = OrchestratorDbContextFactory.Create();
-        await factory.Context.Database.EnsureCreatedAsync();
-
-        var repository = new ChatSessionRepository(factory.Context);
+        await using var database = await CosmosTestDatabase.CreateAsync();
+        await using var context = database.CreateContext();
+        var repository = new ChatSessionRepository(context);
         var session = new ChatSession
         {
-            SessionId = "session-update-001",
-            UserId = "user-003",
+            SessionId = database.NewSessionId(),
+            UserId = database.NewUserId(),
             Title = "Original Title",
             CreatedAt = DateTimeOffset.UtcNow
         };
         await repository.AddAsync(session, CancellationToken.None);
-        var unitOfWork = new OrchestratorUnitOfWork(factory.Context);
+        var unitOfWork = new OrchestratorUnitOfWork(context);
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
-        // Act
         session.Title = "Updated Title";
         session.Messages.Add(new ChatSessionMessage
         {
@@ -111,32 +111,125 @@ public sealed class ChatSessionRepositoryTests
         });
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
-        // Assert
-        var updated = await repository.FindBySessionIdAsync("session-update-001", CancellationToken.None);
+        await using var otherContext = database.CreateContext();
+        var updated = await new ChatSessionRepository(otherContext)
+            .FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None);
         updated.Should().NotBeNull();
         updated!.Title.Should().Be("Updated Title");
         updated.Messages.Should().ContainSingle(m => m.Role == "assistant" && m.Content == "Updated response");
     }
 
-    [Fact]
+    [CosmosFact]
     public async Task AddAsync_BeforeUnitOfWorkCommit_ShouldNotPersistSession()
     {
-        using var factory = OrchestratorDbContextFactory.Create();
-        await factory.Context.Database.EnsureCreatedAsync();
-        var repository = new ChatSessionRepository(factory.Context);
-        var session = new ChatSession { SessionId = "session-pending", UserId = "user-001" };
+        await using var database = await CosmosTestDatabase.CreateAsync();
+        await using var context = database.CreateContext();
+        var repository = new ChatSessionRepository(context);
+        var session = new ChatSession { SessionId = database.NewSessionId(), UserId = database.NewUserId() };
 
         await repository.AddAsync(session, CancellationToken.None);
 
-        using var otherContext = factory.CreateAdditionalContext();
-        var beforeCommit = await otherContext.ChatSessions
-            .AnyAsync(item => item.SessionId == session.SessionId);
-        beforeCommit.Should().BeFalse();
+        await using var otherContext = database.CreateContext();
+        (await otherContext.ChatSessions.AnyAsync(item => item.SessionId == session.SessionId)).Should().BeFalse();
 
-        await new OrchestratorUnitOfWork(factory.Context).SaveChangesAsync(CancellationToken.None);
+        await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
 
-        var afterCommit = await otherContext.ChatSessions
-            .AnyAsync(item => item.SessionId == session.SessionId);
-        afterCommit.Should().BeTrue();
+        (await otherContext.ChatSessions.AnyAsync(item => item.SessionId == session.SessionId)).Should().BeTrue();
+    }
+
+    [CosmosFact]
+    public async Task ListSummariesByUserAsync_WhenUserHasSessions_ShouldReturnOwnSessionsNewestFirst()
+    {
+        await using var database = await CosmosTestDatabase.CreateAsync();
+        await using var context = database.CreateContext();
+        var repository = new ChatSessionRepository(context);
+        var userId = database.NewUserId();
+        var now = DateTimeOffset.UtcNow;
+        var oldId = database.NewSessionId();
+        var newId = database.NewSessionId();
+        await repository.AddAsync(new ChatSession { SessionId = oldId, UserId = userId, Title = "Old", UpdatedAt = now.AddHours(-2) }, CancellationToken.None);
+        await repository.AddAsync(new ChatSession { SessionId = newId, UserId = userId, Title = "New", UpdatedAt = now }, CancellationToken.None);
+        await repository.AddAsync(new ChatSession { SessionId = database.NewSessionId(), UserId = database.NewUserId(), Title = "Foreign", UpdatedAt = now }, CancellationToken.None);
+        await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
+
+        var summaries = await repository.ListSummariesByUserAsync(userId, 0, 10, CancellationToken.None);
+
+        summaries.Select(s => s.SessionId).Should().Equal(newId, oldId);
+        summaries[0].Title.Should().Be("New");
+    }
+
+    [CosmosFact]
+    public async Task ListSummariesByUserAsync_WhenSkipAndTakeAreSet_ShouldReturnRequestedPage()
+    {
+        await using var database = await CosmosTestDatabase.CreateAsync();
+        await using var context = database.CreateContext();
+        var repository = new ChatSessionRepository(context);
+        var userId = database.NewUserId();
+        var now = DateTimeOffset.UtcNow;
+        var ids = Enumerable.Range(0, 5).Select(_ => database.NewSessionId()).ToList();
+        for (var index = 0; index < ids.Count; index++)
+        {
+            await repository.AddAsync(
+                new ChatSession { SessionId = ids[index], UserId = userId, UpdatedAt = now.AddMinutes(-index) },
+                CancellationToken.None);
+        }
+
+        await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
+
+        var page = await repository.ListSummariesByUserAsync(userId, 2, 2, CancellationToken.None);
+
+        page.Select(s => s.SessionId).Should().Equal(ids[2], ids[3]);
+    }
+
+    [CosmosFact]
+    public async Task Delete_WhenSessionIsCommitted_ShouldRemoveSessionAndMessages()
+    {
+        await using var database = await CosmosTestDatabase.CreateAsync();
+        await using var context = database.CreateContext();
+        var repository = new ChatSessionRepository(context);
+        var unitOfWork = new OrchestratorUnitOfWork(context);
+        var session = new ChatSession
+        {
+            SessionId = database.NewSessionId(),
+            UserId = database.NewUserId(),
+            Messages = [new ChatSessionMessage { Role = "user", Content = "hi" }],
+        };
+        await repository.AddAsync(session, CancellationToken.None);
+        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        repository.Delete(session);
+        await unitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        await using var otherContext = database.CreateContext();
+        (await new ChatSessionRepository(otherContext).FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None))
+            .Should().BeNull();
+    }
+
+    [CosmosFact]
+    public async Task AddAsync_WhenSessionHasSummaryFields_ShouldPersistThemIncludingTimestamp()
+    {
+        await using var database = await CosmosTestDatabase.CreateAsync();
+        await using var context = database.CreateContext();
+        var updatedAt = DateTimeOffset.UtcNow;
+        var session = new ChatSession
+        {
+            SessionId = database.NewSessionId(),
+            UserId = database.NewUserId(),
+            AgentId = "agent-1",
+            Summary = "Short summary",
+            SummarizedMessageCount = 8,
+            UpdatedAt = updatedAt,
+        };
+        await new ChatSessionRepository(context).AddAsync(session, CancellationToken.None);
+        await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
+
+        await using var otherContext = database.CreateContext();
+        var persisted = await new ChatSessionRepository(otherContext)
+            .FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None);
+
+        persisted!.AgentId.Should().Be("agent-1");
+        persisted.Summary.Should().Be("Short summary");
+        persisted.SummarizedMessageCount.Should().Be(8);
+        persisted.UpdatedAt.UtcTicks.Should().Be(updatedAt.UtcTicks);
     }
 }

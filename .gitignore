@@ -405,3 +405,6 @@ FodyWeavers.xsd
 
 # Claude
 .claude/settings.local.json
+
+# Local planning notes (not committed)
+plans/

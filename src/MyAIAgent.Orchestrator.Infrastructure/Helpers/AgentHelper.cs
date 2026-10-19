@@ -9,24 +9,41 @@ namespace MyAIAgent.Orchestrator.Infrastructure.Helpers;
 
 public interface IAgentHelper
 {
-    Task<IReadOnlyList<AITool>> GetAgentToolsAsync(AgentDefinition agent, CancellationToken cancellationToken);
+    Task<AgentToolSet> GetAgentToolsAsync(AgentDefinition agent, CancellationToken cancellationToken);
+}
+
+// MCP tools invoke through their client, so the connection must outlive tool discovery until the chat turn ends.
+public sealed class AgentToolSet(IReadOnlyList<AITool> tools, params IAsyncDisposable[] resources) : IAsyncDisposable
+{
+    public static AgentToolSet Empty { get; } = new([]);
+
+    public IReadOnlyList<AITool> Tools { get; } = tools;
+
+    public async ValueTask DisposeAsync()
+    {
+        foreach (var resource in resources.Reverse())
+            await resource.DisposeAsync();
+    }
 }
 
 public sealed class AgentHelper(ILogger<AgentHelper> logger)
     : IAgentHelper, ITransient
 {
-    public async Task<IReadOnlyList<AITool>> GetAgentToolsAsync(AgentDefinition agent, CancellationToken cancellationToken)
+    public async Task<AgentToolSet> GetAgentToolsAsync(AgentDefinition agent, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(agent.McpServerEndpoint))
-            return [];
+            return AgentToolSet.Empty;
+
+        SseClientTransport? transport = null;
+        IMcpClient? mcpClient = null;
 
         try
         {
             // SseClientTransport creates its own internal HttpClient and does not support IHttpClientFactory.
             // Retry and timeout policies from IApiClient<T> cannot be applied here until the MCP SDK
             // exposes a factory-compatible transport. Track: upgrade when ModelContextProtocol adds support.
-            await using var transport = new SseClientTransport(new SseClientTransportOptions { Endpoint = new Uri(agent.McpServerEndpoint) });
-            await using var mcpClient = await McpClientFactory.CreateAsync(transport, cancellationToken: cancellationToken);
+            transport = new SseClientTransport(new SseClientTransportOptions { Endpoint = new Uri(agent.McpServerEndpoint) });
+            mcpClient = await McpClientFactory.CreateAsync(transport, cancellationToken: cancellationToken);
             var mcpTools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
 
             var enabledNames = agent.AgentTools
@@ -38,7 +55,13 @@ public sealed class AgentHelper(ILogger<AgentHelper> logger)
                 ? mcpTools
                 : mcpTools.Where(t => enabledNames.Contains(t.Name));
 
-            return [.. filtered.Cast<AITool>()];
+            return new AgentToolSet([.. filtered.Cast<AITool>()], transport, mcpClient);
+        }
+        catch (OperationCanceledException)
+        {
+            await DisposeQuietlyAsync(mcpClient);
+            await DisposeQuietlyAsync(transport);
+            throw;
         }
         catch (HttpRequestException ex)
         {
@@ -49,6 +72,14 @@ public sealed class AgentHelper(ILogger<AgentHelper> logger)
             logger.LogError(ex, "Unexpected error loading MCP tools from {Endpoint}", agent.McpServerEndpoint);
         }
 
-        return [];
+        await DisposeQuietlyAsync(mcpClient);
+        await DisposeQuietlyAsync(transport);
+        return AgentToolSet.Empty;
+    }
+
+    private static async ValueTask DisposeQuietlyAsync(IAsyncDisposable? resource)
+    {
+        if (resource is not null)
+            await resource.DisposeAsync();
     }
 }

@@ -57,6 +57,27 @@ test('missing TRX cannot pass even when dotnet exits zero', t => {
   assert.equal(report.status, 'FAIL');
   assert.match(report.error, /Expected one fresh TRX/);
 });
+test('skipped tests are surfaced as a warning and never counted as passed', t => {
+  const lines = [];
+  const report = runQuality({ root: fixture(t), output: line => lines.push(line), run(command, args) {
+    const result = successfulRun(command, args);
+    if (command === 'dotnet' && args[0] === 'test' && args[1].includes('Orchestrator')) {
+      const directory = args[args.indexOf('--results-directory') + 1];
+      writeFileSync(join(directory, 'results.trx'), trx({ total: 5, passed: 3, notExecuted: 2 }));
+    }
+    return result;
+  } });
+  assert.equal(report.status, 'PASS');
+  assert.equal(report.tests.skipped, 2);
+  assert.equal(report.warnings.length, 1);
+  assert.match(report.warnings[0], /2 test\(s\) were skipped, not passed \(Orchestrator: 2\)/);
+  assert.match(report.warnings[0], /COSMOS_TEST_CONNECTION_STRING/);
+  assert.ok(lines.some(line => line.includes('WARNING')));
+});
+test('a run without skipped tests has no warnings', t => {
+  const report = runQuality({ root: fixture(t), ...quiet, run: successfulRun });
+  assert.deepEqual(report.warnings, []);
+});
 test('targeted run uses owning test project and is explicitly partial', t => {
   const report = runQuality({ root: fixture(t), project: 'Orchestrator', ...quiet, run: successfulRun });
   assert.equal(report.status, 'PASS');
@@ -102,5 +123,5 @@ test('failed test exit preserves TRX failure counts and stops the gate', t => {
   assert.equal(report.status, 'FAIL');
   assert.equal(report.tests.failed, 1);
   assert.equal(report.tests.passed, 2);
-  assert.equal(report.steps.at(-1).name, 'test:MainSubSys');
+  assert.equal(report.steps.at(-1).name, 'test:Gateway');
 });

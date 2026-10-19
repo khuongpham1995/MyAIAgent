@@ -8,6 +8,7 @@ using MyAIAgent.KernelMemory.Application;
 using MyAIAgent.KernelMemory.Infrastructure.Data;
 using MyAIAgent.KernelMemory.Infrastructure;
 using MyAIAgent.KernelMemory.Presentation.Extensions;
+using MyAIAgent.KernelMemory.Infrastructure.Extensions;
 using static MyAIAgent.KernelMemory.Infrastructure.Extensions.KernelMemoryPipelineExtension;
 
 SensitiveDataLogger.Enabled = false;
@@ -34,7 +35,8 @@ if (!builder.Environment.IsDevelopment()
 builder.AddKernelMemory(
     memoryBuilder =>
     {
-        memoryBuilder.WithoutDefaultHandlers();
+        // In-process orchestration relies on KernelMemory's default pipeline handlers (extract, partition, embed, save).
+        memoryBuilder.AddConfiguredProviders(builder.Configuration, config);
         asyncHandlersCount = AddHandlersAsHostedServices(config, memoryBuilder, builder.Services);
     },
     memory =>
@@ -60,5 +62,5 @@ app.UseExceptionHandler();
 app.UseAzureAppConfigurationWhenConfigured(app.Configuration);
 
 if (app.Environment.IsDevelopment())
-    await app.Services.EnsureDbCreatedAsync<KernelMemoryDbContext>();
+    await app.Services.EnsureCosmosCreatedAsync<KernelMemoryDbContext>();
 await app.RunKernelMemoryAsync(config, start, memoryType, syncHandlersCount, asyncHandlersCount);

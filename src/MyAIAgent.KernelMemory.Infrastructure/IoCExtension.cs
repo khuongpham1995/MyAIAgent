@@ -19,10 +19,7 @@ public static class IoCExtension
             .AddScopedAsMatchingInterfaces(typeof(IoCExtension).Assembly)
             .AddSingletonAsMatchingInterfaces(typeof(IoCExtension).Assembly);
 
-        if (isDevelopment)
-            services.AddSqliteDb<KernelMemoryDbContext>("kernelmemory.db");
-        else
-            services.AddCosmosDb<KernelMemoryDbContext>(configuration);
+        services.AddCosmosDb<KernelMemoryDbContext>(configuration, isDevelopment);
 
         services.Configure<KernelMemoryServiceModel>(
             configuration.GetSection("KernelMemory:Service"));

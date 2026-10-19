@@ -9,7 +9,7 @@ Use typed clients registered with `AddHttpClient<TInterface, TImplementation>` i
 `src/MyAIAgent.<Service>.Infrastructure/IoCExtension.cs`. Infrastructure
 implementations receive `HttpClient`; handlers depend on the service's interfaces.
 For concrete examples inspect `ISearchProvider`/`GoogleSearchClient`,
-`IPageFetcher`/`PageFetcher`, and MainSubSys clients. Do not invent a generic
+`IPageFetcher`/`PageFetcher`, and Gateway clients. Do not invent a generic
 `IApiClient` abstraction absent from the current source.
 
 The shared extension is `AddHttpRetryPolicy()` in

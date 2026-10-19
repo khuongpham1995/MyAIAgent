@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Orchestrator.Domain.Entities;
 using MyAIAgent.Orchestrator.Application.Common.Interfaces;
@@ -9,7 +10,9 @@ public sealed class ChatHandler(
     IChatOrchestratorService orchestratorService,
     IChatSessionRepository sessionRepository,
     IUnitOfWork unitOfWork,
-    TimeProvider timeProvider)
+    IConversationSummarizer summarizer,
+    TimeProvider timeProvider,
+    ILogger<ChatHandler> logger)
     : IRequestHandler<ChatCommand, ResponseModel<ChatResponse>>
 {
     public async Task<ResponseModel<ChatResponse>> Handle(ChatCommand command, CancellationToken cancellationToken)
@@ -17,12 +20,10 @@ public sealed class ChatHandler(
         var isExistingSession = !string.IsNullOrEmpty(command.SessionId);
         var now = timeProvider.GetUtcNow();
 
+        // A session id that is unknown to this user, including one owned by someone else, starts a new conversation.
         var session = isExistingSession
-            ? await sessionRepository.FindBySessionIdAsync(command.SessionId!, cancellationToken)
+            ? await sessionRepository.FindForUserAsync(command.SessionId!, command.UserId, cancellationToken)
             : null;
-
-        if (session is not null && session.UserId != command.UserId)
-            return ResponseModel<ChatResponse>.Fail(message: "Chat session not found.");
 
         var isNewSession = session is null;
         session ??= new ChatSession
@@ -30,14 +31,14 @@ public sealed class ChatHandler(
             SessionId = Guid.NewGuid().ToString(),
             UserId = command.UserId,
             Title = command.UserMessage[..Math.Min(100, command.UserMessage.Length)],
+            AgentId = command.AgentId,
             CreatedAt = now
         };
 
-        var history = session.Messages
-            .Select(m => new ChatMessage(m.Role, m.Content))
-            .ToList();
-
-        var request = new ChatRequest(command.UserMessage, history, command.AgentId);
+        var request = new ChatRequest(
+            command.UserMessage,
+            ChatSessionHistory.Build(session),
+            command.AgentId ?? session.AgentId);
         var aiResult = await orchestratorService.ChatAsync(request, cancellationToken);
 
         if (!aiResult.IsSuccess)
@@ -45,13 +46,22 @@ public sealed class ChatHandler(
 
         var reply = aiResult.Data!;
 
-        session.Messages.Add(new ChatSessionMessage { Role = "user", Content = command.UserMessage, CreatedAt = now });
-        session.Messages.Add(new ChatSessionMessage { Role = "assistant", Content = reply, CreatedAt = now });
+        ChatSessionHistory.AppendTurn(session, command.UserMessage, reply, now);
 
         if (isNewSession)
             await sessionRepository.AddAsync(session, cancellationToken);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // The reply is already saved, so a failed summary save must not turn a successful turn into an error.
+        var previousSummary = session.Summary;
+        var previousSummarizedCount = session.SummarizedMessageCount;
+        if (await ChatSessionHistory.TrySummarizeAsync(session, summarizer, cancellationToken)
+            && !await ChatSessionHistory.TrySaveAsync(unitOfWork, logger, "conversation summary", cancellationToken))
+        {
+            session.Summary = previousSummary;
+            session.SummarizedMessageCount = previousSummarizedCount;
+        }
 
         return ResponseModel<ChatResponse>.Succeed(new ChatResponse(reply, session.SessionId));
     }

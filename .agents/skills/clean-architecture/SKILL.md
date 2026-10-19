@@ -4,7 +4,7 @@ description: >
   Clean Architecture patterns for the MyAIAgent solution. Covers layer
   responsibilities, dependency direction, DI registration, shared types,
   and how to add new features across all four layers for any of the four
-  services (McpServer, Orchestrator, KernelMemory, MainSubSys).
+  services (McpServer, Orchestrator, KernelMemory, Gateway).
   Load when: adding a new feature, refactoring layers, debugging a dependency
   issue, asked about project structure, or adding a new service module.
 ---

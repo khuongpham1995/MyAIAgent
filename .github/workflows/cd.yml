@@ -32,7 +32,7 @@ jobs:
       contents: read
       id-token: write
     outputs:
-      main_image: ${{ steps.images.outputs.main_image }}
+      gateway_image: ${{ steps.images.outputs.gateway_image }}
       orchestrator_image: ${{ steps.images.outputs.orchestrator_image }}
       kernel_memory_image: ${{ steps.images.outputs.kernel_memory_image }}
       mcp_image: ${{ steps.images.outputs.mcp_image }}
@@ -51,6 +51,13 @@ jobs:
       AZURE_EMBEDDING_DEPLOYMENT: ${{ vars.AZURE_EMBEDDING_DEPLOYMENT }}
       AZURE_TEXT_DEPLOYMENT: ${{ vars.AZURE_TEXT_DEPLOYMENT }}
       GOOGLE_SEARCH_ENGINE_ID: ${{ vars.GOOGLE_SEARCH_ENGINE_ID }}
+      SEARCH_ENDPOINT: ${{ vars.SEARCH_ENDPOINT }}
+      PUBLIC_CHAT_ISSUER: ${{ vars.PUBLIC_CHAT_ISSUER }}
+      PUBLIC_CHAT_AUDIENCE: ${{ vars.PUBLIC_CHAT_AUDIENCE }}
+      PUBLIC_CHAT_JWKS_URI: ${{ vars.PUBLIC_CHAT_JWKS_URI }}
+      PUBLIC_CHAT_SIGNING_KEY_SECRET: ${{ vars.PUBLIC_CHAT_SIGNING_KEY_SECRET }}
+      PUBLIC_CHAT_AGENT_ID: ${{ vars.PUBLIC_CHAT_AGENT_ID }}
+      PUBLIC_CHAT_ALLOWED_ORIGIN: ${{ vars.PUBLIC_CHAT_ALLOWED_ORIGIN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -73,8 +80,8 @@ jobs:
           if [[ "${{ github.event_name }}" == workflow_run ]]; then
             az acr login --name "$ACR_NAME"
           fi
-          for service in MainSubSys Orchestrator KernelMemory McpServer; do
-            repository="myaiaagent-${service,,}"
+          for service in Gateway Orchestrator KernelMemory McpServer; do
+            repository="myaiagent-${service,,}"
             tag="$login_server/$repository:$RELEASE_SHA"
             if [[ "${{ github.event_name }}" == workflow_run ]]; then
               docker build --build-arg "SERVICE=$service" --tag "$tag" .
@@ -84,7 +91,7 @@ jobs:
               --name "$repository:$RELEASE_SHA" --query digest --output tsv)
             [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
             case "$service" in
-              MainSubSys) output=main_image ;;
+              Gateway) output=gateway_image ;;
               Orchestrator) output=orchestrator_image ;;
               KernelMemory) output=kernel_memory_image ;;
               McpServer) output=mcp_image ;;
@@ -95,7 +102,7 @@ jobs:
         id: deploy
         run: |
           fqdn=$(bash scripts/deploy/aca.sh staging \
-            '${{ steps.images.outputs.main_image }}' \
+            '${{ steps.images.outputs.gateway_image }}' \
             '${{ steps.images.outputs.orchestrator_image }}' \
             '${{ steps.images.outputs.kernel_memory_image }}' \
             '${{ steps.images.outputs.mcp_image }}')
@@ -124,6 +131,13 @@ jobs:
       AZURE_EMBEDDING_DEPLOYMENT: ${{ vars.AZURE_EMBEDDING_DEPLOYMENT }}
       AZURE_TEXT_DEPLOYMENT: ${{ vars.AZURE_TEXT_DEPLOYMENT }}
       GOOGLE_SEARCH_ENGINE_ID: ${{ vars.GOOGLE_SEARCH_ENGINE_ID }}
+      SEARCH_ENDPOINT: ${{ vars.SEARCH_ENDPOINT }}
+      PUBLIC_CHAT_ISSUER: ${{ vars.PUBLIC_CHAT_ISSUER }}
+      PUBLIC_CHAT_AUDIENCE: ${{ vars.PUBLIC_CHAT_AUDIENCE }}
+      PUBLIC_CHAT_JWKS_URI: ${{ vars.PUBLIC_CHAT_JWKS_URI }}
+      PUBLIC_CHAT_SIGNING_KEY_SECRET: ${{ vars.PUBLIC_CHAT_SIGNING_KEY_SECRET }}
+      PUBLIC_CHAT_AGENT_ID: ${{ vars.PUBLIC_CHAT_AGENT_ID }}
+      PUBLIC_CHAT_ALLOWED_ORIGIN: ${{ vars.PUBLIC_CHAT_ALLOWED_ORIGIN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -137,7 +151,7 @@ jobs:
         id: deploy
         run: |
           fqdn=$(bash scripts/deploy/aca.sh production \
-            '${{ needs.staging.outputs.main_image }}' \
+            '${{ needs.staging.outputs.gateway_image }}' \
             '${{ needs.staging.outputs.orchestrator_image }}' \
             '${{ needs.staging.outputs.kernel_memory_image }}' \
             '${{ needs.staging.outputs.mcp_image }}')

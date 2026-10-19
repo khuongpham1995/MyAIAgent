@@ -7,7 +7,7 @@ import { assertCurrent, captureCandidate, repoRoot } from './candidate.mjs';
 import { readTrx } from './trx.mjs';
 export { repoRoot } from './candidate.mjs';
 
-export const services = ['MainSubSys', 'Orchestrator', 'KernelMemory', 'McpServer'];
+export const services = ['Gateway', 'Orchestrator', 'KernelMemory', 'McpServer'];
 export const testProject = service => `src/MyAIAgent.${service}.Tests/MyAIAgent.${service}.Tests.csproj`;
 const solution = 'src/MyAIAgent.slnx';
 
@@ -16,7 +16,7 @@ export function parseOptions(args) {
   while (args.length) {
     const key = args.shift();
     if (!['--project', '--base'].includes(key) || !args.length || args[0].startsWith('--') || options[key.slice(2)]) {
-      throw new Error('Usage: node scripts/ai/quality.mjs [--project MainSubSys|Orchestrator|KernelMemory|McpServer] [--base <merge-base>]');
+      throw new Error('Usage: node scripts/ai/quality.mjs [--project Gateway|Orchestrator|KernelMemory|McpServer] [--base <merge-base>]');
     }
     options[key.slice(2)] = args.shift();
   }
@@ -31,7 +31,7 @@ export function runQuality({ root = repoRoot, run = spawnSync, output = console.
   mkdirSync(parent, { recursive: true });
   const directory = mkdtempSync(resolve(parent, new Date().toISOString().replaceAll(':', '-') + '-'));
   const report = { version: 1, status: 'RUNNING', scope: project ? 'targeted' : 'full', project: project ?? null,
-    solution, directory, candidate, tests: { total: 0, passed: 0, failed: 0, skipped: 0, suites: [] }, steps: [] };
+    solution, directory, candidate, tests: { total: 0, passed: 0, failed: 0, skipped: 0, suites: [] }, warnings: [], steps: [] };
   const reportPath = resolve(directory, 'quality.json');
   const save = () => writeFileSync(reportPath, JSON.stringify(report, null, 2) + '\n');
   save();
@@ -61,6 +61,13 @@ export function runQuality({ root = repoRoot, run = spawnSync, output = console.
       for (const key of ['total', 'passed', 'failed', 'skipped']) report.tests[key] += suite[key];
       save();
       if (!passed || suite.failed || !['Completed', 'Passed'].includes(suite.outcome)) throw new Error(`Tests failed: ${service}`);
+    }
+    if (report.tests.skipped > 0) {
+      const bySuite = report.tests.suites.filter(suite => suite.skipped).map(suite => `${suite.service}: ${suite.skipped}`).join(', ');
+      const warning = `${report.tests.skipped} test(s) were skipped, not passed (${bySuite}). Cosmos integration tests skip when COSMOS_TEST_CONNECTION_STRING is not set; report them as skipped.`;
+      report.warnings.push(warning);
+      output(`\nWARNING: ${warning}`);
+      save();
     }
     const include = candidate.files.filter(file => file.path.endsWith('.cs') && ['100644', '100755'].includes(file.mode)).map(file => file.path);
     report.format = { scope: 'candidate C# files', include };

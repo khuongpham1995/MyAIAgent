@@ -11,7 +11,7 @@ var orchestrator = builder.AddProject<Projects.MyAIAgent_Orchestrator_Presentati
     .WithReference(mcpServer)
     .WithReference(kernelMemory);
 
-builder.AddProject<Projects.MyAIAgent_MainSubSys_Presentation>("main-subsys")
+builder.AddProject<Projects.MyAIAgent_Gateway_Presentation>("gateway")
     .WithExternalHttpEndpoints()
     .WithReference(orchestrator)
     .WithReference(kernelMemory)

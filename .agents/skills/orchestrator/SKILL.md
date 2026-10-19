@@ -19,7 +19,7 @@ description: >
 
 ```
 MyAIAgent.Orchestrator.Domain/
-  Entities/ChatSession.cs                ← EF Core Cosmos entity (partition: SessionId)
+  Entities/ChatSession.cs                ← EF Core Cosmos entity (partition: UserId, so listing and lookups stay single-partition)
   Entities/ChatSessionMessage.cs         ← owned entity (Role, Content, CreatedAt)
   Models/ChatMessage.cs                  ← role + content (for AI calls)
   Models/ChatRequest.cs                  ← UserMessage + History
@@ -34,7 +34,7 @@ MyAIAgent.Orchestrator.Application/
   Extensions/IoCExtension.cs
 
 MyAIAgent.Orchestrator.Infrastructure/
-  Data/OrchestratorDbContext.cs          ← EF Core (SQLite dev / Cosmos prod; ChatSessions + AgentDefinitions)
+  Data/OrchestratorDbContext.cs          ← EF Core Cosmos (ChatSessions + AgentDefinitions containers; `myaiagent-test` locally and in staging, `myaiagent-prod` in production)
   Repositories/ChatSessionRepository.cs ← IScoped
   Services/ChatOrchestratorService.cs   ← IScoped; wraps IChatClient + IKernelMemoryClient (planned)
   Extensions/IoCExtension.cs            ← registers IChatClient, DB provider, HttpAuthEndpointFilter
@@ -60,9 +60,22 @@ See `Application/Chat/Commands/Chat/ChatHandler.cs` for the current implementati
 
 `IoCExtension.AddInfrastructure` registers `IChatClient` as a singleton based on configuration. See `Infrastructure/IoCExtension.cs`.
 
+## Streaming Chat
+
+`POST /chat/stream` returns Server-Sent Events built from `StreamChatCommand : IStreamRequest<ChatStreamEvent>`
+(`session`, `delta`, `title`, `done`, `error`). MediatR does not run `IPipelineBehavior` for stream requests,
+so `StreamValidationBehavior` (Common.Application) validates them and is registered beside `ValidationBehavior`.
+`ToServerSentEventsAsync` pulls the first event before returning so start-up failures such as validation still
+produce a normal error response. `IChatOrchestratorService.StreamChatAsync` and `ChatAsync` share one turn setup
+and release the MCP client when the turn ends. The `IChatClient` is wrapped with function invocation so tool calls run.
+
+Sessions keep an LLM-generated title, a rolling `Summary` of older turns and `SummarizedMessageCount`;
+`ChatSessionHistory` builds the history sent to the model and folds old turns once enough accumulate.
+Conversation list/get/rename/delete handlers check that the session belongs to the requesting user id.
+
 ## Presentation Bootstrap
 
-`Program.cs` wires: `AddAzureAppConfiguration` → `AddApplication` → `AddInfrastructure(isDevelopment)` → `AddGlobalExceptionHandling` → `AddSingleton(TimeProvider.System)` → `UseExceptionHandler` → `EnsureDbCreatedAsync<OrchestratorDbContext>()` (dev only) → endpoints via `MapGroup("").AddEndpointFilter(HttpAuthEndpointFilter)`.
+`Program.cs` wires: `AddAzureAppConfiguration` → `AddApplication` → `AddInfrastructure(isDevelopment)` → `AddGlobalExceptionHandling` → `AddSingleton(TimeProvider.System)` → `UseExceptionHandler` → `EnsureCosmosCreatedAsync<OrchestratorDbContext>()` (dev only) → endpoints via `MapGroup("").AddEndpointFilter(HttpAuthEndpointFilter)`.
 
 `TimeProvider` is injected for testable timestamps — never use `DateTimeOffset.UtcNow` directly.
 
@@ -83,6 +96,10 @@ See `Application/Chat/Commands/Chat/ChatHandler.cs` for the current implementati
 ```
 
 Use `dotnet user-secrets` for API keys. Never commit them.
+
+`ServiceAuthorization` (shared key checked by `HttpAuthEndpointFilter`) is off in Development and must be on elsewhere:
+the Orchestrator trusts the user id callers send, so `AddInfrastructure` throws outside Development unless
+`ServiceAuthorization:Enabled` is true. The Gateway sends `Orchestrator:AccessKey` in the `Authorization` header.
 
 ## Key Packages (`Orchestrator.Infrastructure.csproj`)
 

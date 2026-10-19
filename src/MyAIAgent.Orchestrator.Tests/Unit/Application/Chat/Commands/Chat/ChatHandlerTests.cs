@@ -7,6 +7,7 @@ using Moq;
 using MyAIAgent.Common.Application.Behaviors;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Orchestrator.Application.Chat.Commands.Chat;
+using MyAIAgent.Orchestrator.Application.Common.Exceptions;
 using MyAIAgent.Orchestrator.Application.Common.Interfaces;
 using MyAIAgent.Orchestrator.Domain.Entities;
 using MyAIAgent.Orchestrator.Application.Chat;
@@ -18,13 +19,16 @@ public sealed class ChatHandlerTests
     private static ChatHandler BuildHandler(
         Mock<IChatOrchestratorService>? orchestrator = null,
         Mock<IChatSessionRepository>? sessionRepo = null,
-        Mock<IUnitOfWork>? unitOfWork = null)
+        Mock<IUnitOfWork>? unitOfWork = null,
+        Mock<IConversationSummarizer>? summarizer = null)
     {
         return new ChatHandler(
             (orchestrator ?? new Mock<IChatOrchestratorService>()).Object,
             (sessionRepo ?? new Mock<IChatSessionRepository>()).Object,
             (unitOfWork ?? new Mock<IUnitOfWork>()).Object,
-            TimeProvider.System);
+            (summarizer ?? new Mock<IConversationSummarizer>()).Object,
+            TimeProvider.System,
+            NullLogger<ChatHandler>.Instance);
     }
 
     [Fact]
@@ -70,7 +74,7 @@ public sealed class ChatHandlerTests
             .ReturnsAsync(ResponseModel<string>.Succeed("Reply"));
 
         mockRepo
-            .Setup(r => r.FindBySessionIdAsync("session-123", It.IsAny<CancellationToken>()))
+            .Setup(r => r.FindForUserAsync("session-123", "tenant:user", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingSession);
 
         var unitOfWork = new Mock<IUnitOfWork>();
@@ -88,27 +92,78 @@ public sealed class ChatHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenSessionBelongsToAnotherUser_ShouldRejectBeforeOrchestration()
+    public async Task Handle_WhenSessionBelongsToAnotherUser_ShouldStartNewConversationWithoutTouchingTheOwnersSession()
     {
-        var existingSession = new ChatSession { SessionId = "session-123", UserId = "tenant:owner" };
+        var ownersSession = new ChatSession { SessionId = "session-123", UserId = "tenant:owner" };
         var mockOrchestrator = new Mock<IChatOrchestratorService>();
+        ChatRequest? captured = null;
+        mockOrchestrator
+            .Setup(s => s.ChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<ChatRequest, CancellationToken>((request, _) => captured = request)
+            .ReturnsAsync(ResponseModel<string>.Succeed("Fresh"));
         var mockRepo = new Mock<IChatSessionRepository>();
         mockRepo
-            .Setup(r => r.FindBySessionIdAsync("session-123", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingSession);
-        var unitOfWork = new Mock<IUnitOfWork>();
-        var handler = BuildHandler(mockOrchestrator, mockRepo, unitOfWork);
+            .Setup(r => r.FindForUserAsync("session-123", "tenant:owner", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ownersSession);
+        ChatSession? added = null;
+        mockRepo
+            .Setup(r => r.AddAsync(It.IsAny<ChatSession>(), It.IsAny<CancellationToken>()))
+            .Callback<ChatSession, CancellationToken>((session, _) => added = session)
+            .Returns(Task.CompletedTask);
+        var handler = BuildHandler(mockOrchestrator, mockRepo, new Mock<IUnitOfWork>());
 
         var result = await handler.Handle(
             new ChatCommand("session-123", "Reveal the conversation", "tenant:other"),
             CancellationToken.None);
 
-        result.IsSuccess.Should().BeFalse();
-        result.Message.Should().Be("Chat session not found.");
-        mockOrchestrator.Verify(
-            service => service.ChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-        unitOfWork.Verify(work => work.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.SessionId.Should().NotBe("session-123");
+        added!.UserId.Should().Be("tenant:other");
+        added.SessionId.Should().Be(result.Data.SessionId);
+        captured!.History.Should().BeEmpty();
+        ownersSession.Messages.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_WhenSummarySaveFailsAfterTheTurnIsCommitted_ShouldStillReturnTheReply()
+    {
+        var baseTime = DateTimeOffset.UtcNow.AddHours(-1);
+        var session = new ChatSession { SessionId = "s-1", UserId = "tenant:user" };
+        for (var index = 0; index < 18; index++)
+        {
+            session.Messages.Add(new ChatSessionMessage
+            {
+                Role = index % 2 == 0 ? "user" : "assistant",
+                Content = $"m{index}",
+                CreatedAt = baseTime.AddSeconds(index),
+            });
+        }
+
+        var mockOrchestrator = new Mock<IChatOrchestratorService>();
+        mockOrchestrator
+            .Setup(s => s.ChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ResponseModel<string>.Succeed("Reply"));
+        var mockRepo = new Mock<IChatSessionRepository>();
+        mockRepo
+            .Setup(r => r.FindForUserAsync("s-1", "tenant:user", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        var mockSummarizer = new Mock<IConversationSummarizer>();
+        mockSummarizer
+            .Setup(s => s.SummarizeAsync(It.IsAny<string?>(), It.IsAny<IReadOnlyList<ChatMessage>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("Condensed.");
+        var unitOfWork = new Mock<IUnitOfWork>();
+        unitOfWork
+            .SetupSequence(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1)
+            .ThrowsAsync(new PersistenceException("throttled", new InvalidOperationException()));
+        var handler = BuildHandler(mockOrchestrator, mockRepo, unitOfWork, mockSummarizer);
+
+        var result = await handler.Handle(new ChatCommand("s-1", "question", "tenant:user"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Reply.Should().Be("Reply");
+        session.Summary.Should().BeNull();
+        session.SummarizedMessageCount.Should().Be(0);
     }
 
     [Fact]

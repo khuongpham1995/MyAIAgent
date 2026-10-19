@@ -5,7 +5,7 @@ flat under `src/`; folders in `src/MyAIAgent.slnx` are solution groupings only.
 
 | Area | Actual path prefix | Responsibility / review focus |
 | --- | --- | --- |
-| MainSubSys | `src/MyAIAgent.MainSubSys.*` | Gateway, chat forwarding, admin agents/tools, document upload/status |
+| Gateway | `src/MyAIAgent.Gateway.*` | API gateway, chat forwarding, public streaming chat, admin agents/tools, document upload/status |
 | Orchestrator | `src/MyAIAgent.Orchestrator.*` | Microsoft Agents AI, RAG context, MCP dispatch, chat/session and agent persistence |
 | KernelMemory | `src/MyAIAgent.KernelMemory.*` | RAG daemon, document ingestion, document records and retrieval |
 | McpServer | `src/MyAIAgent.McpServer.*` | MCP tools, Google search and page fetching |
@@ -43,7 +43,7 @@ files for current versions; do not copy package versions from examples.
   configuration. Do not run live providers, upload documents or start Aspire merely
   to verify an unrelated change.
 
-MainSubSys forwards chat/agent administration to Orchestrator, document upload/status
+Gateway forwards chat/agent administration to Orchestrator, document upload/status
 queries to KernelMemory, and tool discovery to McpServer. Orchestrator retrieves RAG
 context from KernelMemory and dispatches tools through McpServer. McpServer does not
 call KernelMemory. Aspire wires these service references in `src/MyAIAgent.All/`.
@@ -53,8 +53,11 @@ call KernelMemory. Aspire wires these service references in `src/MyAIAgent.All/`
 Use the owning `src/MyAIAgent.<Service>.Tests` project. Add regression tests for
 behavior changes, invalid/missing input, dependency failure and cancellation where
 applicable. Test real handlers/validators/mappers; mock external I/O boundaries.
-Integration tests may use SQLite or a real MediatR pipeline; they should not require
-production credentials. Inspect existing fixtures before adding dependencies.
+Integration tests may use a real MediatR pipeline. Repository tests run against the Cosmos
+test database (`myaiagent-test`) through `[CosmosFact]` and are **skipped, not passed,** when
+`COSMOS_TEST_CONNECTION_STRING` is unset (PR CI never receives that key because the test and
+production databases share one account). Never point tests at production credentials.
+Inspect existing fixtures before adding dependencies.
 
 ```bash
 node scripts/ai/quality.mjs --project Orchestrator
@@ -63,7 +66,7 @@ node scripts/ai/quality.mjs
 
 | Service argument | Test project |
 | --- | --- |
-| `MainSubSys` | `src/MyAIAgent.MainSubSys.Tests/MyAIAgent.MainSubSys.Tests.csproj` |
+| `Gateway` | `src/MyAIAgent.Gateway.Tests/MyAIAgent.Gateway.Tests.csproj` |
 | `Orchestrator` | `src/MyAIAgent.Orchestrator.Tests/MyAIAgent.Orchestrator.Tests.csproj` |
 | `KernelMemory` | `src/MyAIAgent.KernelMemory.Tests/MyAIAgent.KernelMemory.Tests.csproj` |
 | `McpServer` | `src/MyAIAgent.McpServer.Tests/MyAIAgent.McpServer.Tests.csproj` |

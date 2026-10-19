@@ -12,6 +12,9 @@ public sealed class KernelMemoryDbContext(DbContextOptions<KernelMemoryDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfiguration(new DocumentRecordConfiguration(IsCosmosProvider));
+        // Shared database throughput keeps every container inside the free tier budget; a per-container setting would not.
+        modelBuilder.HasManualThroughput(400);
+
+        modelBuilder.ApplyConfiguration(new DocumentRecordConfiguration());
     }
 }

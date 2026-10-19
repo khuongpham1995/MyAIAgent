@@ -1,3 +1,4 @@
+using System.ClientModel;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -5,6 +6,7 @@ using ChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using ChatResponse = Microsoft.Extensions.AI.ChatResponse;
 using Moq;
 using MyAIAgent.Orchestrator.Domain.Entities;
+using MyAIAgent.Orchestrator.Application.Common.Exceptions;
 using MyAIAgent.Orchestrator.Application.Common.Interfaces;
 using MyAIAgent.Orchestrator.Application.Chat;
 using MyAIAgent.Orchestrator.Infrastructure.Helpers;
@@ -73,7 +75,7 @@ public sealed class ChatOrchestratorServiceTests
             .ReturnsAsync(agent);
 
         mockAgentBuilder.Setup(b => b.GetAgentToolsAsync(agent, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(fakeTools);
+            .ReturnsAsync(new AgentToolSet(fakeTools));
 
         ChatOptions? capturedOptions = null;
         mockClient
@@ -113,7 +115,7 @@ public sealed class ChatOrchestratorServiceTests
             .ReturnsAsync(agent);
 
         mockAgentBuilder.Setup(b => b.GetAgentToolsAsync(agent, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([]);
+            .ReturnsAsync(AgentToolSet.Empty);
 
         mockClient
             .Setup(c => c.GetResponseAsync(
@@ -159,5 +161,158 @@ public sealed class ChatOrchestratorServiceTests
         // Assert
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Be("AI service temporarily unavailable.");
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_WhenProviderStreams_ShouldYieldNonEmptyTextChunks()
+    {
+        // Arrange
+        var mockClient = new Mock<IChatClient>();
+        var mockAgentRepo = new Mock<IAgentRepository>();
+        mockAgentRepo.Setup(r => r.FindDefaultAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AgentDefinition?)null);
+        mockClient
+            .Setup(c => c.GetStreamingResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(ToUpdates("Hel", "", "lo"));
+        var service = BuildService(mockClient, mockAgentRepo);
+
+        // Act
+        var chunks = new List<string>();
+        await foreach (var chunk in service.StreamChatAsync(new ChatRequest("Hi", []), CancellationToken.None))
+            chunks.Add(chunk);
+
+        // Assert
+        chunks.Should().Equal("Hel", "lo");
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_WhenStreamEnds_ShouldReleaseAgentTools()
+    {
+        // Arrange
+        var mockClient = new Mock<IChatClient>();
+        var mockAgentRepo = new Mock<IAgentRepository>();
+        var mockAgentBuilder = new Mock<IAgentHelper>();
+        var agent = new AgentDefinition { Name = "Default", IsDefault = true };
+        var resource = new Mock<IAsyncDisposable>();
+        mockAgentRepo.Setup(r => r.FindDefaultAsync(It.IsAny<CancellationToken>())).ReturnsAsync(agent);
+        mockAgentBuilder.Setup(b => b.GetAgentToolsAsync(agent, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentToolSet([], resource.Object));
+        mockClient
+            .Setup(c => c.GetStreamingResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(ToUpdates("done"));
+        var service = BuildService(mockClient, mockAgentRepo, mockAgentBuilder);
+
+        // Act
+        await foreach (var _ in service.StreamChatAsync(new ChatRequest("Hi", []), CancellationToken.None))
+        {
+        }
+
+        // Assert
+        resource.Verify(r => r.DisposeAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task ChatAsync_WhenProviderThrowsClientResultException_ShouldReturnFailure()
+    {
+        var mockClient = new Mock<IChatClient>();
+        var mockAgentRepo = new Mock<IAgentRepository>();
+        mockAgentRepo.Setup(r => r.FindDefaultAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AgentDefinition?)null);
+        mockClient
+            .Setup(c => c.GetResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ClientResultException("429 Too Many Requests"));
+
+        var result = await BuildService(mockClient, mockAgentRepo)
+            .ChatAsync(new ChatRequest("Hi", []), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("AI service temporarily unavailable.");
+    }
+
+    [Fact]
+    public async Task ChatAsync_WhenRequestedAgentDoesNotExist_ShouldFailInsteadOfUsingUnconstrainedModel()
+    {
+        var mockClient = new Mock<IChatClient>();
+        var mockAgentRepo = new Mock<IAgentRepository>();
+        mockAgentRepo.Setup(r => r.FindByIdAsync("gone", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AgentDefinition?)null);
+
+        var result = await BuildService(mockClient, mockAgentRepo)
+            .ChatAsync(new ChatRequest("Hi", [], AgentId: "gone"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("Agent not found.");
+        mockClient.Verify(
+            c => c.GetResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(), It.IsAny<ChatOptions?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_WhenProviderThrowsClientResultException_ShouldThrowAiProviderException()
+    {
+        var mockClient = new Mock<IChatClient>();
+        var mockAgentRepo = new Mock<IAgentRepository>();
+        mockAgentRepo.Setup(r => r.FindDefaultAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AgentDefinition?)null);
+        mockClient
+            .Setup(c => c.GetStreamingResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(FailingUpdates());
+        var service = BuildService(mockClient, mockAgentRepo);
+
+        var act = async () =>
+        {
+            await foreach (var _ in service.StreamChatAsync(new ChatRequest("Hi", []), CancellationToken.None))
+            {
+            }
+        };
+
+        await act.Should().ThrowAsync<AiProviderException>();
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_WhenRequestedAgentDoesNotExist_ShouldThrowAgentNotFoundException()
+    {
+        var mockAgentRepo = new Mock<IAgentRepository>();
+        mockAgentRepo.Setup(r => r.FindByIdAsync("gone", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AgentDefinition?)null);
+        var service = BuildService(agentRepo: mockAgentRepo);
+
+        var act = async () =>
+        {
+            await foreach (var _ in service.StreamChatAsync(new ChatRequest("Hi", [], AgentId: "gone"), CancellationToken.None))
+            {
+            }
+        };
+
+        await act.Should().ThrowAsync<AgentNotFoundException>();
+    }
+
+    private static async IAsyncEnumerable<ChatResponseUpdate> FailingUpdates()
+    {
+        await Task.Yield();
+        yield return new ChatResponseUpdate(ChatRole.Assistant, "partial");
+        throw new ClientResultException("429 Too Many Requests");
+    }
+
+    private static async IAsyncEnumerable<ChatResponseUpdate> ToUpdates(params string[] texts)
+    {
+        foreach (var text in texts)
+        {
+            await Task.Yield();
+            yield return new ChatResponseUpdate(ChatRole.Assistant, text);
+        }
     }
 }

@@ -2,8 +2,4 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MyAIAgent.Common.Infrastructure.Data;
 
-public abstract class BaseDbContext(DbContextOptions options) : DbContext(options)
-{
-    protected bool IsCosmosProvider =>
-        Database.ProviderName?.Contains("Cosmos", StringComparison.OrdinalIgnoreCase) == true;
-}
+public abstract class BaseDbContext(DbContextOptions options) : DbContext(options);

@@ -30,7 +30,9 @@ export function readTrx(directory) {
   if (required.some(key => !Object.hasOwn(values, key))) throw new Error(`Incomplete TRX counters: ${file}`);
   const failed = values.failed + values.error + values.timeout + values.aborted + values.inconclusive +
     values.passedButRunAborted + values.notRunnable + values.disconnected + values.warning + values.inProgress + values.pending;
-  if (values.total <= 0 || values.total !== values.passed + failed + values.notExecuted ||
+  // xUnit skips are not executed but VSTest leaves notExecuted at 0 for them, so skipped is total minus executed.
+  const skipped = values.total - values.executed;
+  if (values.total <= 0 || skipped < 0 || values.notExecuted > skipped ||
       values.executed !== values.passed + failed) throw new Error(`Inconsistent or empty TRX: ${file}`);
-  return { file, outcome, total: values.total, passed: values.passed, failed, skipped: values.notExecuted };
+  return { file, outcome, total: values.total, passed: values.passed, failed, skipped };
 }

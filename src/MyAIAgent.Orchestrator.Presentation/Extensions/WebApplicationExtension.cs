@@ -28,16 +28,21 @@ internal static class WebApplicationExtension
         ServiceAuthorizationModel auth)
     {
         var env = environment.EnvironmentName;
-        var dbProvider = environment.IsDevelopment() ? "SQLite" : "CosmosDB";
+        var database = configuration["CosmosDb:DatabaseName"] ?? "Unknown";
         var aiProvider = configuration["AiProvider:Type"] ?? "Unknown";
         var authStatus = auth.Enabled ? "Enabled" : "Disabled";
 
         logger.LogInformation("*******************************************************************************");
         logger.LogInformation("* Environment         : {Environment}", env);
-        logger.LogInformation("* Database provider   : {DbProvider}", dbProvider);
+        logger.LogInformation("* Cosmos DB database  : {Database}", database);
         logger.LogInformation("* AI provider         : {AiProvider}", aiProvider);
         logger.LogInformation("* Auth                : {AuthStatus}", authStatus);
         logger.LogInformation("* Endpoints           : POST /chat");
+        logger.LogInformation("*                       POST /chat/stream");
+        logger.LogInformation("*                       GET  /conversations");
+        logger.LogInformation("*                       GET  /conversations/{{id}}");
+        logger.LogInformation("*                       PUT  /conversations/{{id}}/title");
+        logger.LogInformation("*                       DELETE /conversations/{{id}}");
         logger.LogInformation("*                       GET  /agents");
         logger.LogInformation("*                       POST /agents");
         logger.LogInformation("*                       DELETE /agents/{{id}}");

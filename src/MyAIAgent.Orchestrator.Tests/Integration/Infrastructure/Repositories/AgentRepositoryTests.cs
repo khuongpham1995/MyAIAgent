@@ -7,18 +7,18 @@ namespace MyAIAgent.Orchestrator.Tests.Integration.Infrastructure.Repositories;
 
 public sealed class AgentRepositoryTests
 {
-    [Fact]
+    [CosmosFact]
     public async Task AddAndDelete_WhenCommitted_ShouldPersistChanges()
     {
-        using var factory = OrchestratorDbContextFactory.Create();
-        await factory.Context.Database.EnsureCreatedAsync();
-        var repository = new AgentRepository(factory.Context);
-        var unitOfWork = new OrchestratorUnitOfWork(factory.Context);
-        var agent = new AgentDefinition { Id = "agent-001", Name = "Test agent" };
+        await using var database = await CosmosTestDatabase.CreateAsync();
+        await using var context = database.CreateContext();
+        var repository = new AgentRepository(context);
+        var unitOfWork = new OrchestratorUnitOfWork(context);
+        var agent = new AgentDefinition { Id = database.NewAgentId(), Name = "Test agent" };
 
         await repository.AddAsync(agent, CancellationToken.None);
 
-        using var otherContext = factory.CreateAdditionalContext();
+        await using var otherContext = database.CreateContext();
         (await otherContext.AgentDefinitions.AnyAsync(item => item.Id == agent.Id)).Should().BeFalse();
 
         await unitOfWork.SaveChangesAsync(CancellationToken.None);

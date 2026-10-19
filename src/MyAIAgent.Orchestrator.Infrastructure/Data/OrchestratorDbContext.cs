@@ -13,7 +13,10 @@ public sealed class OrchestratorDbContext(DbContextOptions<OrchestratorDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfiguration(new ChatSessionConfiguration(IsCosmosProvider));
-        modelBuilder.ApplyConfiguration(new AgentDefinitionConfiguration(IsCosmosProvider));
+        // Shared database throughput keeps every container inside the free tier budget; a per-container setting would not.
+        modelBuilder.HasManualThroughput(400);
+
+        modelBuilder.ApplyConfiguration(new ChatSessionConfiguration());
+        modelBuilder.ApplyConfiguration(new AgentDefinitionConfiguration());
     }
 }

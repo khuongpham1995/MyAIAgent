@@ -10,12 +10,12 @@
     <Project Path="MyAIAgent.Common.Infrastructure/MyAIAgent.Common.Infrastructure.csproj" />
     <Project Path="MyAIAgent.Common.Tests/MyAIAgent.Common.Tests.csproj" />
   </Folder>
-  <Folder Name="/MainSubSys/">
-    <Project Path="MyAIAgent.MainSubSys.Application/MyAIAgent.MainSubSys.Application.csproj" />
-    <Project Path="MyAIAgent.MainSubSys.Domain/MyAIAgent.MainSubSys.Domain.csproj" />
-    <Project Path="MyAIAgent.MainSubSys.Infrastructure/MyAIAgent.MainSubSys.Infrastructure.csproj" />
-    <Project Path="MyAIAgent.MainSubSys.Presentation/MyAIAgent.MainSubSys.Presentation.csproj" />
-    <Project Path="MyAIAgent.MainSubSys.Tests/MyAIAgent.MainSubSys.Tests.csproj" />
+  <Folder Name="/Gateway/">
+    <Project Path="MyAIAgent.Gateway.Application/MyAIAgent.Gateway.Application.csproj" />
+    <Project Path="MyAIAgent.Gateway.Domain/MyAIAgent.Gateway.Domain.csproj" />
+    <Project Path="MyAIAgent.Gateway.Infrastructure/MyAIAgent.Gateway.Infrastructure.csproj" />
+    <Project Path="MyAIAgent.Gateway.Presentation/MyAIAgent.Gateway.Presentation.csproj" />
+    <Project Path="MyAIAgent.Gateway.Tests/MyAIAgent.Gateway.Tests.csproj" />
   </Folder>
   <Folder Name="/McpServer/">
     <Project Path="MyAIAgent.McpServer.Application/MyAIAgent.McpServer.Application.csproj" />

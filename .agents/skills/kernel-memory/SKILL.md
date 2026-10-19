@@ -25,7 +25,7 @@ MyAIAgent.KernelMemory.Application/
   Extensions/IoCExtension.cs
 
 MyAIAgent.KernelMemory.Infrastructure/
-  Data/KernelMemoryDbContext.cs         ← EF Core (DocumentRecords table; SQLite dev / Cosmos prod)
+  Data/KernelMemoryDbContext.cs         ← EF Core (DocumentRecords container on Cosmos; shared 400 RU/s database throughput)
   Extensions/IoCExtension.cs
   Extensions/KernelMemoryPipelineExtension.cs
 
@@ -47,7 +47,7 @@ AddInfrastructure(config, isDevelopment)
 AddGlobalExceptionHandling()
 AddKernelMemory(...)          ← KernelMemoryPipelineExtension
 UseExceptionHandler()
-EnsureDbCreatedAsync<KernelMemoryDbContext>()   ← dev only (SQLite)
+EnsureCosmosCreatedAsync<KernelMemoryDbContext>()   ← dev only (creates containers in the test database)
 RunKernelMemoryAsync(...)
 ```
 
@@ -62,7 +62,7 @@ Both filters are instantiated manually in `WebApplicationExtension` (not via DI)
 
 | Service | Connects to KernelMemory? | Purpose |
 |---|---|---|
-| **MainSubSys** | Yes — `IKernelMemoryClient` / `KernelMemoryClient` (120s) | Admin: document upload, ask, status |
+| **Gateway** | Yes — `IKernelMemoryClient` / `KernelMemoryClient` (120s) | Admin: document upload, ask, status |
 | **Orchestrator** | Yes — planned, not yet implemented | RAG during chat (augment replies with indexed knowledge) |
 | **McpServer** | **No — must never connect** | MCP Server exposes tools only; RAG is Orchestrator's concern |
 
@@ -118,7 +118,7 @@ In Aspire, the base URL is injected automatically via service discovery using th
 ```json
 {
   "KernelMemory": {
-    "DefaultIndexName": "default",
+    "DefaultIndexName": "myaiagent-test",
     "TextGeneratorType": "AzureOpenAI",
     "ServiceAuthorization": {
       "Enabled": true,
@@ -129,17 +129,17 @@ In Aspire, the base URL is injected automatically via service discovery using th
     },
     "DataIngestion": {
       "EmbeddingGeneratorTypes": ["AzureOpenAIEmbedding"],
-      "MemoryDbTypes": ["AzureCosmosDbNoSQL"]
+      "MemoryDbTypes": ["AzureAISearch"]
     },
     "Retrieval": {
-      "MemoryDbType": "AzureCosmosDbNoSQL",
+      "MemoryDbType": "AzureAISearch",
       "EmbeddingGeneratorType": "AzureOpenAIEmbedding",
       "SearchClient": { "MaxMatchesCount": 100, "AnswerTokens": 300, "EmptyAnswer": "INFO NOT FOUND" }
     },
     "Services": {
       "AzureOpenAIEmbedding": { "Auth": "ApiKey", "Endpoint": "", "Deployment": "text-embedding-ada-002", "APIKey": "" },
       "AzureOpenAIText": { "Auth": "ApiKey", "Endpoint": "", "Deployment": "gpt-4o-mini", "APIKey": "" },
-      "AzureCosmosDbNoSQL": { "Auth": "ConnectionString", "ConnectionString": "" }
+      "AzureAISearch": { "Auth": "ApiKey", "Endpoint": "", "APIKey": "" }
     }
   }
 }

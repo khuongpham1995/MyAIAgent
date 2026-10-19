@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
+        <PackageReference Include="Mapster" Version="10.0.13" />
+        <PackageReference Include="Mapster.DependencyInjection" Version="10.0.13" />
+        <PackageReference Include="MediatR" Version="12.5.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\MyAIAgent.Common.Application\MyAIAgent.Common.Application.csproj" />
+        <ProjectReference Include="..\MyAIAgent.Gateway.Domain\MyAIAgent.Gateway.Domain.csproj" />
+    </ItemGroup>
+
+</Project>

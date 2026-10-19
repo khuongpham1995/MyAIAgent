@@ -21,10 +21,11 @@ public static class IoCExtension
             .AddScopedAsMatchingInterfaces(typeof(IoCExtension).Assembly)
             .AddSingletonAsMatchingInterfaces(typeof(IoCExtension).Assembly);
 
-        if (isDevelopment)
-            services.AddSqliteDb<OrchestratorDbContext>("orchestrator.db");
-        else
-            services.AddCosmosDb<OrchestratorDbContext>(configuration);
+        services.AddCosmosDb<OrchestratorDbContext>(configuration, isDevelopment);
+
+        // Callers supply the user id, so outside Development only holders of the shared service key may call this API.
+        if (!isDevelopment && !configuration.GetValue<bool>("ServiceAuthorization:Enabled"))
+            throw new InvalidOperationException("ServiceAuthorization:Enabled must be true outside Development.");
 
         services.Configure<ServiceAuthorizationModel>(
             configuration.GetSection("ServiceAuthorization"));
@@ -41,7 +42,8 @@ public static class IoCExtension
             _ => throw new InvalidOperationException($"Unsupported AI provider: '{providerType}'. Supported values: AzureOpenAI, OpenAI")
         };
 
-        services.AddSingleton(chatClient);
+        // Function invocation executes the agent's MCP tool calls; without it tool requests never get an answer.
+        services.AddSingleton(new ChatClientBuilder(chatClient).UseFunctionInvocation().Build());
     }
 
     private static IChatClient BuildAzureOpenAiClient(IConfiguration configuration)
