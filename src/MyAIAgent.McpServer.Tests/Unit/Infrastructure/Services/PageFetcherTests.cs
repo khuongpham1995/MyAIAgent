@@ -18,12 +18,15 @@ public sealed class PageFetcherTests
     [InlineData("file:///etc/passwd")]
     public async Task GetContentAsync_WhenDestinationIsRestricted_ShouldNotSendRequest(string url)
     {
+        // Arrange
         var handler = new QueueHandler();
         using var client = new HttpClient(handler);
         var fetcher = new PageFetcher(NullLogger<PageFetcher>.Instance, client);
 
+        // Act
         var result = await fetcher.GetContentAsync(url);
 
+        // Assert
         result.Success.Should().BeFalse();
         handler.RequestCount.Should().Be(0);
     }
@@ -31,14 +34,17 @@ public sealed class PageFetcherTests
     [Fact]
     public async Task GetContentAsync_WhenRedirectTargetsPrivateAddress_ShouldStopBeforeSecondRequest()
     {
+        // Arrange
         var redirect = new HttpResponseMessage(HttpStatusCode.Redirect);
         redirect.Headers.Location = new Uri("https://169.254.169.254/latest/meta-data/");
         var handler = new QueueHandler(redirect);
         using var client = new HttpClient(handler);
         var fetcher = new PageFetcher(NullLogger<PageFetcher>.Instance, client);
 
+        // Act
         var result = await fetcher.GetContentAsync("https://example.com/page");
 
+        // Assert
         result.Success.Should().BeFalse();
         handler.RequestCount.Should().Be(1);
     }
@@ -46,6 +52,7 @@ public sealed class PageFetcherTests
     [Fact]
     public async Task GetContentAsync_WhenPageExceedsLimit_ShouldRejectContent()
     {
+        // Arrange & Act
         var response = new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(new string('a', 1024 * 1024 + 1), Encoding.UTF8, "text/plain")
@@ -56,6 +63,7 @@ public sealed class PageFetcherTests
 
         var result = await fetcher.GetContentAsync("https://example.com/page");
 
+        // Assert
         result.Success.Should().BeFalse();
         handler.RequestCount.Should().Be(1);
     }
@@ -63,6 +71,7 @@ public sealed class PageFetcherTests
     [Fact]
     public async Task GetContentAsync_WhenUnknownLengthBodyExceedsLimit_ShouldRejectContent()
     {
+        // Arrange & Act
         var response = new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new UnknownLengthContent(new byte[1024 * 1024 + 1])
@@ -73,6 +82,7 @@ public sealed class PageFetcherTests
 
         var result = await fetcher.GetContentAsync("https://example.com/page");
 
+        // Assert
         result.Success.Should().BeFalse();
         handler.RequestCount.Should().Be(1);
     }
@@ -93,10 +103,13 @@ public sealed class PageFetcherTests
         string text,
         bool expected)
     {
+        // Arrange
         var address = IPAddress.Parse(text);
 
+        // Act
         var result = PublicPageAddressPolicy.IsPublicAddress(address);
 
+        // Assert
         result.Should().Be(expected);
     }
 

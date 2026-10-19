@@ -67,15 +67,18 @@ public sealed class CreateAgentHandlerTests
     [Fact]
     public async Task Handle_WhenRepositoryFails_ShouldNotCommit()
     {
+        // Arrange
         var repository = new Mock<IAgentRepository>();
         repository.Setup(item => item.AddAsync(It.IsAny<AgentDefinition>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Storage failed"));
         var unitOfWork = new Mock<IUnitOfWork>();
         var handler = new CreateAgentHandler(repository.Object, unitOfWork.Object);
 
+        // Act
         var action = async () => await handler.Handle(
             new CreateAgentCommand("Agent", "Instructions", string.Empty, false), CancellationToken.None);
 
+        // Assert
         await action.Should().ThrowAsync<InvalidOperationException>();
         unitOfWork.Verify(work => work.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -83,14 +86,17 @@ public sealed class CreateAgentHandlerTests
     [Fact]
     public async Task Handle_WhenCalled_ShouldForwardCancellationTokenToRepositoryAndCommit()
     {
+        // Arrange
         using var cancellation = new CancellationTokenSource();
         var repository = new Mock<IAgentRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var handler = new CreateAgentHandler(repository.Object, unitOfWork.Object);
 
+        // Act
         await handler.Handle(
             new CreateAgentCommand("Agent", "Instructions", string.Empty, false), cancellation.Token);
 
+        // Assert
         repository.Verify(item => item.AddAsync(It.IsAny<AgentDefinition>(), cancellation.Token), Times.Once);
         unitOfWork.Verify(work => work.SaveChangesAsync(cancellation.Token), Times.Once);
     }

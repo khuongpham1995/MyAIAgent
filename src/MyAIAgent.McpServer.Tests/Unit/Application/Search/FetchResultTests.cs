@@ -38,7 +38,7 @@ public sealed class FetchResultTests
         var a = new FetchResult(true, "content", "text/plain");
         var b = new FetchResult(true, "content", "text/plain");
 
-        // Assert
+        // Act & Assert
         a.Should().Be(b);
     }
 
@@ -49,7 +49,7 @@ public sealed class FetchResultTests
         var a = new FetchResult(true, "content", "text/plain");
         var b = new FetchResult(false, "content", "text/plain");
 
-        // Assert
+        // Act & Assert
         a.Should().NotBe(b);
     }
 }

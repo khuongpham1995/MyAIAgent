@@ -14,6 +14,7 @@ public sealed class StreamChatPipelineTests
     [Fact]
     public async Task CreateStream_WhenMessageIsEmpty_ShouldThrowValidationExceptionBeforeHandlerRuns()
     {
+        // Arrange
         var handler = new Mock<IStreamRequestHandler<StreamChatCommand, ChatStreamEvent>>();
         var services = new ServiceCollection();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<StreamChatCommand>());
@@ -23,6 +24,7 @@ public sealed class StreamChatPipelineTests
         await using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
+        // Act
         var act = async () =>
         {
             await foreach (var _ in sender.CreateStream(new StreamChatCommand(null, "", "visitor:a")))
@@ -30,6 +32,7 @@ public sealed class StreamChatPipelineTests
             }
         };
 
+        // Assert
         await act.Should().ThrowAsync<ValidationException>();
         handler.Verify(
             h => h.Handle(It.IsAny<StreamChatCommand>(), It.IsAny<CancellationToken>()),

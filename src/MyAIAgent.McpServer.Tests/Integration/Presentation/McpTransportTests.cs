@@ -23,6 +23,7 @@ public sealed class McpTransportTests
     [InlineData("/")]
     public async Task Mcp_WhenAuthenticated_ShouldDiscoverAndInvokeToolOverHttp(string endpoint)
     {
+        // Arrange
         await using var app = await StartServerAsync();
         using var httpClient = app.GetTestClient();
         await using var transport = new HttpClientTransport(new HttpClientTransportOptions
@@ -32,9 +33,11 @@ public sealed class McpTransportTests
         }, httpClient);
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: CancellationToken.None);
 
+        // Act
         var tools = await client.ListToolsAsync(cancellationToken: CancellationToken.None);
         var result = await client.CallToolAsync(McpServerConstant.GetCurrentDateTimeToolName, cancellationToken: CancellationToken.None);
 
+        // Assert
         tools.Should().ContainSingle(tool => tool.Name == McpServerConstant.GetCurrentDateTimeToolName);
         result.IsError.Should().NotBeTrue();
         DateTimeOffset.TryParse(result.Content.OfType<TextContentBlock>().Single().Text, out _).Should().BeTrue();
@@ -47,12 +50,14 @@ public sealed class McpTransportTests
     [InlineData("/", "wrong-key", HttpStatusCode.Forbidden)]
     public async Task Mcp_WhenServiceKeyIsMissingOrInvalid_ShouldRejectBeforeProtocolDispatch(string endpoint, string? key, HttpStatusCode expected)
     {
+        // Arrange
         await using var app = await StartServerAsync();
         using var httpClient = app.GetTestClient();
         httpClient.DefaultRequestHeaders.Add("Accept", "application/json, text/event-stream");
         if (key is not null)
             httpClient.DefaultRequestHeaders.Add("Authorization", key);
 
+        // Act
         using var response = await httpClient.PostAsJsonAsync(endpoint, new
         {
             jsonrpc = "2.0",
@@ -61,6 +66,7 @@ public sealed class McpTransportTests
             @params = new { protocolVersion = "2025-11-25", capabilities = new { }, clientInfo = new { name = "test", version = "1" } }
         });
 
+        // Assert
         response.StatusCode.Should().Be(expected);
     }
 

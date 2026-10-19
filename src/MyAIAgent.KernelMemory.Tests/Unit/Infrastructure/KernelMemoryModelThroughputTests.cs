@@ -20,9 +20,13 @@ public sealed class KernelMemoryModelThroughputTests
     [Fact]
     public void Model_WhenBuilt_ShouldShareFourHundredRequestUnitsAndNoDedicatedContainerThroughput()
     {
+        // Arrange
         using var context = CreateContext();
+
+        // Act
         var model = DesignModel(context);
 
+        // Assert
         model.GetThroughput()!.Throughput.Should().Be(400);
         model.GetEntityTypes().Where(entityType => entityType.GetThroughput() is not null).Should().BeEmpty();
     }
@@ -30,8 +34,10 @@ public sealed class KernelMemoryModelThroughputTests
     [Fact]
     public void Model_WhenBuilt_ShouldMapDocumentRecordsToTheirContainer()
     {
+        // Arrange
         using var context = CreateContext();
 
+        // Act & Assert
         DesignModel(context).GetEntityTypes().Select(entityType => entityType.GetContainer())
             .Should().Equal("DocumentRecords");
     }
@@ -40,8 +46,10 @@ public sealed class KernelMemoryModelThroughputTests
     [Fact]
     public void Model_WhenBuilt_ShouldUseThePartitionKeyThatMatchesTheBicepContainer()
     {
+        // Arrange
         using var context = CreateContext();
 
+        // Act & Assert
         DesignModel(context).GetEntityTypes()
             .Select(entityType => string.Join("/", entityType.GetPartitionKeyPropertyNames()))
             .Should().Equal("IndexName");

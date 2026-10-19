@@ -9,12 +9,17 @@ import type { ToolResult } from './types.ts';
 
 const quiet = { output() {} };
 test('full gate binds candidate and all four suites, runs task format using safe argv', t => {
+  // Arrange
   const root = fixture(t);
   const calls: { command: string; args: string[]; options: SpawnSyncOptions }[] = [];
+
+  // Act
   const report = runQuality({ root, ...quiet, run(command, args, options) {
     calls.push({ command, args, options });
     return successfulRun(command, args);
   } });
+
+  // Assert
   assert.equal(report.status, 'PASS');
   assert.equal(report.scope, 'full');
   assert.deepEqual(calls.map(c => c.args[0]), ['run', '--test', 'restore', 'build', 'test', 'test', 'test', 'test', 'format']);
@@ -39,11 +44,16 @@ test('full gate binds candidate and all four suites, runs task format using safe
 
 for (const failureAt of [0, 1, 2, 3, 4, 5, 6, 7, 8]) {
   test(`gate ${failureAt + 1} failure stops subsequent gates and persists failure`, t => {
+    // Arrange
     const root = fixture(t);
     let calls = 0;
+
+    // Act
     const report = runQuality({ root, ...quiet, run(command, args) {
       return calls++ === failureAt ? { status: 7 } : successfulRun(command, args);
     } });
+
+    // Assert
     assert.equal(calls, failureAt + 1);
     assert.equal(report.status, 'FAIL');
     assert.equal(report.steps.at(-1)!.exitCode, 7);
@@ -52,18 +62,27 @@ for (const failureAt of [0, 1, 2, 3, 4, 5, 6, 7, 8]) {
 }
 for (const result of [{ status: null, error: new Error('node not found') }, { status: null, signal: 'SIGTERM' }] satisfies ToolResult[]) {
   test(`missing or interrupted tool cannot pass: ${result.signal ?? 'ENOENT'}`, t => {
+    // Arrange & Act
     const report = runQuality({ root: fixture(t), ...quiet, run: () => result });
+
+    // Assert
     assert.equal(report.status, 'FAIL');
     assert.equal(report.steps.length, 1);
   });
 }
 test('missing TRX cannot pass even when dotnet exits zero', t => {
+  // Arrange & Act
   const report = runQuality({ root: fixture(t), ...quiet, run: () => ({ status: 0 }) });
+
+  // Assert
   assert.equal(report.status, 'FAIL');
   assert.match(report.error!, /Expected one fresh TRX/);
 });
 test('skipped tests are surfaced as a warning and never counted as passed', t => {
+  // Arrange
   const lines: string[] = [];
+
+  // Act
   const report = runQuality({ root: fixture(t), output: line => lines.push(line), run(command, args) {
     const result = successfulRun(command, args);
     if (command === 'dotnet' && args[0] === 'test' && args[1].includes('Orchestrator')) {
@@ -72,6 +91,8 @@ test('skipped tests are surfaced as a warning and never counted as passed', t =>
     }
     return result;
   } });
+
+  // Assert
   assert.equal(report.status, 'PASS');
   assert.equal(report.tests.skipped, 2);
   assert.equal(report.warnings.length, 1);
@@ -80,34 +101,51 @@ test('skipped tests are surfaced as a warning and never counted as passed', t =>
   assert.ok(lines.some(line => line.includes('WARNING')));
 });
 test('a run without skipped tests has no warnings', t => {
+  // Arrange & Act
   const report = runQuality({ root: fixture(t), ...quiet, run: successfulRun });
+
+  // Assert
   assert.deepEqual(report.warnings, []);
 });
 test('targeted run uses owning test project and is explicitly partial', t => {
+  // Arrange & Act
   const report = runQuality({ root: fixture(t), project: 'Orchestrator', ...quiet, run: successfulRun });
+
+  // Assert
   assert.equal(report.status, 'PASS');
   assert.equal(report.scope, 'targeted');
   assert.equal(report.steps[0].command![2], testProject('Orchestrator'));
   assert.equal(report.tests.suites.length, 1);
 });
 test('configuration-only or deleted C# candidate never falls back to full format', t => {
+  // Arrange
   const root = fixture(t);
   unlinkSync(join(root, 'example.cs'));
+
+  // Act
   const report = runQuality({ root, ...quiet, run: successfulRun });
+
+  // Assert
   assert.equal(report.status, 'PASS');
   assert.equal(report.steps.at(-1)!.status, 'NOT_APPLICABLE');
   assert.deepEqual(report.format!.include, []);
 });
 test('edits during checks invalidate evidence', t => {
+  // Arrange
   const root = fixture(t);
+
+  // Act
   const report = runQuality({ root, ...quiet, run(command, args) {
     writeFileSync(join(root, 'new.txt'), 'concurrent edit');
     return successfulRun(command, args);
   } });
+
+  // Assert
   assert.equal(report.status, 'FAIL');
   assert.match(report.error!, /Candidate changed/);
 });
 test('invalid, duplicate or missing CLI arguments fail closed', () => {
+  // Arrange, Act & Assert
   for (const args of [['--project', 'Unknown'], ['--project'], ['--filter', 'x'], ['--base', 'HEAD', '--base', 'x']]) {
     assert.throws(() => parseOptions(args));
   }
@@ -115,7 +153,10 @@ test('invalid, duplicate or missing CLI arguments fail closed', () => {
 });
 
 test('failed test exit preserves TRX failure counts and stops the gate', t => {
+  // Arrange
   const root = fixture(t);
+
+  // Act
   const report = runQuality({ root, ...quiet, run(command, args) {
     const result = successfulRun(command, args);
     if (command === 'dotnet' && args[0] === 'test') {
@@ -125,6 +166,8 @@ test('failed test exit preserves TRX failure counts and stops the gate', t => {
     }
     return result;
   } });
+
+  // Assert
   assert.equal(report.status, 'FAIL');
   assert.equal(report.tests.failed, 1);
   assert.equal(report.tests.passed, 2);

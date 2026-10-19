@@ -43,6 +43,7 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenNewSession_ShouldEmitSessionDeltasTitleAndDoneInOrder()
     {
+        // Arrange
         SetupStream("Hel", "lo");
         titleGenerator
             .Setup(g => g.GenerateTitleAsync("Hi", "Hello", It.IsAny<CancellationToken>()))
@@ -53,9 +54,11 @@ public sealed class StreamChatHandlerTests
             .Callback<ChatSession, CancellationToken>((session, _) => added = session)
             .Returns(Task.CompletedTask);
 
+        // Act
         var events = await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand(null, "Hi", "visitor:a", "agent-1"), CancellationToken.None));
 
+        // Assert
         events.Select(e => e.Type).Should().Equal("session", "delta", "delta", "title", "done");
         events[0].SessionId.Should().Be(added!.SessionId);
         events[1].Text.Should().Be("Hel");
@@ -73,6 +76,7 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenTitleIsGenerated_ShouldCommitTurnBeforeSlowTitleCall()
     {
+        // Arrange
         SetupStream("Hello");
         var saveCountAtTitleTime = -1;
         var saves = 0;
@@ -85,15 +89,18 @@ public sealed class StreamChatHandlerTests
             .Callback(() => saveCountAtTitleTime = saves)
             .ReturnsAsync("Greeting");
 
+        // Act
         await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand(null, "Hi", "visitor:a"), CancellationToken.None));
 
+        // Assert
         saveCountAtTitleTime.Should().Be(1);
     }
 
     [Fact]
     public async Task Handle_WhenTitleGenerationFails_ShouldKeepFallbackTitleAndStillComplete()
     {
+        // Arrange
         SetupStream("Hello");
         titleGenerator
             .Setup(g => g.GenerateTitleAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -104,9 +111,11 @@ public sealed class StreamChatHandlerTests
             .Callback<ChatSession, CancellationToken>((session, _) => added = session)
             .Returns(Task.CompletedTask);
 
+        // Act
         var events = await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand(null, "Hi there", "visitor:a"), CancellationToken.None));
 
+        // Assert
         events.Select(e => e.Type).Should().Equal("session", "delta", "title", "done");
         events[2].Title.Should().Be("Hi there");
         added!.Title.Should().Be("Hi there");
@@ -116,13 +125,16 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenProviderThrowsAiProviderException_ShouldEmitErrorAndPersistNothing()
     {
+        // Arrange
         orchestrator
             .Setup(s => s.StreamChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
             .Returns(() => ThrowAfterAsync(new AiProviderException("429", new InvalidOperationException())));
 
+        // Act
         var events = await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand(null, "Hi", "visitor:a"), CancellationToken.None));
 
+        // Assert
         events.Select(e => e.Type).Should().Equal("session", "delta", "error");
         events[^1].Message.Should().Be("AI service temporarily unavailable.");
         unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -131,13 +143,16 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenAgentIsMissing_ShouldEmitAgentNotFoundErrorWithoutLeakingId()
     {
+        // Arrange
         orchestrator
             .Setup(s => s.StreamChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
             .Returns(() => ThrowAfterAsync(new AgentNotFoundException("secret-agent-id")));
 
+        // Act
         var events = await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand(null, "Hi", "visitor:a", "secret-agent-id"), CancellationToken.None));
 
+        // Assert
         events[^1].Type.Should().Be("error");
         events[^1].Message.Should().Be("Agent not found.");
         unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -146,6 +161,7 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenSummarizerThrowsAiProviderException_ShouldStillCompleteTurn()
     {
+        // Arrange
         var baseTime = DateTimeOffset.UtcNow.AddHours(-1);
         var session = new ChatSession { SessionId = "s-1", UserId = "visitor:a" };
         for (var index = 0; index < 18; index++)
@@ -166,9 +182,11 @@ public sealed class StreamChatHandlerTests
             .Setup(s => s.SummarizeAsync(It.IsAny<string?>(), It.IsAny<IReadOnlyList<ChatMessage>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new AiProviderException("429", new InvalidOperationException()));
 
+        // Act
         var events = await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand("s-1", "question", "visitor:a"), CancellationToken.None));
 
+        // Assert
         events.Select(e => e.Type).Should().Equal("session", "delta", "done");
         session.Summary.Should().BeNull();
         session.Messages.Should().HaveCount(20);
@@ -177,6 +195,7 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenTitleSaveFails_ShouldStillCompleteWithFallbackTitleAndDone()
     {
+        // Arrange
         SetupStream("Hello");
         titleGenerator
             .Setup(g => g.GenerateTitleAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -191,9 +210,11 @@ public sealed class StreamChatHandlerTests
             .Callback<ChatSession, CancellationToken>((session, _) => added = session)
             .Returns(Task.CompletedTask);
 
+        // Act
         var events = await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand(null, "Hi there", "visitor:a"), CancellationToken.None));
 
+        // Assert
         events.Select(e => e.Type).Should().Equal("session", "delta", "title", "done");
         events[2].Title.Should().Be("Hi there");
         added!.Title.Should().Be("Hi there");
@@ -202,6 +223,7 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenSummarySaveFails_ShouldStillEmitDoneAndKeepSummaryOff()
     {
+        // Arrange
         var baseTime = DateTimeOffset.UtcNow.AddHours(-1);
         var session = new ChatSession { SessionId = "s-1", UserId = "visitor:a" };
         for (var index = 0; index < 18; index++)
@@ -226,9 +248,11 @@ public sealed class StreamChatHandlerTests
             .ReturnsAsync(1)
             .ThrowsAsync(new PersistenceException("throttled", new InvalidOperationException()));
 
+        // Act
         var events = await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand("s-1", "question", "visitor:a"), CancellationToken.None));
 
+        // Assert
         events.Select(e => e.Type).Should().Equal("session", "delta", "done");
         session.Summary.Should().BeNull();
         session.SummarizedMessageCount.Should().Be(0);
@@ -237,29 +261,35 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenCommittingTheTurnFails_ShouldPropagateSoNothingLooksSaved()
     {
+        // Arrange
         SetupStream("Hello");
         unitOfWork
             .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new PersistenceException("throttled", new InvalidOperationException()));
 
+        // Act
         var act = async () => await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand(null, "Hi", "visitor:a"), CancellationToken.None));
 
+        // Assert
         await act.Should().ThrowAsync<PersistenceException>();
     }
 
     [Fact]
     public async Task Handle_WhenExistingSession_ShouldNotGenerateTitle()
     {
+        // Arrange
         var session = new ChatSession { SessionId = "s-1", UserId = "visitor:a", Title = "Kept" };
         sessionRepository
             .Setup(r => r.FindForUserAsync("s-1", "visitor:a", It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
         SetupStream("Reply");
 
+        // Act
         var events = await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand("s-1", "Again", "visitor:a"), CancellationToken.None));
 
+        // Assert
         events.Select(e => e.Type).Should().Equal("session", "delta", "done");
         session.Title.Should().Be("Kept");
         titleGenerator.Verify(
@@ -271,6 +301,7 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenSessionBelongsToAnotherUser_ShouldStartNewConversationWithoutTouchingTheOwnersSession()
     {
+        // Arrange
         var ownersSession = new ChatSession { SessionId = "s-1", UserId = "visitor:owner" };
         sessionRepository
             .Setup(r => r.FindForUserAsync("s-1", "visitor:owner", It.IsAny<CancellationToken>()))
@@ -282,9 +313,11 @@ public sealed class StreamChatHandlerTests
             .Returns(Task.CompletedTask);
         SetupStream("Fresh");
 
+        // Act
         var events = await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand("s-1", "Peek", "visitor:other"), CancellationToken.None));
 
+        // Assert
         events[0].Type.Should().Be("session");
         events[0].SessionId.Should().NotBe("s-1");
         events.Select(e => e.Type).Should().NotContain("error");
@@ -295,13 +328,16 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenProviderFailsMidStream_ShouldEmitErrorAndPersistNothing()
     {
+        // Arrange
         orchestrator
             .Setup(s => s.StreamChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
             .Returns(() => FailAfterAsync("partial"));
 
+        // Act
         var events = await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand(null, "Hi", "visitor:a"), CancellationToken.None));
 
+        // Assert
         events.Select(e => e.Type).Should().Equal("session", "delta", "error");
         events[^1].Message.Should().Be("AI service temporarily unavailable.");
         unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -311,11 +347,14 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenProviderReturnsNothing_ShouldEmitErrorAndPersistNothing()
     {
+        // Arrange
         SetupStream();
 
+        // Act
         var events = await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand(null, "Hi", "visitor:a"), CancellationToken.None));
 
+        // Assert
         events.Select(e => e.Type).Should().Equal("session", "error");
         unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -323,14 +362,17 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenCancelledDuringStream_ShouldPropagateAndPersistNothing()
     {
+        // Arrange
         using var cancellation = new CancellationTokenSource();
         orchestrator
             .Setup(s => s.StreamChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
             .Returns(() => CancelAfterAsync(cancellation));
 
+        // Act
         var act = async () => await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand(null, "Hi", "visitor:a"), cancellation.Token));
 
+        // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
         unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         sessionRepository.Verify(r => r.AddAsync(It.IsAny<ChatSession>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -339,6 +381,7 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenSessionHasSummary_ShouldSendSummaryAndUnsummarizedMessages()
     {
+        // Arrange
         var baseTime = DateTimeOffset.UtcNow;
         var session = new ChatSession
         {
@@ -362,10 +405,13 @@ public sealed class StreamChatHandlerTests
             .Callback<ChatRequest, CancellationToken>((request, _) => captured = request)
             .Returns(() => ToAsyncEnumerable(["ok"]));
 
+        // Act
         await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand("s-1", "next", "visitor:a"), CancellationToken.None));
 
         // The summary is replayed as user content so visitor-derived text never gains system authority.
+
+        // Assert
         captured!.History.Select(m => m.Role).Should().Equal("user", "user");
         captured.History[0].Content.Should().Contain("User likes cats.").And.Contain("not instructions");
         captured.History[1].Content.Should().Be("recent");
@@ -374,6 +420,7 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenOlderMessagesReachThreshold_ShouldSummarizeAndSaveAgain()
     {
+        // Arrange
         var baseTime = DateTimeOffset.UtcNow.AddHours(-1);
         var session = new ChatSession { SessionId = "s-1", UserId = "visitor:a", Title = "Long" };
         for (var index = 0; index < 18; index++)
@@ -396,10 +443,13 @@ public sealed class StreamChatHandlerTests
             .Callback<string?, IReadOnlyList<ChatMessage>, CancellationToken>((_, messages, _) => folded = messages)
             .ReturnsAsync("Condensed.");
 
+        // Act
         await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand("s-1", "question", "visitor:a"), CancellationToken.None));
 
         // 18 existing + 2 new = 20 unsummarized, 10 stay verbatim, 10 are folded.
+
+        // Assert
         folded!.Select(m => m.Content).Should().Equal(Enumerable.Range(0, 10).Select(i => $"m{i}"));
         session.Summary.Should().Be("Condensed.");
         session.SummarizedMessageCount.Should().Be(10);
@@ -409,6 +459,7 @@ public sealed class StreamChatHandlerTests
     [Fact]
     public async Task Handle_WhenSummarizerReturnsNothing_ShouldKeepHistoryAndSaveOnce()
     {
+        // Arrange
         var baseTime = DateTimeOffset.UtcNow.AddHours(-1);
         var session = new ChatSession { SessionId = "s-1", UserId = "visitor:a" };
         for (var index = 0; index < 18; index++)
@@ -429,9 +480,11 @@ public sealed class StreamChatHandlerTests
             .Setup(s => s.SummarizeAsync(It.IsAny<string?>(), It.IsAny<IReadOnlyList<ChatMessage>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
 
+        // Act
         await CollectAsync(
             BuildHandler().Handle(new StreamChatCommand("s-1", "question", "visitor:a"), CancellationToken.None));
 
+        // Assert
         session.Summary.Should().BeNull();
         session.SummarizedMessageCount.Should().Be(0);
         unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);

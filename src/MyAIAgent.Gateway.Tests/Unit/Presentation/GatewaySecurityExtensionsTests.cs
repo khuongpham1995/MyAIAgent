@@ -18,6 +18,7 @@ public sealed class GatewaySecurityExtensionsTests
         bool canChat,
         bool canAdmin)
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddGatewaySecurity(Configuration(), isDevelopment: false);
@@ -27,9 +28,11 @@ public sealed class GatewaySecurityExtensionsTests
             [new Claim("roles", role), new Claim("tid", "tenant"), new Claim("oid", "user")],
             "test", "name", "roles"));
 
+        // Act
         var chat = await authorization.AuthorizeAsync(principal, GatewaySecurityExtensions.ChatPolicy);
         var admin = await authorization.AuthorizeAsync(principal, GatewaySecurityExtensions.AdminPolicy);
 
+        // Assert
         chat.Succeeded.Should().Be(canChat);
         admin.Succeeded.Should().Be(canAdmin);
     }
@@ -37,16 +40,20 @@ public sealed class GatewaySecurityExtensionsTests
     [Fact]
     public void AddGatewaySecurity_WhenProductionConfigurationIsMissing_ShouldFail()
     {
+        // Arrange
         var services = new ServiceCollection();
 
+        // Act
         var action = () => services.AddGatewaySecurity(new ConfigurationBuilder().Build(), isDevelopment: false);
 
+        // Assert
         action.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
     public async Task AuthorizeAsync_WhenUserIsAnonymous_ShouldRejectBothPolicies()
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddGatewaySecurity(Configuration(), isDevelopment: false);
@@ -54,9 +61,11 @@ public sealed class GatewaySecurityExtensionsTests
         var authorization = provider.GetRequiredService<IAuthorizationService>();
         var principal = new ClaimsPrincipal(new ClaimsIdentity());
 
+        // Act
         var chat = await authorization.AuthorizeAsync(principal, GatewaySecurityExtensions.ChatPolicy);
         var admin = await authorization.AuthorizeAsync(principal, GatewaySecurityExtensions.AdminPolicy);
 
+        // Assert
         chat.Succeeded.Should().BeFalse();
         admin.Succeeded.Should().BeFalse();
     }
@@ -64,6 +73,7 @@ public sealed class GatewaySecurityExtensionsTests
     [Fact]
     public async Task AuthorizeAsync_WhenIdentityClaimsAreMissing_ShouldRejectChat()
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddGatewaySecurity(Configuration(), isDevelopment: false);
@@ -72,14 +82,17 @@ public sealed class GatewaySecurityExtensionsTests
         var principal = new ClaimsPrincipal(new ClaimsIdentity(
             [new Claim("roles", "Chat.Access")], "test", "name", "roles"));
 
+        // Act
         var result = await authorization.AuthorizeAsync(principal, GatewaySecurityExtensions.ChatPolicy);
 
+        // Assert
         result.Succeeded.Should().BeFalse();
     }
 
     [Fact]
     public void AddGatewaySecurity_WhenAudienceIsAppIdUri_ShouldRejectConfiguration()
     {
+        // Arrange
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -89,8 +102,10 @@ public sealed class GatewaySecurityExtensionsTests
             })
             .Build();
 
+        // Act
         var action = () => services.AddGatewaySecurity(configuration, isDevelopment: false);
 
+        // Assert
         action.Should().Throw<InvalidOperationException>();
     }
 

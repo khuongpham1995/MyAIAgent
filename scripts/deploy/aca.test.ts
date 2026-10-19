@@ -15,6 +15,7 @@ function configuration(): NodeJS.ProcessEnv {
 }
 
 test('deployment encodes identity parameters as JSON without interpreting shell characters', t => {
+  // Arrange
   const root = mkdtempSync(join(tmpdir(), 'myaiagent-deploy-test-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const tools = join(root, 'tools');
@@ -39,9 +40,11 @@ console.log('example.test');
   env.KERNEL_MEMORY_IDENTITY_NAME = 'literal $(text)';
   env.MCP_IDENTITY_NAME = 'literal `text`';
 
+  // Act
   const result = spawnSync(process.execPath, ['--import', 'tsx', resolve('scripts/deploy/aca.ts'), 'staging', 'gateway', 'orchestrator', 'memory', 'mcp'],
     { env, encoding: 'utf8', shell: false });
 
+  // Assert
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout.trim(), 'example.test');
   const parameters = JSON.parse(readFileSync(captured, 'utf8'));
@@ -57,22 +60,29 @@ console.log('example.test');
 });
 
 test('invalid deployment arguments and missing configuration never invoke Azure', () => {
+  // Arrange
   const run = () => { assert.fail('Azure must not run'); };
+
+  // Act & Assert
   assert.throws(() => deployContainerApps(['invalid', 'a', 'b', 'c', 'd'], { env: {}, run }), /Usage:/);
   assert.throws(() => deployContainerApps(['staging', 'a', 'b', 'c', 'd'], { env: {}, run }), /RESOURCE_GROUP is required/);
 });
 
 test('deployment CLI rejects missing arguments with the original usage exit code', () => {
+  // Arrange & Act
   const result = spawnSync(process.execPath, ['--import', 'tsx', resolve('scripts/deploy/aca.ts')], { encoding: 'utf8' });
 
+  // Assert
   assert.equal(result.status, 2);
   assert.match(result.stderr, /Usage:/);
 });
 
 test('failed Azure invocation removes temporary parameters and does not reveal command output', () => {
+  // Arrange
   let parameterFile = '';
   const privateOutput = ['private', 'azure', 'response'].join('-');
 
+  // Act & Assert
   assert.throws(() => deployContainerApps(['production', 'a', 'b', 'c', 'd'], {
     env: configuration(), run(command, args, options) {
       assert.equal(command, 'az');
@@ -91,10 +101,12 @@ test('failed Azure invocation removes temporary parameters and does not reveal c
 });
 
 test('untrusted deployment output cannot inject a GitHub output line', t => {
+  // Arrange
   const root = mkdtempSync(join(tmpdir(), 'myaiagent-output-test-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const output = join(root, 'output');
 
+  // Act & Assert
   assert.throws(() => deployContainerApps(['staging', 'a', 'b', 'c', 'd'], {
     env: { ...configuration(), GITHUB_OUTPUT: output },
     run: () => ({ status: 0, stdout: 'example.test\nextra=value' }),

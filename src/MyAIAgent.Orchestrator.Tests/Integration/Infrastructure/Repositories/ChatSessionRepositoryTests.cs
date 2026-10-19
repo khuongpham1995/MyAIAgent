@@ -11,6 +11,7 @@ public sealed class ChatSessionRepositoryTests
     [CosmosFact]
     public async Task SaveChangesAsync_WhenMetadataSaveIsStale_ShouldPreserveConcurrentTurn()
     {
+        // Arrange
         await using var database = await CosmosTestDatabase.CreateAsync();
         await using var metadataContext = database.CreateContext();
         var repository = new ChatSessionRepository(metadataContext);
@@ -41,8 +42,10 @@ public sealed class ChatSessionRepositoryTests
         session.Summary = "Delayed summary";
         session.SummarizedMessageCount = 2;
 
+        // Act
         var save = () => metadataUnitOfWork.SaveChangesAsync(CancellationToken.None);
 
+        // Assert
         var failure = await save.Should().ThrowAsync<PersistenceException>();
         failure.Which.InnerException.Should().BeOfType<DbUpdateConcurrencyException>();
         await using var verificationContext = database.CreateContext();
@@ -58,6 +61,7 @@ public sealed class ChatSessionRepositoryTests
     [CosmosFact]
     public async Task AddAsync_WhenSessionIsNew_ShouldPersistSession()
     {
+        // Arrange
         await using var database = await CosmosTestDatabase.CreateAsync();
         await using var context = database.CreateContext();
         var repository = new ChatSessionRepository(context);
@@ -69,9 +73,11 @@ public sealed class ChatSessionRepositoryTests
             CreatedAt = DateTimeOffset.UtcNow
         };
 
+        // Act
         await repository.AddAsync(session, CancellationToken.None);
         await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
 
+        // Assert
         var persisted = await repository.FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None);
         persisted.Should().NotBeNull();
         persisted!.SessionId.Should().Be(session.SessionId);
@@ -82,6 +88,7 @@ public sealed class ChatSessionRepositoryTests
     [CosmosFact]
     public async Task FindForUserAsync_WhenSessionExists_ShouldReturnSessionWithMessages()
     {
+        // Arrange
         await using var database = await CosmosTestDatabase.CreateAsync();
         await using var context = database.CreateContext();
         var repository = new ChatSessionRepository(context);
@@ -97,9 +104,12 @@ public sealed class ChatSessionRepositoryTests
         await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
 
         await using var otherContext = database.CreateContext();
+
+        // Act
         var result = await new ChatSessionRepository(otherContext)
             .FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None);
 
+        // Assert
         result.Should().NotBeNull();
         result!.Messages.Should().ContainSingle(m => m.Role == "user" && m.Content == "Hello");
     }
@@ -107,18 +117,22 @@ public sealed class ChatSessionRepositoryTests
     [CosmosFact]
     public async Task FindForUserAsync_WhenSessionNotFound_ShouldReturnNull()
     {
+        // Arrange
         await using var database = await CosmosTestDatabase.CreateAsync();
         await using var context = database.CreateContext();
 
+        // Act
         var result = await new ChatSessionRepository(context)
             .FindForUserAsync(database.NewSessionId(), database.NewUserId(), CancellationToken.None);
 
+        // Assert
         result.Should().BeNull();
     }
 
     [CosmosFact]
     public async Task FindForUserAsync_WhenSessionBelongsToAnotherUser_ShouldReturnNull()
     {
+        // Arrange
         await using var database = await CosmosTestDatabase.CreateAsync();
         await using var context = database.CreateContext();
         var repository = new ChatSessionRepository(context);
@@ -127,15 +141,19 @@ public sealed class ChatSessionRepositoryTests
         await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
 
         await using var otherContext = database.CreateContext();
+
+        // Act
         var result = await new ChatSessionRepository(otherContext)
             .FindForUserAsync(session.SessionId, database.NewUserId(), CancellationToken.None);
 
+        // Assert
         result.Should().BeNull();
     }
 
     [CosmosFact]
     public async Task UpdateAsync_WhenSessionIsModified_ShouldPersistChanges()
     {
+        // Arrange
         await using var database = await CosmosTestDatabase.CreateAsync();
         await using var context = database.CreateContext();
         var repository = new ChatSessionRepository(context);
@@ -150,6 +168,7 @@ public sealed class ChatSessionRepositoryTests
         var unitOfWork = new OrchestratorUnitOfWork(context);
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
+        // Act
         session.Title = "Updated Title";
         session.Messages.Add(new ChatSessionMessage
         {
@@ -159,6 +178,7 @@ public sealed class ChatSessionRepositoryTests
         });
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
+        // Assert
         await using var otherContext = database.CreateContext();
         var updated = await new ChatSessionRepository(otherContext)
             .FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None);
@@ -170,24 +190,30 @@ public sealed class ChatSessionRepositoryTests
     [CosmosFact]
     public async Task AddAsync_BeforeUnitOfWorkCommit_ShouldNotPersistSession()
     {
+        // Arrange
         await using var database = await CosmosTestDatabase.CreateAsync();
         await using var context = database.CreateContext();
         var repository = new ChatSessionRepository(context);
         var session = new ChatSession { SessionId = database.NewSessionId(), UserId = database.NewUserId() };
 
+        // Act
         await repository.AddAsync(session, CancellationToken.None);
 
+        // Assert
         await using var otherContext = database.CreateContext();
         (await otherContext.ChatSessions.AnyAsync(item => item.SessionId == session.SessionId)).Should().BeFalse();
 
+        // Act
         await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
 
+        // Assert
         (await otherContext.ChatSessions.AnyAsync(item => item.SessionId == session.SessionId)).Should().BeTrue();
     }
 
     [CosmosFact]
     public async Task ListSummariesByUserAsync_WhenUserHasSessions_ShouldReturnOwnSessionsNewestFirst()
     {
+        // Arrange
         await using var database = await CosmosTestDatabase.CreateAsync();
         await using var context = database.CreateContext();
         var repository = new ChatSessionRepository(context);
@@ -200,8 +226,10 @@ public sealed class ChatSessionRepositoryTests
         await repository.AddAsync(new ChatSession { SessionId = database.NewSessionId(), UserId = database.NewUserId(), Title = "Foreign", UpdatedAt = now }, CancellationToken.None);
         await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
 
+        // Act
         var summaries = await repository.ListSummariesByUserAsync(userId, 0, 10, CancellationToken.None);
 
+        // Assert
         summaries.Select(s => s.SessionId).Should().Equal(newId, oldId);
         summaries[0].Title.Should().Be("New");
     }
@@ -209,6 +237,7 @@ public sealed class ChatSessionRepositoryTests
     [CosmosFact]
     public async Task ListSummariesByUserAsync_WhenSkipAndTakeAreSet_ShouldReturnRequestedPage()
     {
+        // Arrange
         await using var database = await CosmosTestDatabase.CreateAsync();
         await using var context = database.CreateContext();
         var repository = new ChatSessionRepository(context);
@@ -224,14 +253,17 @@ public sealed class ChatSessionRepositoryTests
 
         await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
 
+        // Act
         var page = await repository.ListSummariesByUserAsync(userId, 2, 2, CancellationToken.None);
 
+        // Assert
         page.Select(s => s.SessionId).Should().Equal(ids[2], ids[3]);
     }
 
     [CosmosFact]
     public async Task Delete_WhenSessionIsCommitted_ShouldRemoveSessionAndMessages()
     {
+        // Arrange
         await using var database = await CosmosTestDatabase.CreateAsync();
         await using var context = database.CreateContext();
         var repository = new ChatSessionRepository(context);
@@ -245,9 +277,11 @@ public sealed class ChatSessionRepositoryTests
         await repository.AddAsync(session, CancellationToken.None);
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
+        // Act
         repository.Delete(session);
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
+        // Assert
         await using var otherContext = database.CreateContext();
         (await new ChatSessionRepository(otherContext).FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None))
             .Should().BeNull();
@@ -256,6 +290,7 @@ public sealed class ChatSessionRepositoryTests
     [CosmosFact]
     public async Task AddAsync_WhenSessionHasSummaryFields_ShouldPersistThemIncludingTimestamp()
     {
+        // Arrange
         await using var database = await CosmosTestDatabase.CreateAsync();
         await using var context = database.CreateContext();
         var updatedAt = DateTimeOffset.UtcNow;
@@ -268,9 +303,12 @@ public sealed class ChatSessionRepositoryTests
             SummarizedMessageCount = 8,
             UpdatedAt = updatedAt,
         };
+
+        // Act
         await new ChatSessionRepository(context).AddAsync(session, CancellationToken.None);
         await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
 
+        // Assert
         await using var otherContext = database.CreateContext();
         var persisted = await new ChatSessionRepository(otherContext)
             .FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None);

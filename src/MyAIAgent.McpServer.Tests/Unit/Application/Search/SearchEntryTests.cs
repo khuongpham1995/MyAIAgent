@@ -34,7 +34,7 @@ public sealed class SearchEntryTests
         var a = new SearchEntry("https://example.com", "snippet");
         var b = new SearchEntry("https://example.com", "snippet");
 
-        // Assert
+        // Act & Assert
         a.Should().Be(b);
     }
 
@@ -45,7 +45,7 @@ public sealed class SearchEntryTests
         var a = new SearchEntry("https://example.com", "snippet one");
         var b = new SearchEntry("https://example.com", "snippet two");
 
-        // Assert
+        // Act & Assert
         a.Should().NotBe(b);
     }
 }

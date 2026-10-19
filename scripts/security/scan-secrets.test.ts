@@ -13,6 +13,7 @@ function temporary(t: TestContext): string {
 }
 
 test('scanner findings fail the scan while printed fields omit credential values', t => {
+  // Arrange
   const root = temporary(t);
   const report = join(root, 'report.json');
   const credential = ['sensitive', 'fixture', 'value'].join('-');
@@ -27,6 +28,7 @@ test('scanner findings fail the scan while printed fields omit credential values
     return { status: 1, stdout: credential, stderr: credential };
   };
 
+  // Act & Assert
   assert.equal(runScan('scanner', root, report, 'git', 'config', 'ignore', { run, output: line => lines.push(line) }), true);
 
   assert.equal(lines.join('\n').includes(credential), false);
@@ -34,26 +36,38 @@ test('scanner findings fail the scan while printed fields omit credential values
 });
 
 test('missing and invalid reports cannot pass even when scanner exits zero', t => {
+  // Arrange
   const root = temporary(t);
   const report = join(root, 'report.json');
   const options = { run: () => ({ status: 0 }), output() {} };
 
+  // Act & Assert
   assert.throws(() => runScan('scanner', root, report, 'dir', 'config', 'ignore', options), /report is missing/);
+
+  // Arrange
   writeFileSync(report, 'invalid report content');
+
+  // Act & Assert
   assert.throws(() => runScan('scanner', root, report, 'dir', 'config', 'ignore', options), /report is invalid/);
+
+  // Arrange
   writeFileSync(report, '[]');
+
+  // Act & Assert
   assert.equal(runScan('scanner', root, report, 'dir', 'config', 'ignore', options), false);
   assert.equal(runScan('scanner', root, report, 'dir', 'config', 'ignore',
     { ...options, run: () => ({ status: 1 }) }), true);
 });
 
 test('bad checksums stop execution and delete the untrusted archive', t => {
+  // Arrange
   const root = temporary(t);
   const tools = join(root, 'artifacts/tools/gitleaks/8.30.1');
   mkdirSync(tools, { recursive: true });
   const archive = join(tools, 'linux_x64.tar.gz');
   writeFileSync(archive, 'not the official release');
 
+  // Act & Assert
   assert.throws(() => installScanner(root, { platform: 'linux', arch: 'x64',
     run() { assert.fail('No command may run before a cached archive is verified'); } }), /checksum mismatch/);
 
@@ -61,6 +75,7 @@ test('bad checksums stop execution and delete the untrusted archive', t => {
 });
 
 test('worktree snapshot includes filenames with spaces and skips symlinks and deleted files', t => {
+  // Arrange
   const root = temporary(t);
   const worktree = join(root, 'worktree');
   mkdirSync(worktree);
@@ -70,6 +85,7 @@ test('worktree snapshot includes filenames with spaces and skips symlinks and de
   writeFileSync(join(outside, 'outside.txt'), 'outside checkout');
   symlinkSync(outside, join(root, 'linked-directory'));
 
+  // Act
   copyWorktree(root, worktree, (command, args, options) => {
     assert.equal(command, 'git');
     assert.ok(args.includes('-z'));
@@ -77,6 +93,7 @@ test('worktree snapshot includes filenames with spaces and skips symlinks and de
     return { status: 0, stdout: 'file with spaces.txt\0link\0deleted.txt\0linked-directory/outside.txt\0' };
   });
 
+  // Assert
   assert.equal(readFileSync(join(worktree, 'file with spaces.txt'), 'utf8'), 'example');
   assert.equal(existsSync(join(worktree, 'link')), false);
   assert.equal(existsSync(join(worktree, 'deleted.txt')), false);

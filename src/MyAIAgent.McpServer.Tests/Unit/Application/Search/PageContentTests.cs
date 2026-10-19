@@ -23,7 +23,7 @@ public sealed class PageContentTests
         var a = new PageContent("https://example.com", "body");
         var b = new PageContent("https://example.com", "body");
 
-        // Assert
+        // Act & Assert
         a.Should().Be(b);
     }
 
@@ -34,7 +34,7 @@ public sealed class PageContentTests
         var a = new PageContent("https://example.com", "body");
         var b = new PageContent("https://other.com", "body");
 
-        // Assert
+        // Act & Assert
         a.Should().NotBe(b);
     }
 }

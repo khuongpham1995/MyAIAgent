@@ -8,9 +8,11 @@ public sealed class ProjectDependencyTests
     [Fact]
     public void ServiceProjects_ShouldOnlyReferenceAllowedLayers()
     {
+        // Arrange
         var sourceDirectory = FindSourceDirectory();
         var violations = new List<string>();
 
+        // Act
         foreach (var projectFile in Directory.GetFiles(sourceDirectory, "*.csproj", SearchOption.AllDirectories))
         {
             var projectName = Path.GetFileNameWithoutExtension(projectFile);
@@ -48,6 +50,7 @@ public sealed class ProjectDependencyTests
                 .Select(reference => $"{projectName} references {reference}"));
         }
 
+        // Assert
         violations.Should().BeEmpty();
     }
 

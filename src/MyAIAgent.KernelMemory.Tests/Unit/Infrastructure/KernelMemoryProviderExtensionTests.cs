@@ -10,8 +10,10 @@ public sealed class KernelMemoryProviderExtensionTests
     [Fact]
     public void EnsureSupportedMemoryDbTypes_WhenAzureAiSearch_ShouldPass()
     {
+        // Arrange & Act
         var action = () => KernelMemoryProviderExtension.EnsureSupportedMemoryDbTypes(["AzureAISearch", "azureaisearch"]);
 
+        // Assert
         action.Should().NotThrow();
     }
 
@@ -21,14 +23,17 @@ public sealed class KernelMemoryProviderExtensionTests
     [InlineData("Nonsense")]
     public void EnsureSupportedMemoryDbTypes_WhenTypeIsNotWiredUp_ShouldFailNamingTheType(string type)
     {
+        // Arrange & Act
         var action = () => KernelMemoryProviderExtension.EnsureSupportedMemoryDbTypes([type]);
 
+        // Assert
         action.Should().Throw<ConfigurationException>().WithMessage($"*{type}*");
     }
 
     [Fact]
     public void ShippedAppSettings_WhenRead_ShouldOnlyConfigureSupportedMemoryDbTypes()
     {
+        // Arrange
         var configuration = new ConfigurationBuilder()
             .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: false)
             .Build();
@@ -36,7 +41,10 @@ public sealed class KernelMemoryProviderExtensionTests
 
         var types = config.DataIngestion.MemoryDbTypes.Append(config.Retrieval.MemoryDbType);
 
+        // Act
         var action = () => KernelMemoryProviderExtension.EnsureSupportedMemoryDbTypes(types);
+
+        // Assert
         action.Should().NotThrow();
         config.DataIngestion.MemoryDbTypes.Should().Equal("AzureAISearch");
     }
@@ -44,10 +52,12 @@ public sealed class KernelMemoryProviderExtensionTests
     [Fact]
     public void ShippedAppSettings_WhenRead_ShouldUseTheTestIndexAndDatabaseByDefault()
     {
+        // Arrange & Act
         var configuration = new ConfigurationBuilder()
             .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: false)
             .Build();
 
+        // Assert
         configuration["KernelMemory:DefaultIndexName"].Should().Be("myaiagent-test");
         configuration["CosmosDb:DatabaseName"].Should().Be("myaiagent-test");
     }
@@ -85,40 +95,52 @@ public sealed class KernelMemoryProviderExtensionTests
     [Fact]
     public void AddConfiguredProviders_WhenConfigurationIsComplete_ShouldNotThrow()
     {
+        // Arrange
         var (configuration, config) = BuildConfiguration();
 
+        // Act
         var action = () => new KernelMemoryBuilder().AddConfiguredProviders(configuration, config);
 
+        // Assert
         action.Should().NotThrow();
     }
 
     [Fact]
     public void AddConfiguredProviders_WhenSearchApiKeyIsBlank_ShouldFailNamingTheService()
     {
+        // Arrange
         var (configuration, config) = BuildConfiguration(searchApiKey: "");
 
+        // Act
         var action = () => new KernelMemoryBuilder().AddConfiguredProviders(configuration, config);
 
+        // Assert
         action.Should().Throw<ConfigurationException>().WithMessage("*AzureAISearch*APIKey*");
     }
 
     [Fact]
     public void AddConfiguredProviders_WhenOpenAiApiKeyIsBlank_ShouldFail()
     {
+        // Arrange
         var (configuration, config) = BuildConfiguration(openAiApiKey: "");
 
+        // Act
         var action = () => new KernelMemoryBuilder().AddConfiguredProviders(configuration, config);
 
+        // Assert
         action.Should().Throw<ConfigurationException>().WithMessage("*AzureOpenAI*APIKey*");
     }
 
     [Fact]
     public void AddConfiguredProviders_WhenOrchestrationIsDistributed_ShouldFailWithClearMessage()
     {
+        // Arrange
         var (configuration, config) = BuildConfiguration(orchestration: "Distributed");
 
+        // Act
         var action = () => new KernelMemoryBuilder().AddConfiguredProviders(configuration, config);
 
+        // Assert
         action.Should().Throw<ConfigurationException>().WithMessage("*InProcess*");
     }
 }

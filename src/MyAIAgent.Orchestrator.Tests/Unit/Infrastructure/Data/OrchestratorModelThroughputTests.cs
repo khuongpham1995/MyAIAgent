@@ -21,10 +21,13 @@ public sealed class OrchestratorModelThroughputTests
     [Fact]
     public void Model_WhenBuilt_ShouldShareFourHundredRequestUnitsAcrossTheDatabase()
     {
+        // Arrange
         using var context = CreateContext();
 
+        // Act
         var throughput = DesignModel(context).GetThroughput();
 
+        // Assert
         throughput.Should().NotBeNull();
         throughput!.Throughput.Should().Be(400);
         throughput.AutoscaleMaxThroughput.Should().BeNull();
@@ -33,26 +36,32 @@ public sealed class OrchestratorModelThroughputTests
     [Fact]
     public void Model_WhenBuilt_ShouldNotGiveAnyContainerDedicatedThroughput()
     {
+        // Arrange
         using var context = CreateContext();
 
+        // Act
         var dedicated = DesignModel(context).GetEntityTypes()
             .Where(entityType => entityType.GetThroughput() is not null)
             .Select(entityType => entityType.DisplayName());
 
+        // Assert
         dedicated.Should().BeEmpty();
     }
 
     [Fact]
     public void Model_WhenBuilt_ShouldMapSessionsAndAgentsToTheirOwnContainers()
     {
+        // Arrange
         using var context = CreateContext();
 
+        // Act
         var containers = DesignModel(context).GetEntityTypes()
             .Where(entityType => !entityType.IsOwned())
             .Select(entityType => entityType.GetContainer())
             .Distinct()
             .Order();
 
+        // Assert
         containers.Should().Equal("AgentDefinitions", "ChatSessions");
     }
 
@@ -60,14 +69,17 @@ public sealed class OrchestratorModelThroughputTests
     [Fact]
     public void Model_WhenBuilt_ShouldUsePartitionKeysThatMatchTheBicepContainers()
     {
+        // Arrange
         using var context = CreateContext();
 
+        // Act
         var keys = DesignModel(context).GetEntityTypes()
             .Where(entityType => !entityType.IsOwned())
             .ToDictionary(
                 entityType => entityType.GetContainer()!,
                 entityType => string.Join("/", entityType.GetPartitionKeyPropertyNames()));
 
+        // Assert
         keys.Should().Equal(new Dictionary<string, string>
         {
             ["ChatSessions"] = "UserId",

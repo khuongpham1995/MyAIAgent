@@ -24,18 +24,24 @@ public sealed class IoCExtensionTests
     [Fact]
     public void AddInfrastructure_WhenOrchestratorKeyIsMissingInProduction_ShouldFail()
     {
+        // Arrange & Act
         var action = () => new ServiceCollection().AddInfrastructure(Config(null), isDevelopment: false);
 
+        // Assert
         action.Should().Throw<InvalidOperationException>().WithMessage("*Orchestrator:AccessKey*");
     }
 
     [Fact]
     public void AddInfrastructure_WhenOrchestratorKeyIsMissingInDevelopment_ShouldSendNoKey()
     {
+        // Arrange
         var services = new ServiceCollection();
+
+        // Act
         services.AddInfrastructure(Config(null), isDevelopment: true);
         using var provider = services.BuildServiceProvider();
 
+        // Assert
         var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient("IOrchestratorClient");
 
         client.DefaultRequestHeaders.Contains("Authorization").Should().BeFalse();
@@ -46,10 +52,14 @@ public sealed class IoCExtensionTests
     [InlineData("IOrchestratorStreamClient")]
     public void AddInfrastructure_WhenOrchestratorKeyIsConfigured_ShouldSendItOnEveryOrchestratorClient(string clientName)
     {
+        // Arrange
         var services = new ServiceCollection();
+
+        // Act
         services.AddInfrastructure(Config(OrchestratorKey), isDevelopment: false);
         using var provider = services.BuildServiceProvider();
 
+        // Assert
         var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient(clientName);
 
         client.DefaultRequestHeaders.GetValues("Authorization").Should().ContainSingle().Which.Should().Be(OrchestratorKey);

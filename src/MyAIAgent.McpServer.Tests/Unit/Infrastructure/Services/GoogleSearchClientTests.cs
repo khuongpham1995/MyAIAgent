@@ -12,6 +12,7 @@ public sealed class GoogleSearchClientTests
     [Fact]
     public async Task SearchAsync_WhenRequestIsSent_ShouldKeepApiKeyOutOfUri()
     {
+        // Arrange
         const string apiKey = "test-secret-key";
         var handler = new CapturingHandler();
         using var httpClient = new HttpClient(handler);
@@ -25,9 +26,12 @@ public sealed class GoogleSearchClientTests
         var client = new GoogleSearchClient(httpClient, configuration, NullLogger<GoogleSearchClient>.Instance);
 
         var entries = new List<string>();
+
+        // Act
         await foreach (var entry in client.SearchAsync("test query", 1))
             entries.Add(entry.Link!);
 
+        // Assert
         entries.Should().ContainSingle().Which.Should().Be("https://example.com/result");
         handler.RequestUri.Should().NotBeNull();
         handler.RequestUri!.ToString().Should().NotContain(apiKey);

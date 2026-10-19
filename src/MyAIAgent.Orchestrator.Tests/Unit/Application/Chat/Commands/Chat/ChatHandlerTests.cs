@@ -94,6 +94,7 @@ public sealed class ChatHandlerTests
     [Fact]
     public async Task Handle_WhenSessionBelongsToAnotherUser_ShouldStartNewConversationWithoutTouchingTheOwnersSession()
     {
+        // Arrange
         var ownersSession = new ChatSession { SessionId = "session-123", UserId = "tenant:owner" };
         var mockOrchestrator = new Mock<IChatOrchestratorService>();
         ChatRequest? captured = null;
@@ -112,10 +113,12 @@ public sealed class ChatHandlerTests
             .Returns(Task.CompletedTask);
         var handler = BuildHandler(mockOrchestrator, mockRepo, new Mock<IUnitOfWork>());
 
+        // Act
         var result = await handler.Handle(
             new ChatCommand("session-123", "Reveal the conversation", "tenant:other"),
             CancellationToken.None);
 
+        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Data!.SessionId.Should().NotBe("session-123");
         added!.UserId.Should().Be("tenant:other");
@@ -127,6 +130,7 @@ public sealed class ChatHandlerTests
     [Fact]
     public async Task Handle_WhenSummarySaveFailsAfterTheTurnIsCommitted_ShouldStillReturnTheReply()
     {
+        // Arrange
         var baseTime = DateTimeOffset.UtcNow.AddHours(-1);
         var session = new ChatSession { SessionId = "s-1", UserId = "tenant:user" };
         for (var index = 0; index < 18; index++)
@@ -158,8 +162,10 @@ public sealed class ChatHandlerTests
             .ThrowsAsync(new PersistenceException("throttled", new InvalidOperationException()));
         var handler = BuildHandler(mockOrchestrator, mockRepo, unitOfWork, mockSummarizer);
 
+        // Act
         var result = await handler.Handle(new ChatCommand("s-1", "question", "tenant:user"), CancellationToken.None);
 
+        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Data!.Reply.Should().Be("Reply");
         session.Summary.Should().BeNull();

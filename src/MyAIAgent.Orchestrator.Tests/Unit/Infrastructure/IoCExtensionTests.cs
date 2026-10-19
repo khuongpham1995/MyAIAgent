@@ -27,16 +27,20 @@ public sealed class IoCExtensionTests
     [InlineData(false)]
     public void AddInfrastructure_WhenServiceAuthorizationIsOffOutsideDevelopment_ShouldFail(bool? enabled)
     {
+        // Arrange & Act
         var action = () => new ServiceCollection().AddInfrastructure(Config(enabled), isDevelopment: false);
 
+        // Assert
         action.Should().Throw<InvalidOperationException>().WithMessage("*ServiceAuthorization*");
     }
 
     [Fact]
     public void AddInfrastructure_WhenServiceAuthorizationIsOnOutsideDevelopment_ShouldRegister()
     {
+        // Arrange & Act
         var action = () => new ServiceCollection().AddInfrastructure(Config(true), isDevelopment: false);
 
+        // Assert
         action.Should().NotThrow();
     }
 }

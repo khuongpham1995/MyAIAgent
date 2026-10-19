@@ -15,12 +15,15 @@ public sealed class ApplicationMappingTests
     [Fact]
     public void Map_WhenCreateAgentHasTools_ShouldPreserveRequestFields()
     {
+        // Arrange
         using var provider = CreateProvider();
         var mapper = provider.GetRequiredService<IMapper>();
         var request = new CreateAgentRequestDto("Agent", "Instructions", "https://mcp.example", true, ["web_search"]);
 
+        // Act
         var command = mapper.Map<CreateAgentCommand>(request);
 
+        // Assert
         command.Name.Should().Be("Agent");
         command.Instructions.Should().Be("Instructions");
         command.McpServerEndpoint.Should().Be("https://mcp.example");
@@ -31,12 +34,15 @@ public sealed class ApplicationMappingTests
     [Fact]
     public void Map_WhenChatRequestHasIdentity_ShouldPreserveRequestFields()
     {
+        // Arrange
         using var provider = CreateProvider();
         var mapper = provider.GetRequiredService<IMapper>();
         var request = new ChatRequestDto("session-1", "Hello", "tenant-1:user-1", "agent-1");
 
+        // Act
         var command = mapper.Map<ChatCommand>(request);
 
+        // Assert
         command.SessionId.Should().Be("session-1");
         command.UserMessage.Should().Be("Hello");
         command.UserId.Should().Be("tenant-1:user-1");
@@ -46,6 +52,7 @@ public sealed class ApplicationMappingTests
     [Fact]
     public void Map_WhenAgentHasEnabledTools_ShouldMapToMcpToolInfo()
     {
+        // Arrange
         using var provider = CreateProvider();
         var mapper = provider.GetRequiredService<IMapper>();
         var agent = new AgentDefinition
@@ -62,8 +69,10 @@ public sealed class ApplicationMappingTests
             ]
         };
 
+        // Act
         var summary = mapper.Map<AgentSummary>(agent);
 
+        // Assert
         summary.Id.Should().Be("agent-1");
         summary.Name.Should().Be("Test Agent");
         summary.Instructions.Should().Be("Be helpful.");
@@ -78,6 +87,7 @@ public sealed class ApplicationMappingTests
     [Fact]
     public void Map_WhenSomeToolsAreDisabled_ShouldOnlyIncludeEnabledTools()
     {
+        // Arrange
         using var provider = CreateProvider();
         var mapper = provider.GetRequiredService<IMapper>();
         var agent = new AgentDefinition
@@ -89,8 +99,10 @@ public sealed class ApplicationMappingTests
             ]
         };
 
+        // Act
         var summary = mapper.Map<AgentSummary>(agent);
 
+        // Assert
         summary.EnabledTools.Should().ContainSingle();
         summary.EnabledTools[0].Name.Should().Be("web_search");
     }
@@ -98,6 +110,7 @@ public sealed class ApplicationMappingTests
     [Fact]
     public void Map_WhenAllToolsAreDisabled_ShouldReturnEmptyEnabledTools()
     {
+        // Arrange
         using var provider = CreateProvider();
         var mapper = provider.GetRequiredService<IMapper>();
         var agent = new AgentDefinition
@@ -109,20 +122,25 @@ public sealed class ApplicationMappingTests
             ]
         };
 
+        // Act
         var summary = mapper.Map<AgentSummary>(agent);
 
+        // Assert
         summary.EnabledTools.Should().BeEmpty();
     }
 
     [Fact]
     public void Map_WhenAgentHasNoTools_ShouldReturnEmptyEnabledTools()
     {
+        // Arrange
         using var provider = CreateProvider();
         var mapper = provider.GetRequiredService<IMapper>();
         var agent = new AgentDefinition { AgentTools = [] };
 
+        // Act
         var summary = mapper.Map<AgentSummary>(agent);
 
+        // Assert
         summary.EnabledTools.Should().BeEmpty();
     }
 

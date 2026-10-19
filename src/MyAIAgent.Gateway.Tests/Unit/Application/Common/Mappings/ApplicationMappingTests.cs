@@ -14,14 +14,17 @@ public sealed class ApplicationMappingTests
     [Fact]
     public void Map_WhenChatRequestHasAuthenticatedIdentity_ShouldUseTrustedUserId()
     {
+        // Arrange
         using var provider = CreateProvider();
         var mapper = provider.GetRequiredService<IMapper>();
         var request = new AuthenticatedChatGatewayRequest(
             new ChatGatewayRequestDto("session-1", "Hello", "agent-1"),
             "tenant-1:user-1");
 
+        // Act
         var command = mapper.Map<ChatGatewayCommand>(request);
 
+        // Assert
         command.SessionId.Should().Be("session-1");
         command.UserMessage.Should().Be("Hello");
         command.UserId.Should().Be("tenant-1:user-1");
@@ -31,12 +34,15 @@ public sealed class ApplicationMappingTests
     [Fact]
     public void Map_WhenCreateAgentHasTools_ShouldPreserveRequestFields()
     {
+        // Arrange
         using var provider = CreateProvider();
         var mapper = provider.GetRequiredService<IMapper>();
         var request = new CreateAgentRequestDto("Agent", "Instructions", "https://mcp.example", true, ["web_search"]);
 
+        // Act
         var command = mapper.Map<CreateAgentCommand>(request);
 
+        // Assert
         command.Name.Should().Be("Agent");
         command.Instructions.Should().Be("Instructions");
         command.McpServerEndpoint.Should().Be("https://mcp.example");

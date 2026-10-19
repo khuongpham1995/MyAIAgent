@@ -28,12 +28,15 @@ public sealed class PublicChatEndpointsTests
     [Fact]
     public async Task ChatStream_WhenTokenIsValid_ShouldStreamEventsAsServerSentEvents()
     {
+        // Arrange
         await using var app = await PublicChatTestApp.StartAsync();
         SetupStream(app);
 
+        // Act
         var response = await app.Client.SendAsync(PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken()));
         var body = await response.Content.ReadAsStringAsync();
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Content.Headers.ContentType!.MediaType.Should().Be("text/event-stream");
         body.Should().Contain("event: session").And.Contain("event: delta").And.Contain("event: done");
@@ -44,14 +47,17 @@ public sealed class PublicChatEndpointsTests
     [Fact]
     public async Task ChatStream_WhenClientSendsAgentId_ShouldUseConfiguredAgentAndVisitorIdentity()
     {
+        // Arrange
         await using var app = await PublicChatTestApp.StartAsync();
         SetupStream(app);
         const string body = "{\"sessionId\":\"s-9\",\"userMessage\":\"Hi\",\"agentId\":\"attacker-agent\",\"userId\":\"tid:oid\"}";
 
+        // Act
         var response = await app.Client.SendAsync(
             PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken("visitor-a"), body));
         await response.Content.ReadAsStringAsync();
 
+        // Assert
         app.StreamClient.Verify(
             c => c.StreamChatAsync(
                 "s-9", "Hi", "visitor:visitor-a", PublicChatTestApp.ConfiguredAgent, It.IsAny<CancellationToken>()),
@@ -61,12 +67,15 @@ public sealed class PublicChatEndpointsTests
     [Fact]
     public async Task ChatStream_WhenMessageIsEmpty_ShouldRejectWithBadRequestBeforeStreaming()
     {
+        // Arrange
         await using var app = await PublicChatTestApp.StartAsync();
         SetupStream(app);
 
+        // Act
         var response = await app.Client.SendAsync(
             PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken(), "{\"userMessage\":\"\"}"));
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         app.StreamClient.Verify(
             c => c.StreamChatAsync(
@@ -90,12 +99,15 @@ public sealed class PublicChatEndpointsTests
     [MemberData(nameof(RejectedTokens))]
     public async Task ChatStream_WhenTokenIsNotAcceptable_ShouldReturnUnauthorized(string scenario, string token)
     {
+        // Arrange
         await using var app = await PublicChatTestApp.StartAsync();
         SetupStream(app);
 
+        // Act
         var response = await app.Client.SendAsync(
             PublicChatTestApp.ChatRequest(token.Length == 0 ? null : token));
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, scenario);
         app.StreamClient.Verify(
             c => c.StreamChatAsync(
@@ -106,11 +118,14 @@ public sealed class PublicChatEndpointsTests
     [Fact]
     public async Task Preflight_WhenOriginIsAllowed_ShouldReturnCorsHeaders()
     {
+        // Arrange
         await using var app = await PublicChatTestApp.StartAsync();
         var request = PreflightRequest(PublicChatTestApp.AllowedOrigin);
 
+        // Act
         var response = await app.Client.SendAsync(request);
 
+        // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
         response.Headers.GetValues("Access-Control-Allow-Origin").Should().Equal(PublicChatTestApp.AllowedOrigin);
         response.Headers.GetValues("Access-Control-Allow-Headers").Single().Should().Contain("Authorization");
@@ -120,26 +135,33 @@ public sealed class PublicChatEndpointsTests
     [Fact]
     public async Task Preflight_WhenOriginIsNotAllowed_ShouldNotReturnAllowOriginHeader()
     {
+        // Arrange
         await using var app = await PublicChatTestApp.StartAsync();
 
+        // Act
         var response = await app.Client.SendAsync(PreflightRequest("https://evil.test"));
 
+        // Assert
         response.Headers.Contains("Access-Control-Allow-Origin").Should().BeFalse();
     }
 
     [Fact]
     public async Task ChatStream_WhenIpExceedsLimit_ShouldReturnTooManyRequestsWithRetryAfter()
     {
+        // Arrange
         await using var app = await PublicChatTestApp.StartAsync(new PublicChatRateLimits(IpPermitLimit: 2));
 
         var statuses = new List<HttpStatusCode>();
         HttpResponseMessage? last = null;
+
+        // Act
         for (var attempt = 0; attempt < 3; attempt++)
         {
             last = await app.Client.SendAsync(PublicChatTestApp.ChatRequest(null));
             statuses.Add(last.StatusCode);
         }
 
+        // Assert
         statuses.Should().Equal(HttpStatusCode.Unauthorized, HttpStatusCode.Unauthorized, HttpStatusCode.TooManyRequests);
         last!.Headers.Contains("Retry-After").Should().BeTrue();
     }
@@ -147,12 +169,15 @@ public sealed class PublicChatEndpointsTests
     [Fact]
     public async Task ChatStream_WhenVisitorExceedsBurst_ShouldReturnTooManyRequests()
     {
+        // Arrange
         await using var app = await PublicChatTestApp.StartAsync(
             new PublicChatRateLimits(IpPermitLimit: 100, VisitorBurst: 2, VisitorReplenishSeconds: 3600));
         SetupStream(app);
         var token = PublicChatTestApp.CreateToken("visitor-a");
 
         var statuses = new List<HttpStatusCode>();
+
+        // Act
         for (var attempt = 0; attempt < 3; attempt++)
         {
             var response = await app.Client.SendAsync(PublicChatTestApp.ChatRequest(token));
@@ -160,12 +185,14 @@ public sealed class PublicChatEndpointsTests
             statuses.Add(response.StatusCode);
         }
 
+        // Assert
         statuses.Should().Equal(HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.TooManyRequests);
     }
 
     [Fact]
     public async Task ChatStream_WhenVisitorHoldsAllTheirStreamSlots_ShouldRejectTheNextStreamOnly()
     {
+        // Arrange
         await using var app = await PublicChatTestApp.StartAsync(
             new PublicChatRateLimits(IpPermitLimit: 100, MaxConcurrentStreamsPerVisitor: 1));
         var release = new TaskCompletionSource();
@@ -174,6 +201,7 @@ public sealed class PublicChatEndpointsTests
                 It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(() => HoldOpenAsync(release.Task));
 
+        // Act
         var first = await app.Client.SendAsync(
             PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken("visitor-a")),
             HttpCompletionOption.ResponseHeadersRead);
@@ -183,6 +211,7 @@ public sealed class PublicChatEndpointsTests
             PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken("visitor-b")),
             HttpCompletionOption.ResponseHeadersRead);
 
+        // Assert
         first.StatusCode.Should().Be(HttpStatusCode.OK);
         secondSameVisitor.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
         otherVisitor.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -202,21 +231,25 @@ public sealed class PublicChatEndpointsTests
     [Fact]
     public async Task ChatStream_WhenAnotherVisitorHasExhaustedBurst_ShouldStillServeThisVisitor()
     {
+        // Arrange
         await using var app = await PublicChatTestApp.StartAsync(
             new PublicChatRateLimits(IpPermitLimit: 100, VisitorBurst: 1, VisitorReplenishSeconds: 3600));
         SetupStream(app);
 
+        // Act
         var first = await app.Client.SendAsync(PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken("visitor-a")));
         await first.Content.ReadAsStringAsync();
         var second = await app.Client.SendAsync(PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken("visitor-b")));
         await second.Content.ReadAsStringAsync();
 
+        // Assert
         second.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task Conversations_WhenVisitorLists_ShouldQueryOnlyTheirOwnVisitorId()
     {
+        // Arrange
         await using var app = await PublicChatTestApp.StartAsync();
         app.OrchestratorClient
             .Setup(c => c.ListConversationsAsync("visitor:visitor-a", 1, 20, It.IsAny<CancellationToken>()))
@@ -225,9 +258,11 @@ public sealed class PublicChatEndpointsTests
         var request = new HttpRequestMessage(HttpMethod.Get, "/public/conversations?userId=visitor:other");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PublicChatTestApp.CreateToken("visitor-a"));
 
+        // Act
         var response = await app.Client.SendAsync(request);
         var body = await response.Content.ReadAsStringAsync();
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         body.Should().Contain("s-1");
         app.OrchestratorClient.Verify(
@@ -237,6 +272,7 @@ public sealed class PublicChatEndpointsTests
     [Fact]
     public async Task Conversations_WhenOrchestratorReportsNotFound_ShouldReturnNotFound()
     {
+        // Arrange
         await using var app = await PublicChatTestApp.StartAsync();
         app.OrchestratorClient
             .Setup(c => c.GetConversationAsync("s-404", "visitor:visitor-a", It.IsAny<CancellationToken>()))
@@ -244,14 +280,17 @@ public sealed class PublicChatEndpointsTests
         var request = new HttpRequestMessage(HttpMethod.Get, "/public/conversations/s-404");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PublicChatTestApp.CreateToken("visitor-a"));
 
+        // Act
         var response = await app.Client.SendAsync(request);
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task Conversations_WhenRenamedWithValidTitle_ShouldReturnNoContent()
     {
+        // Arrange
         await using var app = await PublicChatTestApp.StartAsync();
         app.OrchestratorClient
             .Setup(c => c.RenameConversationAsync("s-1", "visitor:visitor-a", "New title", It.IsAny<CancellationToken>()))
@@ -262,8 +301,10 @@ public sealed class PublicChatEndpointsTests
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PublicChatTestApp.CreateToken("visitor-a"));
 
+        // Act
         var response = await app.Client.SendAsync(request);
 
+        // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 

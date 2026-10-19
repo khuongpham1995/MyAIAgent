@@ -13,6 +13,7 @@ public sealed class AzureOpenAICompatibilityTests
     [Fact]
     public async Task GenerateTextAsync_WhenDependenciesArePatched_ShouldStreamThroughKernelMemoryConnector()
     {
+        // Arrange
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -30,9 +31,11 @@ public sealed class AzureOpenAICompatibilityTests
         var generator = services.GetRequiredService<ITextGenerator>();
         var text = new StringBuilder();
 
+        // Act
         await foreach (var chunk in generator.GenerateTextAsync("Test prompt", new TextGenerationOptions(), CancellationToken.None))
             text.Append(chunk.Text);
 
+        // Assert
         text.ToString().Should().Be("KernelMemory reply");
         handler.RequestPath.Should().Contain("/deployments/test-model/chat/completions");
     }
