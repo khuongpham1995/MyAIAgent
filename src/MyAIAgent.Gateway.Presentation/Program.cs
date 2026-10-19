@@ -10,7 +10,6 @@ using MyAIAgent.Gateway.Application.Agents.Commands.CreateAgent;
 using MyAIAgent.Gateway.Application.Agents.Commands.DeleteAgent;
 using MyAIAgent.Gateway.Application.Agents.Queries.ListAgents;
 using MyAIAgent.Gateway.Application.Chat.Commands.ChatGateway;
-using MyAIAgent.Common.Infrastructure.Extensions;
 using MyAIAgent.Gateway.Application.Chat.Commands.StreamChatGateway;
 using MyAIAgent.Gateway.Presentation.PublicApi;
 using MyAIAgent.Gateway.Application.Agents;

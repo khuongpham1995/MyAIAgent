@@ -145,6 +145,19 @@ dotnet restore
 dotnet run --project src/MyAIAgent.All
 ```
 
+Use `MyAIAgent.All` as the IDE startup project. Its default `https` launch profile uses the local .NET development
+certificate. To select a profile explicitly, run `dotnet run --project src/MyAIAgent.All --launch-profile https`
+or `dotnet run --project src/MyAIAgent.All --launch-profile http`.
+The AppHost's `http` profile explicitly allows unencrypted transport on its localhost dashboard endpoints;
+dashboard authentication remains enabled.
+
+Aspire selects the matching service launch profile when available. Gateway and Orchestrator profiles set both
+`DOTNET_ENVIRONMENT` and `ASPNETCORE_ENVIRONMENT` to `Development`, enabling each service's user-secrets.
+Configure secrets on the owning Presentation project, not only on the AppHost: user-secrets are not shared
+between projects. Keep Azure endpoints and credentials in user-secrets, outside `launchSettings.json`.
+Avoid a `Urls` user-secret override; launch profiles and Aspire manage listening addresses. Restart AppHost
+after changing launch profiles or local secrets.
+
 Aspire starts all four services and opens the dashboard with live endpoint URLs. There is no local database: in
 Development the Orchestrator and KernelMemory use the **test** Cosmos database (`myaiagent-test`), use preprovisioned containers, and refuse to start against any database other than `myaiagent-test`.
 
