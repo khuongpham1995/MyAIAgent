@@ -3,8 +3,9 @@
   "permissions": {
     "defaultMode": "plan",
     "allow": [
-      "Bash(node scripts/ai/quality.mjs *)",
-      "Bash(node scripts/ai/candidate.mjs check *)",
+      "Bash(npm run quality)",
+      "Bash(npm run quality -- *)",
+      "Bash(npm run candidate:check -- *)",
       "Bash(dotnet test src/MyAIAgent.slnx)",
       "Bash(dotnet test src/MyAIAgent.MainSubSys.Tests/MyAIAgent.MainSubSys.Tests.csproj)",
       "Bash(dotnet test src/MyAIAgent.Orchestrator.Tests/MyAIAgent.Orchestrator.Tests.csproj)",

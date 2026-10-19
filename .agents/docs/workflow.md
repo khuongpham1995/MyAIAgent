@@ -36,8 +36,8 @@ persists after that transition; do not add another approval ritual.
    The main session owns implementation, test writing, build fixes and refactoring.
    For behavior changes, reproduce the bug or write a meaningful failing test first
    when practical, then implement and refactor. Do not add tests that merely repeat code.
-3. Run `node scripts/ai/quality.mjs --project <Service>` while iterating, then
-   `node scripts/ai/quality.mjs` for the full gate (including workflow tests).
+3. Run `npm run quality -- --project <Service>` while iterating, then
+   `npm run quality` for the full gate (including workflow tests).
    For a branch review, pass `--base <merge-base-commit>` to include committed task
    changes; resolve it against the intended target branch, not an assumed `main`.
    See [evidence.md](evidence.md) for scope, counts and candidate checks.
@@ -85,7 +85,7 @@ request before any Git mutation; preserve authorization already given in the ses
 Configuring this workflow alone does not request committing or publishing it.
 
 1. Confirm quality evidence and both review verdicts still describe the exact
-   candidate, using `candidate.mjs check` with both review files. Stop on unresolved
+   candidate, using `candidate.ts check` with both review files. Stop on unresolved
    blockers; do not label it ready. This check is required by the adapters; it is
    not a Git hook and cannot prevent a user from running Git directly.
    Once ready, if the user has not already selected the delivery option, show one

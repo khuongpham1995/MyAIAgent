@@ -35,6 +35,7 @@ resource account 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   properties: {
     databaseAccountOfferType: 'Standard'
     enableFreeTier: true
+    disableLocalAuth: true
     minimalTlsVersion: 'Tls12'
     consistencyPolicy: {
       defaultConsistencyLevel: 'Session'

@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, type BinaryLike } from 'node:crypto';
 import { lstatSync, readFileSync, readlinkSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { Candidate, CandidateFile, QualityReport, ReviewRecord } from './types.ts';
 
 export const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-export const hash = value => createHash('sha256').update(value).digest('hex');
-export const readJson = path => JSON.parse(readFileSync(path, 'utf8'));
+export const hash = (value: BinaryLike): string => createHash('sha256').update(value).digest('hex');
+export const readJson = <T = unknown>(path: string): T => JSON.parse(readFileSync(path, 'utf8')) as T;
 
-export function git(root, args) {
+export function git(root: string, args: string[]): string {
   const result = spawnSync('git', ['--no-optional-locks', ...args], {
     cwd: root, encoding: 'utf8', shell: false, maxBuffer: 32 * 1024 * 1024,
   });
@@ -18,9 +19,9 @@ export function git(root, args) {
   }
   return result.stdout;
 }
-const paths = output => output.split('\0').filter(Boolean);
+const paths = (output: string): string[] => output.split('\0').filter(Boolean);
 
-function fileState(root, path, baselineFiles) {
+function fileState(root: string, path: string, baselineFiles: Set<string>): CandidateFile {
   // Never follow a replaced parent directory outside the repository.
   let parent = root;
   for (const segment of path.split('/').slice(0, -1)) {
@@ -39,7 +40,7 @@ function fileState(root, path, baselineFiles) {
   return { path, mode: stat.mode & 0o111 ? '100755' : '100644', sha256: hash(readFileSync(fullPath)) };
 }
 
-export function captureCandidate(root = repoRoot, base = 'HEAD') {
+export function captureCandidate(root = repoRoot, base = 'HEAD'): Candidate {
   if (git(root, ['ls-files', '--unmerged', '-z'])) throw new Error('Resolve index conflicts before capturing a candidate.');
   const flags = paths(git(root, ['ls-files', '-v', '-z']));
   if (flags.some(entry => entry[0] === 'S' || entry[0] === entry[0].toLowerCase())) {
@@ -65,14 +66,15 @@ export function captureCandidate(root = repoRoot, base = 'HEAD') {
   return { ...manifest, digest: hash(JSON.stringify(manifest)) };
 }
 
-export function assertCurrent(candidate, root = repoRoot) {
+export function assertCurrent(candidate: Candidate, root = repoRoot): Candidate {
   const current = captureCandidate(root, candidate.base);
   if (current.digest !== candidate.digest) throw new Error('Candidate changed; rerun quality and both reviews.');
   return current;
 }
 
-export function checkEvidence(reportPath, { root = repoRoot, reviews = [], staged = false } = {}) {
-  const report = readJson(reportPath);
+export function checkEvidence(reportPath: string, { root = repoRoot, reviews = [], staged = false }:
+  { root?: string; reviews?: string[]; staged?: boolean } = {}) {
+  const report = readJson<QualityReport>(reportPath);
   if (report.version !== 1 || report.status !== 'PASS' || report.scope !== 'full') {
     throw new Error('A completed PASS from the full quality gate is required.');
   }
@@ -83,7 +85,7 @@ export function checkEvidence(reportPath, { root = repoRoot, reviews = [], stage
   if (reviews.length) {
     const expected = new Set(['code-reviewer', 'security-reviewer']);
     for (const path of reviews) {
-      const review = readJson(path);
+      const review = readJson<ReviewRecord>(path);
       if (!expected.delete(review.reviewer) || review.verdict !== 'PASS' ||
           review.candidateDigest !== current.digest || review.qualitySha256 !== hash(readFileSync(reportPath)) ||
           !review.summary?.trim() || !Array.isArray(review.changes) || !Array.isArray(review.risks)) {
@@ -110,11 +112,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const staged = rest.at(-1) === '--staged';
     const reviews = staged ? rest.slice(0, -1) : rest;
     if (command !== 'check' || !reportPath || ![0, 2].includes(reviews.length) || reviews.some(p => p.startsWith('--'))) {
-      throw new Error('Usage: node scripts/ai/candidate.mjs check <quality.json> [<code-review.json> <security-review.json>] [--staged]');
+      throw new Error('Usage: npm run candidate:check -- <quality.json> [<code-review.json> <security-review.json>] [--staged]');
     }
     console.log(JSON.stringify(checkEvidence(reportPath, { reviews, staged }), null, 2));
   } catch (error) {
-    console.error(`BLOCKED: ${error.message}`);
+    console.error(`BLOCKED: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;
   }
 }

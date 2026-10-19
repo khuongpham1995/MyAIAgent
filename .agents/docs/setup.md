@@ -15,7 +15,7 @@
 | `.claude/agents/` | Two read-only Sonnet reviewers |
 | `.claude/skills`, `.claude/rules/shared` | Per-skill links to `.agents/skills/*` and one shared rules link |
 | `.codex/config.toml`, `.codex/agents/` | Codex Sol default and two Sol reviewers; select Astra for main-session Plan |
-| `scripts/ai/quality.mjs`, `candidate.mjs` | Test/format evidence and candidate/review/staging checks |
+| `scripts/ai/quality.ts`, `candidate.ts` | Test/format evidence and candidate/review/staging checks |
 | `.github/pull_request_template.md` | Shared PR report format |
 
 Everything shared has one canonical source under `.agents/`; `.claude/` and
@@ -66,6 +66,7 @@ Start from the real checkout directory (on this machine,
 `/Volumes/KHUONG/Repositories/MyAIAgent`):
 
 ```bash
+npm ci --ignore-scripts
 claude --model opusplan --permission-mode plan
 ```
 
@@ -150,7 +151,7 @@ already-running session. Model/mode changes only count after client confirmation
 
 - Open the repository root, trust it, then restart/reload the client after renames.
 - Check the four `ai-*` directories under `.agents/skills/` and their Claude links.
-  Run `node --test scripts/ai/shared-config.test.mjs` for filesystem consistency;
+  Run `node --test --import tsx scripts/ai/shared-config.test.ts` for filesystem consistency;
   this test alone does not prove a client loaded a skill.
 - Claude: type `/ai-`; inspect higher-priority personal/enterprise skills if a name
   resolves elsewhere. Do not start with skills disabled or safe mode enabled.
@@ -162,12 +163,12 @@ already-running session. Model/mode changes only count after client confirmation
 
 ## Quality and troubleshooting
 
-Requires .NET 10 SDK, Node.js 20+ and access to the solution's NuGet dependencies.
+Requires .NET 10 SDK, Node.js 20.6+ and access to the solution's NuGet dependencies.
 
 ```bash
-node --test scripts/ai/*.test.mjs
-node scripts/ai/quality.mjs
-node scripts/ai/quality.mjs --project Orchestrator
+node --test --import tsx scripts/ai/*.test.ts
+npm run quality
+npm run quality -- --project Orchestrator
 ```
 
 The quality runner executes sequentially, stops on the first failure, never formats

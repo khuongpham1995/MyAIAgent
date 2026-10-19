@@ -6,7 +6,9 @@ param registryName string
 param registryResourceGroup string
 param environmentName string
 param vaultName string
-param identityName string
+param identityNames object
+param appConfigurationEndpoint string
+param cosmosEndpoint string
 param imageGateway string
 param imageOrchestrator string
 param imageKernelMemory string
@@ -18,7 +20,7 @@ param azureOpenAiDeployment string
 param azureEmbeddingDeployment string
 param azureTextDeployment string
 param googleSearchEngineId string
-// Public chat stays disabled while the issuer, audience, JWKS URI and signing-key secret are all empty.
+// Nonempty values override AAC; otherwise public chat can be configured through AAC.
 param publicChatIssuer string = ''
 param publicChatAudience string = ''
 param publicChatJwksUri string = ''
@@ -51,13 +53,11 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
   name: vaultName
 }
 
-resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
-  name: identityName
-}
-
 var services = [
   {
     name: gatewayName
+    identityName: identityNames.gateway
+    configurationPrefix: 'Gateway:'
     image: imageGateway
     external: true
     cpu: json('0.5')
@@ -81,33 +81,35 @@ var services = [
       { name: 'McpServer__BaseUrl', value: 'http://${mcpName}' }
       { name: 'KernelMemory__AccessKey', secretRef: 'kernel-memory-key' }
       { name: 'Orchestrator__AccessKey', secretRef: 'orchestrator-key' }
+      // The Container Apps ingress is the only way in, so its X-Forwarded-For entry identifies the client.
+      { name: 'PublicChat__TrustForwardedHeaders', value: 'true' }
+    ], filter([
       { name: 'PublicChat__Jwt__Issuer', value: publicChatIssuer }
       { name: 'PublicChat__Jwt__Audience', value: publicChatAudience }
       { name: 'PublicChat__Jwt__JwksUri', value: publicChatJwksUri }
       { name: 'PublicChat__AgentId', value: publicChatAgentId }
       { name: 'PublicChat__AllowedOrigins__0', value: publicChatAllowedOrigin }
-      // The Container Apps ingress is the only way in, so its X-Forwarded-For entry identifies the client.
-      { name: 'PublicChat__TrustForwardedHeaders', value: 'true' }
-    ], empty(publicChatJwtVaultEntry) ? [] : [
+    ], setting => !empty(setting.value)), empty(publicChatJwtVaultEntry) ? [] : [
       { name: 'PublicChat__Jwt__SigningKey', secretRef: 'public-chat-signing-key' }
     ])
   }
   {
     name: orchestratorName
+    identityName: identityNames.orchestrator
+    configurationPrefix: 'Orchestrator:'
     image: imageOrchestrator
     external: false
     cpu: json('0.5')
     memory: '1Gi'
     maxReplicas: 2
     secrets: [
-      { name: 'cosmos-connection', vaultSecret: 'cosmos-connection' }
       { name: 'azure-openai-key', vaultSecret: 'azure-openai-key' }
       { name: 'orchestrator-key', vaultSecret: 'orchestrator-key' }
       { name: 'orchestrator-rotation-key', vaultSecret: 'orchestrator-rotation-key' }
     ]
     env: [
       { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
-      { name: 'ConnectionStrings__CosmosDb', secretRef: 'cosmos-connection' }
+      { name: 'CosmosDb__Endpoint', value: cosmosEndpoint }
       { name: 'CosmosDb__DatabaseName', value: dataName }
       { name: 'ServiceAuthorization__Enabled', value: 'true' }
       { name: 'ServiceAuthorization__AccessKey1', secretRef: 'orchestrator-key' }
@@ -120,13 +122,14 @@ var services = [
   }
   {
     name: kernelMemoryName
+    identityName: identityNames.kernelmemory
+    configurationPrefix: 'KernelMemory:'
     image: imageKernelMemory
     external: false
     cpu: 1
     memory: '2Gi'
     maxReplicas: 1
     secrets: [
-      { name: 'cosmos-connection', vaultSecret: 'cosmos-connection' }
       { name: 'azure-openai-key', vaultSecret: 'azure-openai-key' }
       { name: 'blob-connection', vaultSecret: 'blob-connection' }
       { name: 'search-admin-key', vaultSecret: 'search-admin-key' }
@@ -135,7 +138,7 @@ var services = [
     ]
     env: [
       { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
-      { name: 'ConnectionStrings__CosmosDb', secretRef: 'cosmos-connection' }
+      { name: 'CosmosDb__Endpoint', value: cosmosEndpoint }
       { name: 'KernelMemory__DocumentStorageType', value: 'AzureBlobs' }
       { name: 'KernelMemory__ContentStorageType', value: 'AzureBlobs' }
       { name: 'KernelMemory__Services__AzureBlobs__Auth', value: 'ConnectionString' }
@@ -156,6 +159,8 @@ var services = [
   }
   {
     name: mcpName
+    identityName: identityNames.mcpserver
+    configurationPrefix: 'McpServer:'
     image: imageMcp
     external: false
     cpu: json('0.5')
@@ -172,13 +177,17 @@ var services = [
   }
 ]
 
-resource apps 'Microsoft.App/containerApps@2024-03-01' = [for service in services: {
+resource identities 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = [for service in services: {
+  name: service.identityName
+}]
+
+resource apps 'Microsoft.App/containerApps@2024-03-01' = [for (service, index) in services: {
   name: service.name
   location: location
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
-      '${identity.id}': {}
+      '${identities[index].id}': {}
     }
   }
   properties: {
@@ -194,13 +203,13 @@ resource apps 'Microsoft.App/containerApps@2024-03-01' = [for service in service
       registries: [
         {
           server: registry.properties.loginServer
-          identity: identity.id
+          identity: identities[index].id
         }
       ]
       secrets: [for secret in service.secrets: {
         name: secret.name
         keyVaultUrl: '${vault.properties.vaultUri}secrets/${secret.vaultSecret}'
-        identity: identity.id
+        identity: identities[index].id
       }]
     }
     template: {
@@ -212,7 +221,12 @@ resource apps 'Microsoft.App/containerApps@2024-03-01' = [for service in service
             cpu: service.cpu
             memory: service.memory
           }
-          env: service.env
+          env: concat(service.env, [
+            { name: 'AzureIdentity__ClientId', value: identities[index].properties.clientId }
+            { name: 'AppConfiguration__Endpoint', value: appConfigurationEndpoint }
+            { name: 'AppConfiguration__KeyPrefix', value: service.configurationPrefix }
+            { name: 'AppConfiguration__Label', value: stage }
+          ])
           probes: [
             {
               type: 'Startup'

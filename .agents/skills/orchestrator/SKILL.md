@@ -75,7 +75,7 @@ Conversation list/get/rename/delete handlers check that the session belongs to t
 
 ## Presentation Bootstrap
 
-`Program.cs` wires: `AddAzureAppConfiguration` → `AddApplication` → `AddInfrastructure(isDevelopment)` → `AddGlobalExceptionHandling` → `AddSingleton(TimeProvider.System)` → `UseExceptionHandler` → `EnsureCosmosCreatedAsync<OrchestratorDbContext>()` (dev only) → endpoints via `MapGroup("").AddEndpointFilter(HttpAuthEndpointFilter)`.
+`Program.cs` wires: `AddAzureAppConfiguration` → `AddApplication` → `AddInfrastructure(isDevelopment)` → `AddGlobalExceptionHandling` → `AddSingleton(TimeProvider.System)` → `UseExceptionHandler` → endpoints via `MapGroup("").AddEndpointFilter(HttpAuthEndpointFilter)`.
 
 `TimeProvider` is injected for testable timestamps — never use `DateTimeOffset.UtcNow` directly.
 
@@ -109,3 +109,5 @@ the Orchestrator trusts the user id callers send, so `AddInfrastructure` throws 
 | `Microsoft.Extensions.AI` | `IChatClient` abstraction |
 | `Microsoft.Extensions.AI.OpenAI` | OpenAI `IChatClient` implementation |
 | `Azure.AI.OpenAI` | Azure OpenAI client |
+
+Cosmos databases and containers are provisioned by Bicep. Runtime uses `CosmosDb:Endpoint` and identity-based access; local developers sign in with Azure CLI and have only test-container permissions.

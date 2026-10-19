@@ -11,7 +11,8 @@ public sealed class IoCExtensionTests
         new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:CosmosDb"] = "AccountEndpoint=https://localhost:9/;AccountKey=eA==;",
+                ["CosmosDb:Endpoint"] = "https://test.documents.azure.com/",
+                ["AzureIdentity:ClientId"] = "11111111-1111-1111-1111-111111111111",
                 ["CosmosDb:DatabaseName"] = "myaiagent-prod",
                 ["AiProvider:Type"] = "AzureOpenAI",
                 ["AzureOpenAI:Endpoint"] = "https://example.openai.azure.com",

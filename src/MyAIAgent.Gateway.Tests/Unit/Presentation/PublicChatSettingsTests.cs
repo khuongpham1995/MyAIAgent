@@ -7,7 +7,7 @@ namespace MyAIAgent.Gateway.Tests.Unit.Presentation;
 
 public sealed class PublicChatSettingsTests
 {
-    private const string ValidKey = "0123456789abcdef0123456789abcdef";
+    private static readonly string ValidKey = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 
     private static IConfiguration Config(params (string Key, string? Value)[] values) =>
         new ConfigurationBuilder()

@@ -6,9 +6,10 @@ Run these commands from the repository root. Artifacts stay in ignored
 ## Scope and quality
 
 ```bash
-node scripts/ai/quality.mjs
-node scripts/ai/quality.mjs --project Orchestrator
-node scripts/ai/quality.mjs --base <merge-base-commit>
+npm ci --ignore-scripts
+npm run quality
+npm run quality -- --project Orchestrator
+npm run quality -- --base <merge-base-commit>
 ```
 
 The default comparison base is HEAD. For branch/PR review, first resolve the
@@ -28,7 +29,7 @@ must disclose relevant environmental limits.
 Full quality runs workflow tests, restores/builds the solution, tests each of the
 four runnable service projects, and verifies added/modified candidate C# files.
 It records total/passed/failed/skipped counts from fresh VSTest TRX counters per
-suite. Skips remain visible and need review (the gate prints a WARNING and records it in `warnings`; Cosmos repository tests skip when `COSMOS_TEST_CONNECTION_STRING` is unset, so report them as skipped, never as passed); zero tests, missing reports or failures
+suite. Skips remain visible and need review (the gate prints a WARNING and records it in `warnings`; Cosmos repository tests skip when `COSMOS_TEST_ENDPOINT` is unset, so report them as skipped, never as passed); zero tests, missing reports or failures
 cannot pass. No changed C# files means format is NOT_APPLICABLE. Whole-solution
 format drift is a separate baseline, not hidden by a claim of full format success.
 Changes to formatting policy may justify a broader explicit format check.
@@ -42,7 +43,7 @@ run the full gate. Quality checks candidate freshness again before reporting PAS
 Check the full report before launching both read-only reviewers:
 
 ```bash
-node scripts/ai/candidate.mjs check artifacts/ai/<run>/quality.json
+npm run candidate:check -- artifacts/ai/<run>/quality.json
 ```
 
 The command prints `candidateDigest` and `qualitySha256`. Pass the same report and
@@ -67,7 +68,7 @@ and BLOCKED. The owner saves the actual returned records as `code-review.json` a
 missing or blocked review. Reviewers never write these files themselves.
 
 ```bash
-node scripts/ai/candidate.mjs check artifacts/ai/<run>/quality.json artifacts/ai/<run>/code-review.json artifacts/ai/<run>/security-review.json
+npm run candidate:check -- artifacts/ai/<run>/quality.json artifacts/ai/<run>/code-review.json artifacts/ai/<run>/security-review.json
 ```
 
 Both distinct PASS reports must match the current candidate and exact quality
@@ -81,7 +82,7 @@ Only after explicit user authorization, stage the complete reviewed candidate
 using explicit paths. Preserve unrelated work. Immediately before committing:
 
 ```bash
-node scripts/ai/candidate.mjs check artifacts/ai/<run>/quality.json artifacts/ai/<run>/code-review.json artifacts/ai/<run>/security-review.json --staged
+npm run candidate:check -- artifacts/ai/<run>/quality.json artifacts/ai/<run>/code-review.json artifacts/ai/<run>/security-review.json --staged
 ```
 
 This additionally requires a nonempty staged diff, no unstaged/untracked changes,

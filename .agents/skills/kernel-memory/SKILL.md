@@ -47,7 +47,7 @@ AddInfrastructure(config, isDevelopment)
 AddGlobalExceptionHandling()
 AddKernelMemory(...)          ← KernelMemoryPipelineExtension
 UseExceptionHandler()
-EnsureCosmosCreatedAsync<KernelMemoryDbContext>()   ← dev only (creates containers in the test database)
+Cosmos containers are preprovisioned by Bicep; startup never creates resources.
 RunKernelMemoryAsync(...)
 ```
 
@@ -145,4 +145,4 @@ In Aspire, the base URL is injected automatically via service discovery using th
 }
 ```
 
-Use `dotnet user-secrets` for `APIKey`, `ConnectionString`, and `AccessKey1`/`AccessKey2`. Never commit them.
+Use `dotnet user-secrets` for provider `APIKey`, Blob `ConnectionString`, and `AccessKey1`/`AccessKey2`. Cosmos and AAC use endpoints with Azure CLI identity locally and an explicit assigned managed identity in deployment. Never commit credentials.

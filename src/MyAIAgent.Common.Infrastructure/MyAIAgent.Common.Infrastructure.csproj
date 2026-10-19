@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+        <PackageReference Include="Azure.Identity" Version="1.21.0"/>
         <PackageReference Include="Microsoft.Azure.AppConfiguration.AspNetCore" Version="8.0.0"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="9.0.5"/>
         <PackageReference Include="Microsoft.Extensions.Configuration.AzureAppConfiguration" Version="8.0.0"/>

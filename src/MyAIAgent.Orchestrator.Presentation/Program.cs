@@ -34,8 +34,6 @@ app.UseAzureAppConfigurationWhenConfigured(app.Configuration);
 app.MapGet("/health/live", () => Results.Ok());
 app.MapGet("/health/ready", () => Results.Ok());
 
-if (app.Environment.IsDevelopment())
-    await app.Services.EnsureCosmosCreatedAsync<OrchestratorDbContext>();
 
 var api = app.MapGroup("").AddEndpointFilter(app.Services.GetRequiredService<HttpAuthEndpointFilter>());
 

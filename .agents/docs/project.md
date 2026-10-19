@@ -1,6 +1,6 @@
 # Project context
 
-MyAIAgent is a .NET 10 / C# backend with four services. The real directories are
+MyAIAgent is a public .NET 10 / C# backend repository with four services. Tracked configuration must contain safe defaults only; credentials belong in Key Vault or local developer secret storage. AAC and Cosmos use Azure identities, and deployed services have separate least-privilege runtime identities. The real directories are
 flat under `src/`; folders in `src/MyAIAgent.slnx` are solution groupings only.
 
 | Area | Actual path prefix | Responsibility / review focus |
@@ -55,13 +55,13 @@ behavior changes, invalid/missing input, dependency failure and cancellation whe
 applicable. Test real handlers/validators/mappers; mock external I/O boundaries.
 Integration tests may use a real MediatR pipeline. Repository tests run against the Cosmos
 test database (`myaiagent-test`) through `[CosmosFact]` and are **skipped, not passed,** when
-`COSMOS_TEST_CONNECTION_STRING` is unset (PR CI never receives that key because the test and
-production databases share one account). Never point tests at production credentials.
+`COSMOS_TEST_ENDPOINT` is unset. Tests use Azure CLI sign-in against preprovisioned containers; developer identities must have only test-container grants. PR CI receives no Azure identity or endpoint. Never grant test identities production access.
 Inspect existing fixtures before adding dependencies.
 
 ```bash
-node scripts/ai/quality.mjs --project Orchestrator
-node scripts/ai/quality.mjs
+npm ci --ignore-scripts
+npm run quality -- --project Orchestrator
+npm run quality
 ```
 
 | Service argument | Test project |

@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { readTrx } from './trx.mjs';
-import { fixture, trx } from './test-fixtures.mjs';
+import { readTrx } from './trx.ts';
+import { fixture, trx } from './test-fixtures.ts';
 
 test('TRX records passed, failed and skipped counts', t => {
   const root = fixture(t);

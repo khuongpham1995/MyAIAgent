@@ -43,7 +43,12 @@ jobs:
       ACR_RESOURCE_GROUP: ${{ vars.ACR_RESOURCE_GROUP }}
       APP_ENVIRONMENT_NAME: ${{ vars.APP_ENVIRONMENT_NAME }}
       KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME }}
-      RUNTIME_IDENTITY_NAME: ${{ vars.RUNTIME_IDENTITY_NAME }}
+      GATEWAY_IDENTITY_NAME: ${{ vars.GATEWAY_IDENTITY_NAME }}
+      ORCHESTRATOR_IDENTITY_NAME: ${{ vars.ORCHESTRATOR_IDENTITY_NAME }}
+      KERNEL_MEMORY_IDENTITY_NAME: ${{ vars.KERNEL_MEMORY_IDENTITY_NAME }}
+      MCP_IDENTITY_NAME: ${{ vars.MCP_IDENTITY_NAME }}
+      APP_CONFIG_ENDPOINT: ${{ vars.APP_CONFIG_ENDPOINT }}
+      COSMOS_ENDPOINT: ${{ vars.COSMOS_ENDPOINT }}
       ENTRA_TENANT_ID: ${{ vars.ENTRA_TENANT_ID }}
       ENTRA_AUDIENCE: ${{ vars.ENTRA_AUDIENCE }}
       AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
@@ -59,21 +64,36 @@ jobs:
       PUBLIC_CHAT_AGENT_ID: ${{ vars.PUBLIC_CHAT_AGENT_ID }}
       PUBLIC_CHAT_ALLOWED_ORIGIN: ${{ vars.PUBLIC_CHAT_ALLOWED_ORIGIN }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout delivery tooling
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Checkout release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ env.RELEASE_SHA }}
           fetch-depth: 0
+          persist-credentials: false
+          path: release-source
       - name: Validate release commit
+        working-directory: release-source
         run: |
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           git merge-base --is-ancestor "$RELEASE_SHA" origin/main
-      - uses: azure/login@v2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+      - name: Install automation dependencies
+        run: npm ci --ignore-scripts
+      - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Build and resolve immutable images
         id: images
+        working-directory: release-source
         run: |
           set -euo pipefail
           login_server=$(az acr show --name "$ACR_NAME" --query loginServer --output tsv)
@@ -100,15 +120,16 @@ jobs:
           done
       - name: Deploy staging
         id: deploy
-        run: |
-          fqdn=$(bash scripts/deploy/aca.sh staging \
-            '${{ steps.images.outputs.gateway_image }}' \
-            '${{ steps.images.outputs.orchestrator_image }}' \
-            '${{ steps.images.outputs.kernel_memory_image }}' \
-            '${{ steps.images.outputs.mcp_image }}')
-          echo "fqdn=$fqdn" >> "$GITHUB_OUTPUT"
+        env:
+          GATEWAY_IMAGE: ${{ steps.images.outputs.gateway_image }}
+          ORCHESTRATOR_IMAGE: ${{ steps.images.outputs.orchestrator_image }}
+          KERNEL_MEMORY_IMAGE: ${{ steps.images.outputs.kernel_memory_image }}
+          MCP_IMAGE: ${{ steps.images.outputs.mcp_image }}
+        run: npm run deploy:aca -- staging "$GATEWAY_IMAGE" "$ORCHESTRATOR_IMAGE" "$KERNEL_MEMORY_IMAGE" "$MCP_IMAGE"
       - name: Smoke test staging
-        run: bash scripts/deploy/smoke.sh '${{ steps.deploy.outputs.fqdn }}' "$ENTRA_AUDIENCE"
+        env:
+          GATEWAY_FQDN: ${{ steps.deploy.outputs.fqdn }}
+        run: npm run deploy:smoke -- "$GATEWAY_FQDN" "$ENTRA_AUDIENCE"
 
   production:
     needs: staging
@@ -123,7 +144,12 @@ jobs:
       ACR_RESOURCE_GROUP: ${{ vars.ACR_RESOURCE_GROUP }}
       APP_ENVIRONMENT_NAME: ${{ vars.APP_ENVIRONMENT_NAME }}
       KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME }}
-      RUNTIME_IDENTITY_NAME: ${{ vars.RUNTIME_IDENTITY_NAME }}
+      GATEWAY_IDENTITY_NAME: ${{ vars.GATEWAY_IDENTITY_NAME }}
+      ORCHESTRATOR_IDENTITY_NAME: ${{ vars.ORCHESTRATOR_IDENTITY_NAME }}
+      KERNEL_MEMORY_IDENTITY_NAME: ${{ vars.KERNEL_MEMORY_IDENTITY_NAME }}
+      MCP_IDENTITY_NAME: ${{ vars.MCP_IDENTITY_NAME }}
+      APP_CONFIG_ENDPOINT: ${{ vars.APP_CONFIG_ENDPOINT }}
+      COSMOS_ENDPOINT: ${{ vars.COSMOS_ENDPOINT }}
       ENTRA_TENANT_ID: ${{ vars.ENTRA_TENANT_ID }}
       ENTRA_AUDIENCE: ${{ vars.ENTRA_AUDIENCE }}
       AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
@@ -139,22 +165,29 @@ jobs:
       PUBLIC_CHAT_AGENT_ID: ${{ vars.PUBLIC_CHAT_AGENT_ID }}
       PUBLIC_CHAT_ALLOWED_ORIGIN: ${{ vars.PUBLIC_CHAT_ALLOWED_ORIGIN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || inputs.release_sha }}
-      - uses: azure/login@v2
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+      - name: Install automation dependencies
+        run: npm ci --ignore-scripts
+      - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Deploy production
         id: deploy
-        run: |
-          fqdn=$(bash scripts/deploy/aca.sh production \
-            '${{ needs.staging.outputs.gateway_image }}' \
-            '${{ needs.staging.outputs.orchestrator_image }}' \
-            '${{ needs.staging.outputs.kernel_memory_image }}' \
-            '${{ needs.staging.outputs.mcp_image }}')
-          echo "fqdn=$fqdn" >> "$GITHUB_OUTPUT"
+        env:
+          GATEWAY_IMAGE: ${{ needs.staging.outputs.gateway_image }}
+          ORCHESTRATOR_IMAGE: ${{ needs.staging.outputs.orchestrator_image }}
+          KERNEL_MEMORY_IMAGE: ${{ needs.staging.outputs.kernel_memory_image }}
+          MCP_IMAGE: ${{ needs.staging.outputs.mcp_image }}
+        run: npm run deploy:aca -- production "$GATEWAY_IMAGE" "$ORCHESTRATOR_IMAGE" "$KERNEL_MEMORY_IMAGE" "$MCP_IMAGE"
       - name: Smoke test production
-        run: bash scripts/deploy/smoke.sh '${{ steps.deploy.outputs.fqdn }}' "$ENTRA_AUDIENCE"
+        env:
+          GATEWAY_FQDN: ${{ steps.deploy.outputs.fqdn }}
+        run: npm run deploy:smoke -- "$GATEWAY_FQDN" "$ENTRA_AUDIENCE"

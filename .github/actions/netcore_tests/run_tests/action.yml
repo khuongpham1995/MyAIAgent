@@ -27,4 +27,4 @@ runs:
         else
           base=HEAD
         fi
-        node scripts/ai/quality.mjs --base "$base"
+        npm run quality -- --base "$base"

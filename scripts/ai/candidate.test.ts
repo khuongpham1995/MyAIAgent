@@ -1,12 +1,12 @@
-import test from 'node:test';
+import test, { type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import { chmodSync, mkdirSync, readFileSync, renameSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { assertCurrent, captureCandidate, checkEvidence, git, hash } from './candidate.mjs';
-import { runQuality } from './quality.mjs';
-import { commit, fixture, successfulRun } from './test-fixtures.mjs';
+import { assertCurrent, captureCandidate, checkEvidence, git, hash } from './candidate.ts';
+import { runQuality } from './quality.ts';
+import { commit, fixture, successfulRun } from './test-fixtures.ts';
 
-function evidence(t) {
+function evidence(t: TestContext) {
   const root = fixture(t);
   const report = runQuality({ root, run: successfulRun, output() {} });
   const reportPath = join(report.directory, 'quality.json');
@@ -24,14 +24,14 @@ test('manifest includes untracked content, deletions, modes, symlinks and unusua
   writeFileSync(join(root, name), 'new');
   symlinkSync('example.cs', join(root, 'link'));
   const first = captureCandidate(root);
-  assert.equal(first.files.find(f => f.path === 'link').mode, '120000');
+  assert.equal(first.files.find(f => f.path === 'link')!.mode, '120000');
   writeFileSync(join(root, name), 'changed');
   assert.throws(() => assertCurrent(first, root), /changed/);
   const second = captureCandidate(root);
   chmodSync(join(root, 'example.cs'), 0o755);
   assert.notEqual(captureCandidate(root).digest, second.digest);
   unlinkSync(join(root, 'example.cs'));
-  assert.equal(captureCandidate(root).files.find(f => f.path === 'example.cs').mode, 'deleted');
+  assert.equal(captureCandidate(root).files.find(f => f.path === 'example.cs')!.mode, 'deleted');
 });
 test('staging same final content preserves digest; stale index cannot pass commit gate', t => {
   const { root, report, reportPath, reviews } = evidence(t);
@@ -94,8 +94,8 @@ test('replacing tracked directory with symlink records child deletions without f
   renameSync(join(root, 'nested'), join(root, 'moved'));
   symlinkSync('moved', join(root, 'nested'));
   const candidate = captureCandidate(root);
-  assert.equal(candidate.files.find(f => f.path === 'nested/file').mode, 'deleted');
-  assert.equal(candidate.files.find(f => f.path === 'nested').mode, '120000');
+  assert.equal(candidate.files.find(f => f.path === 'nested/file')!.mode, 'deleted');
+  assert.equal(candidate.files.find(f => f.path === 'nested')!.mode, '120000');
   git(root, ['add', '--', 'nested', 'moved']);
   assert.equal(captureCandidate(root).digest, candidate.digest);
 });
@@ -119,8 +119,8 @@ for (const kind of ['file', 'symlink']) {
     mkdirSync(join(root, 'adapter'));
     writeFileSync(join(root, 'adapter', 'child'), 'new');
     const candidate = captureCandidate(root);
-    assert.equal(candidate.files.find(f => f.path === 'adapter').mode, 'deleted');
-    assert.equal(candidate.files.find(f => f.path === 'adapter/child').sha256, hash('new'));
+    assert.equal(candidate.files.find(f => f.path === 'adapter')!.mode, 'deleted');
+    assert.equal(candidate.files.find(f => f.path === 'adapter/child')!.sha256, hash('new'));
     git(root, ['add', '--', 'adapter']);
     assert.equal(captureCandidate(root).digest, candidate.digest);
     writeFileSync(join(root, 'adapter', 'child'), 'unreviewed');

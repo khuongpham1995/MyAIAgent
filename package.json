@@ -1,5 +1,22 @@
 {
   "devDependencies": {
-    "@types/node": "^25.5.1"
+    "@types/node": "20.19.43",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.6"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test:automation": "node --test --import tsx scripts/ai/*.test.ts scripts/security/*.test.ts scripts/deploy/*.test.ts",
+    "security:scan": "node --import tsx scripts/security/scan-secrets.ts",
+    "security:configure": "node --import tsx scripts/security/configure-github.ts",
+    "quality": "node --import tsx scripts/ai/quality.ts",
+    "candidate:check": "node --import tsx scripts/ai/candidate.ts check",
+    "deploy:aca": "node --import tsx scripts/deploy/aca.ts",
+    "deploy:smoke": "node --import tsx scripts/deploy/smoke.ts"
   }
 }

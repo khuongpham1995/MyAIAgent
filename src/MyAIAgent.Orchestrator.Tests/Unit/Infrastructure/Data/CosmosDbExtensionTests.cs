@@ -8,16 +8,14 @@ namespace MyAIAgent.Orchestrator.Tests.Unit.Infrastructure.Data;
 
 public sealed class CosmosDbExtensionTests
 {
-    private const string FakeConnectionString = "AccountEndpoint=https://localhost:9/;AccountKey=eA==;";
-
-    private static IConfiguration Config(string? connectionString, string? databaseName) =>
-        new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:CosmosDb"] = connectionString,
-                ["CosmosDb:DatabaseName"] = databaseName,
-            })
-            .Build();
+    private static IConfiguration Config(string? endpoint = "https://test.documents.azure.com/",
+        string? databaseName = "myaiagent-test", string? clientId = "11111111-1111-1111-1111-111111111111") =>
+        new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["CosmosDb:Endpoint"] = endpoint,
+            ["CosmosDb:DatabaseName"] = databaseName,
+            ["AzureIdentity:ClientId"] = clientId,
+        }).Build();
 
     [Theory]
     [InlineData("myaiagent-prod")]
@@ -25,30 +23,19 @@ public sealed class CosmosDbExtensionTests
     [InlineData("someone-test")]
     public void AddCosmosDb_WhenDevelopmentDatabaseIsNotTheTestDatabase_ShouldFail(string databaseName)
     {
-        var services = new ServiceCollection();
-
-        var action = () => services.AddCosmosDb<OrchestratorDbContext>(
-            Config(FakeConnectionString, databaseName), isDevelopment: true);
+        var action = () => new ServiceCollection().AddCosmosDb<OrchestratorDbContext>(Config(databaseName: databaseName), true);
 
         action.Should().Throw<InvalidOperationException>().WithMessage("*'myaiagent-test'*");
     }
 
-    [Fact]
-    public void AddCosmosDb_WhenDevelopmentDatabaseIsATestDatabase_ShouldRegisterContext()
+    [Theory]
+    [InlineData(true, "myaiagent-test")]
+    [InlineData(false, "myaiagent-prod")]
+    public void AddCosmosDb_WhenEndpointAndIdentityAreConfigured_ShouldRegisterContext(bool isDevelopment, string databaseName)
     {
         var services = new ServiceCollection();
 
-        services.AddCosmosDb<OrchestratorDbContext>(Config(FakeConnectionString, "myaiagent-test"), isDevelopment: true);
-
-        services.Should().Contain(descriptor => descriptor.ServiceType == typeof(OrchestratorDbContext));
-    }
-
-    [Fact]
-    public void AddCosmosDb_WhenDeployedWithProductionDatabase_ShouldRegisterContext()
-    {
-        var services = new ServiceCollection();
-
-        services.AddCosmosDb<OrchestratorDbContext>(Config(FakeConnectionString, "myaiagent-prod"), isDevelopment: false);
+        services.AddCosmosDb<OrchestratorDbContext>(Config(databaseName: databaseName), isDevelopment);
 
         services.Should().Contain(descriptor => descriptor.ServiceType == typeof(OrchestratorDbContext));
     }
@@ -56,23 +43,29 @@ public sealed class CosmosDbExtensionTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    public void AddCosmosDb_WhenConnectionStringIsMissing_ShouldFailWithUserSecretsHint(string? connectionString)
+    [InlineData("http://test.documents.azure.com")]
+    [InlineData("https://test.documents.azure.com/?key=unsafe")]
+    public void AddCosmosDb_WhenEndpointIsMissingOrInvalid_ShouldFail(string? endpoint)
     {
-        var services = new ServiceCollection();
+        var action = () => new ServiceCollection().AddCosmosDb<OrchestratorDbContext>(Config(endpoint: endpoint), true);
 
-        var action = () => services.AddCosmosDb<OrchestratorDbContext>(
-            Config(connectionString, "myaiagent-test"), isDevelopment: true);
-
-        action.Should().Throw<InvalidOperationException>().WithMessage("*user-secrets*");
+        action.Should().Throw<InvalidOperationException>().WithMessage("*CosmosDb:Endpoint*");
     }
 
     [Fact]
-    public void AddCosmosDb_WhenDatabaseNameIsMissing_ShouldFail()
+    public void AddCosmosDb_WhenDeployedIdentityIsMissing_ShouldFail()
     {
-        var services = new ServiceCollection();
+        var action = () => new ServiceCollection().AddCosmosDb<OrchestratorDbContext>(Config(clientId: null), false);
 
-        var action = () => services.AddCosmosDb<OrchestratorDbContext>(
-            Config(FakeConnectionString, null), isDevelopment: false);
+        action.Should().Throw<InvalidOperationException>().WithMessage("*AzureIdentity:ClientId*");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void AddCosmosDb_WhenDatabaseNameIsMissing_ShouldFail(string? databaseName)
+    {
+        var action = () => new ServiceCollection().AddCosmosDb<OrchestratorDbContext>(Config(databaseName: databaseName), false);
 
         action.Should().Throw<InvalidOperationException>().WithMessage("*DatabaseName*");
     }

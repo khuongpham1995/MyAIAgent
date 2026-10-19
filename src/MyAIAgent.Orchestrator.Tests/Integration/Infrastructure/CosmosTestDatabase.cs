@@ -1,3 +1,5 @@
+using Azure.Identity;
+using MyAIAgent.Common.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 using MyAIAgent.Orchestrator.Infrastructure.Data;
 
@@ -5,9 +7,6 @@ namespace MyAIAgent.Orchestrator.Tests.Integration.Infrastructure;
 
 public sealed class CosmosTestDatabase : IAsyncDisposable
 {
-    private static readonly SemaphoreSlim EnsureCreatedLock = new(1, 1);
-    private static bool isCreated;
-
     private readonly List<string> userIds = [];
     private readonly List<string> agentIds = [];
 
@@ -15,21 +14,17 @@ public sealed class CosmosTestDatabase : IAsyncDisposable
     {
     }
 
-    public static async Task<CosmosTestDatabase> CreateAsync()
-    {
-        var database = new CosmosTestDatabase();
-        await EnsureCreatedOnceAsync(database);
-        return database;
-    }
+    public static Task<CosmosTestDatabase> CreateAsync() => Task.FromResult(new CosmosTestDatabase());
 
     public OrchestratorDbContext CreateContext()
     {
-        var connectionString = CosmosTestEnvironment.ConnectionString
+        var endpoint = CosmosTestEnvironment.Endpoint
             ?? throw new InvalidOperationException(
-                $"{CosmosTestEnvironment.ConnectionStringVariable} is not set; use [CosmosFact] so the test is skipped instead.");
+                $"{CosmosTestEnvironment.EndpointVariable} is not set; use [CosmosFact] so the test is skipped instead.");
 
         var options = new DbContextOptionsBuilder<OrchestratorDbContext>()
-            .UseCosmos(connectionString, CosmosTestEnvironment.DatabaseName)
+            .UseCosmos(AzureCredentialFactory.RequireHttpsEndpoint(endpoint, CosmosTestEnvironment.EndpointVariable).AbsoluteUri,
+                new AzureCliCredential(), CosmosTestEnvironment.DatabaseName)
             .Options;
 
         return new OrchestratorDbContext(options);
@@ -72,21 +67,4 @@ public sealed class CosmosTestDatabase : IAsyncDisposable
         await context.SaveChangesAsync();
     }
 
-    private static async Task EnsureCreatedOnceAsync(CosmosTestDatabase database)
-    {
-        await EnsureCreatedLock.WaitAsync();
-        try
-        {
-            if (isCreated)
-                return;
-
-            await using var context = database.CreateContext();
-            await context.Database.EnsureCreatedAsync();
-            isCreated = true;
-        }
-        finally
-        {
-            EnsureCreatedLock.Release();
-        }
-    }
 }

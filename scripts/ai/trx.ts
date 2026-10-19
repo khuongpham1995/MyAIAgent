@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 // Read the fixed counters emitted by VSTest, not arbitrary XML. Unsupported or
 // incomplete output fails closed; no DTD/entity resolution or XML dependency.
-export function readTrx(directory) {
+export function readTrx(directory: string) {
   const files = readdirSync(directory).filter(name => name.endsWith('.trx'));
   if (files.length !== 1) throw new Error(`Expected one fresh TRX in ${directory}, found ${files.length}.`);
   const file = join(directory, files[0]);
@@ -13,12 +13,12 @@ export function readTrx(directory) {
     throw new Error(`Unsupported or incomplete TRX: ${file}`);
   }
   const outcome = summaries[0][0].match(/^<ResultSummary\b[^>]*\boutcome="([^"]+)"/)?.[1];
-  if (!['Completed', 'Passed', 'Failed', 'Error', 'Timeout', 'Aborted'].includes(outcome)) {
+  if (!outcome || !['Completed', 'Passed', 'Failed', 'Error', 'Timeout', 'Aborted'].includes(outcome)) {
     throw new Error(`Unsupported TRX outcome: ${file}`);
   }
   const counters = [...summaries[0][1].matchAll(/<Counters\b([^>]*?)\/>/g)];
   if (counters.length !== 1) throw new Error(`Missing or duplicate TRX counters: ${file}`);
-  const values = {};
+  const values: Record<string, number> = {};
   for (const [, key, value] of counters[0][1].matchAll(/(\w+)="([^"]*)"/g)) {
     if (Object.hasOwn(values, key) || !/^\d+$/.test(value) || !Number.isSafeInteger(Number(value))) {
       throw new Error(`Invalid TRX counter ${key}: ${file}`);

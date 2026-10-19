@@ -28,7 +28,8 @@ choices defined in [the workflow](.agents/docs/workflow.md) before staging or
 committing.
 
 ```bash
-node scripts/ai/quality.mjs
+npm ci --ignore-scripts
+npm run quality
 ```
 
 Azure Container Apps deployment and rollback setup is documented in
@@ -143,27 +144,32 @@ dotnet run --project src/MyAIAgent.All
 ```
 
 Aspire starts all four services and opens the dashboard with live endpoint URLs. There is no local database: in
-Development the Orchestrator and KernelMemory use the **test** Cosmos database (`myaiagent-test`), create its containers
-on startup, and refuse to start against any database other than `myaiagent-test`.
+Development the Orchestrator and KernelMemory use the **test** Cosmos database (`myaiagent-test`), use preprovisioned containers, and refuse to start against any database other than `myaiagent-test`.
 
-### Configure secrets
+### Configure local identity and secrets
+
+This repository is public. See [configuration security](docs/security.md) before adding environment settings. Cosmos uses identity-based access to preprovisioned test containers; it does not create resources on application startup.
 
 ```bash
-# Orchestrator — AI provider and test database
-cd src/MyAIAgent.Orchestrator.Presentation
-dotnet user-secrets set "ConnectionStrings:CosmosDb" "<test account connection string>"
-dotnet user-secrets set "AzureOpenAI:Endpoint" "https://<resource>.openai.azure.com/"
-dotnet user-secrets set "AzureOpenAI:DeploymentName" "gpt-4o"
-dotnet user-secrets set "AzureOpenAI:ApiKey" "<key>"
+az login --tenant "<tenant-id>"
+# A bootstrap administrator must first grant your identity access to the test containers.
+dotnet user-secrets set "CosmosDb:Endpoint" "https://<account>.documents.azure.com/" --project src/MyAIAgent.Orchestrator.Presentation
+dotnet user-secrets set "AzureOpenAI:Endpoint" "https://<resource>.openai.azure.com/" --project src/MyAIAgent.Orchestrator.Presentation
+dotnet user-secrets set "AzureOpenAI:DeploymentName" "<deployment>" --project src/MyAIAgent.Orchestrator.Presentation
+dotnet user-secrets set "AzureOpenAI:ApiKey" "<key>" --project src/MyAIAgent.Orchestrator.Presentation
 
-# KernelMemory — test database, embeddings and vector store
-cd src/MyAIAgent.KernelMemory.Presentation
-dotnet user-secrets set "ConnectionStrings:CosmosDb" "<test account connection string>"
-dotnet user-secrets set "KernelMemory:Services:AzureOpenAIEmbedding:APIKey" "<key>"
-dotnet user-secrets set "KernelMemory:Services:AzureOpenAIText:APIKey" "<key>"
-dotnet user-secrets set "KernelMemory:Services:AzureAISearch:Endpoint" "https://<name>.search.windows.net"
-dotnet user-secrets set "KernelMemory:Services:AzureAISearch:APIKey" "<admin key>"
+dotnet user-secrets set "CosmosDb:Endpoint" "https://<account>.documents.azure.com/" --project src/MyAIAgent.KernelMemory.Presentation
+dotnet user-secrets set "KernelMemory:Services:AzureOpenAIText:Endpoint" "https://<resource>.openai.azure.com/" --project src/MyAIAgent.KernelMemory.Presentation
+dotnet user-secrets set "KernelMemory:Services:AzureOpenAIText:APIKey" "<key>" --project src/MyAIAgent.KernelMemory.Presentation
+dotnet user-secrets set "KernelMemory:Services:AzureOpenAIEmbedding:Endpoint" "https://<resource>.openai.azure.com/" --project src/MyAIAgent.KernelMemory.Presentation
+dotnet user-secrets set "KernelMemory:Services:AzureOpenAIEmbedding:APIKey" "<key>" --project src/MyAIAgent.KernelMemory.Presentation
+dotnet user-secrets set "KernelMemory:Services:AzureAISearch:Endpoint" "https://<name>.search.windows.net/" --project src/MyAIAgent.KernelMemory.Presentation
+dotnet user-secrets set "KernelMemory:Services:AzureAISearch:APIKey" "<key>" --project src/MyAIAgent.KernelMemory.Presentation
 ```
+
+Match the text/embedding deployment names to your provisioned deployments. AAC is optional locally: set `AppConfiguration:Endpoint` and its `Label` with user-secrets to use it. Deployed apps require AAC and their assigned `AzureIdentity:ClientId`.
+
+For Cosmos integration tests, set `COSMOS_TEST_ENDPOINT` and sign in with a test-scoped identity. Tests are visibly skipped when that endpoint is absent. Run `npm run security:scan` to scan history and current source for credentials. Automation scripts use strict TypeScript; `npm run typecheck` checks them without emitting JavaScript.
 
 ### Build and test
 
@@ -177,5 +183,5 @@ dotnet format src/MyAIAgent.slnx --verify-no-changes
 
 - Follow [AGENTS.md](AGENTS.md) and the [project conventions](.agents/docs/project.md).
 - Follow the shared [Plan → Build → Verify → Commit workflow](.agents/docs/workflow.md).
-- Run `node scripts/ai/quality.mjs` and both parallel reviewers before commit/PR.
+- Run `npm run quality` and both parallel reviewers before commit/PR.
 - Use conventional commit prefixes: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`

@@ -4,6 +4,7 @@
 .claude
 .codex
 artifacts
+node_modules
 **/bin
 **/obj
 **/*.user
@@ -11,3 +12,15 @@ artifacts
 **/appsettings.Development.json
 **/*.db
 **/*.db-*
+
+.env
+.env.*
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.pfx
+**/*.p12
+**/*.jks
+**/appsettings.Local.json
+**/appsettings.*.Local.json

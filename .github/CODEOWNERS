@@ -1,0 +1,10 @@
+# Configuration and delivery changes need maintainer attention.
+/.github/ @khuongpham1995
+/infra/ @khuongpham1995
+/scripts/deploy/ @khuongpham1995
+/scripts/security/ @khuongpham1995
+/src/MyAIAgent.Common.Infrastructure/Extensions/ @khuongpham1995
+/src/**/appsettings*.json @khuongpham1995
+/.gitignore @khuongpham1995
+/.dockerignore @khuongpham1995
+/SECURITY.md @khuongpham1995

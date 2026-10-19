@@ -80,7 +80,7 @@ public sealed class PublicChatEndpointsTests
         { "wrong issuer", PublicChatTestApp.CreateToken(issuer: "https://evil.test") },
         { "wrong audience", PublicChatTestApp.CreateToken(audience: "other-api") },
         { "expired", PublicChatTestApp.CreateToken(expires: DateTime.UtcNow.AddMinutes(-30)) },
-        { "bad signature", PublicChatTestApp.CreateToken(signingKey: "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210") },
+        { "bad signature", PublicChatTestApp.CreateToken(signingKey: Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(64))) },
         { "missing sub", PublicChatTestApp.CreateToken(subject: null) },
         { "overlong sub", PublicChatTestApp.CreateToken(subject: new string('a', 129)) },
         { "unexpected algorithm", PublicChatTestApp.CreateToken(algorithm: SecurityAlgorithms.HmacSha384) },

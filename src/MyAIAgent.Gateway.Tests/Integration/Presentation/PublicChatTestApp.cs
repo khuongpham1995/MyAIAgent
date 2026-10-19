@@ -20,7 +20,7 @@ internal sealed class PublicChatTestApp : IAsyncDisposable
     public const string Issuer = "https://issuer.test";
     public const string Audience = "chat-api";
     // 64 bytes so the same secret can also sign HS384 tokens in the algorithm-allowlist test.
-    public const string SigningKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    public static readonly string SigningKey = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(64));
     public const string AllowedOrigin = "https://app.example.test";
     public const string ConfiguredAgent = "configured-agent";
 
@@ -86,7 +86,7 @@ internal sealed class PublicChatTestApp : IAsyncDisposable
         string? subject = "visitor-a",
         string issuer = Issuer,
         string audience = Audience,
-        string signingKey = SigningKey,
+        string? signingKey = null,
         DateTime? expires = null,
         string algorithm = SecurityAlgorithms.HmacSha256)
     {
@@ -102,7 +102,7 @@ internal sealed class PublicChatTestApp : IAsyncDisposable
             NotBefore = DateTime.UtcNow.AddMinutes(-10),
             Expires = expires ?? DateTime.UtcNow.AddMinutes(30),
             SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey)),
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey ?? SigningKey)),
                 algorithm),
         };
 

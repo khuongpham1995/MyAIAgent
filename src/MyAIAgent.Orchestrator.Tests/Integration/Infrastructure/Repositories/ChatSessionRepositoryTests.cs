@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using MyAIAgent.Orchestrator.Application.Common.Exceptions;
 using MyAIAgent.Orchestrator.Domain.Entities;
 using MyAIAgent.Orchestrator.Infrastructure.Data.Repositories;
 
@@ -7,6 +8,53 @@ namespace MyAIAgent.Orchestrator.Tests.Integration.Infrastructure.Repositories;
 
 public sealed class ChatSessionRepositoryTests
 {
+    [CosmosFact]
+    public async Task SaveChangesAsync_WhenMetadataSaveIsStale_ShouldPreserveConcurrentTurn()
+    {
+        await using var database = await CosmosTestDatabase.CreateAsync();
+        await using var metadataContext = database.CreateContext();
+        var repository = new ChatSessionRepository(metadataContext);
+        var now = new DateTimeOffset(2026, 10, 19, 0, 0, 0, TimeSpan.Zero);
+        var session = new ChatSession
+        {
+            SessionId = database.NewSessionId(),
+            UserId = database.NewUserId(),
+            Title = "Fallback title",
+            Messages =
+            [
+                new ChatSessionMessage { Role = "user", Content = "First question", CreatedAt = now },
+                new ChatSessionMessage { Role = "assistant", Content = "First reply", CreatedAt = now.AddTicks(1) }
+            ]
+        };
+        await repository.AddAsync(session, CancellationToken.None);
+        var metadataUnitOfWork = new OrchestratorUnitOfWork(metadataContext);
+        await metadataUnitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        // A second request commits while the first is awaiting its title or summary provider.
+        await using var turnContext = database.CreateContext();
+        var concurrent = (await new ChatSessionRepository(turnContext)
+            .FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None))!;
+        concurrent.Messages.Add(new ChatSessionMessage { Role = "user", Content = "Second question", CreatedAt = now.AddSeconds(1) });
+        concurrent.Messages.Add(new ChatSessionMessage { Role = "assistant", Content = "Second reply", CreatedAt = now.AddSeconds(1).AddTicks(1) });
+        await new OrchestratorUnitOfWork(turnContext).SaveChangesAsync(CancellationToken.None);
+        session.Title = "Delayed title";
+        session.Summary = "Delayed summary";
+        session.SummarizedMessageCount = 2;
+
+        var save = () => metadataUnitOfWork.SaveChangesAsync(CancellationToken.None);
+
+        var failure = await save.Should().ThrowAsync<PersistenceException>();
+        failure.Which.InnerException.Should().BeOfType<DbUpdateConcurrencyException>();
+        await using var verificationContext = database.CreateContext();
+        var persisted = (await new ChatSessionRepository(verificationContext)
+            .FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None))!;
+        persisted.Messages.Select(message => message.Content).Should()
+            .BeEquivalentTo("First question", "First reply", "Second question", "Second reply");
+        persisted.Title.Should().Be("Fallback title");
+        persisted.Summary.Should().BeNull();
+        persisted.SummarizedMessageCount.Should().Be(0);
+    }
+
     [CosmosFact]
     public async Task AddAsync_WhenSessionIsNew_ShouldPersistSession()
     {

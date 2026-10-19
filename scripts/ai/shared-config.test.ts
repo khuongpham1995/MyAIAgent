@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { repoRoot } from './quality.mjs';
+import { repoRoot } from './quality.ts';
 
-function markdownFiles(directory) {
+function markdownFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) return markdownFiles(path);
@@ -13,7 +13,7 @@ function markdownFiles(directory) {
   });
 }
 
-function frontmatter(path) {
+function frontmatter(path: string): Record<string, string> {
   const match = readFileSync(path, 'utf8').match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
   assert.ok(match, `${path}: missing frontmatter`);
   return Object.fromEntries(match[1].split(/\r?\n/).filter(line => /^[\w-]+:/.test(line))
@@ -24,7 +24,7 @@ const aiConfigPaths = ['.agents', '.claude', '.codex', '.github', 'scripts/ai',
   'AGENTS.md', 'CLAUDE.md', 'README.md'];
 
 // Names only: a failed content assertion would print the whole file into the log.
-function aiConfigFilesMatching(pattern, { except = [] } = {}) {
+function aiConfigFilesMatching(pattern: RegExp, { except = [] }: { except?: string[] } = {}): string[] {
   const result = spawnSync('git', ['ls-files', '--cached', '--others', '--exclude-standard',
     '--', ...aiConfigPaths], { cwd: repoRoot, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
@@ -38,7 +38,7 @@ function aiConfigFilesMatching(pattern, { except = [] } = {}) {
 
 const sharedSkills = join(repoRoot, '.agents/skills');
 const stageSkills = ['ai-plan', 'ai-build', 'ai-verify', 'ai-commit'];
-const testFile = 'scripts/ai/shared-config.test.mjs';
+const testFile = 'scripts/ai/shared-config.test.ts';
 
 test('Claude discovers each canonical skill through a supported folder symlink', () => {
   const adapter = join(repoRoot, '.claude/skills');
@@ -107,7 +107,7 @@ test('the delivery options are defined only in the workflow policy', () => {
 });
 
 test('quality service map covers every runnable test project in the solution', async () => {
-  const { services, testProject } = await import('./quality.mjs');
+  const { services, testProject } = await import('./quality.ts');
   const solution = readFileSync(join(repoRoot, 'src/MyAIAgent.slnx'), 'utf8');
   const projects = [...solution.matchAll(/Path="([^"]+\.csproj)"/g)].map(match => `src/${match[1]}`);
   const runnable = projects.filter(path => /PackageReference Include="Microsoft.NET.Test.Sdk"/.test(readFileSync(join(repoRoot, path), 'utf8')));

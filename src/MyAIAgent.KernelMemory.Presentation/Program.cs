@@ -61,6 +61,4 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseAzureAppConfigurationWhenConfigured(app.Configuration);
 
-if (app.Environment.IsDevelopment())
-    await app.Services.EnsureCosmosCreatedAsync<KernelMemoryDbContext>();
 await app.RunKernelMemoryAsync(config, start, memoryType, syncHandlersCount, asyncHandlersCount);
