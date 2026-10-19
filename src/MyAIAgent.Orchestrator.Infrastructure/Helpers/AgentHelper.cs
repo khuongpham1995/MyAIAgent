@@ -1,8 +1,6 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
-using ModelContextProtocol.Protocol.Transport;
-using MyAIAgent.Common.Domain.Abstractions;
 using MyAIAgent.Orchestrator.Domain.Entities;
 
 namespace MyAIAgent.Orchestrator.Infrastructure.Helpers;
@@ -26,24 +24,23 @@ public sealed class AgentToolSet(IReadOnlyList<AITool> tools, params IAsyncDispo
     }
 }
 
-public sealed class AgentHelper(ILogger<AgentHelper> logger)
-    : IAgentHelper, ITransient
+public sealed class AgentHelper(HttpClient httpClient, ILogger<AgentHelper> logger)
+    : IAgentHelper
 {
     public async Task<AgentToolSet> GetAgentToolsAsync(AgentDefinition agent, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(agent.McpServerEndpoint))
             return AgentToolSet.Empty;
 
-        SseClientTransport? transport = null;
-        IMcpClient? mcpClient = null;
+        HttpClientTransport? transport = null;
+        McpClient? mcpClient = null;
 
         try
         {
-            // SseClientTransport creates its own internal HttpClient and does not support IHttpClientFactory.
-            // Retry and timeout policies from IApiClient<T> cannot be applied here until the MCP SDK
-            // exposes a factory-compatible transport. Track: upgrade when ModelContextProtocol adds support.
-            transport = new SseClientTransport(new SseClientTransportOptions { Endpoint = new Uri(agent.McpServerEndpoint) });
-            mcpClient = await McpClientFactory.CreateAsync(transport, cancellationToken: cancellationToken);
+            // Auto-detection supports Streamable HTTP and existing SSE endpoints without replaying tool calls.
+            transport = new HttpClientTransport(
+                new HttpClientTransportOptions { Endpoint = new Uri(agent.McpServerEndpoint) }, httpClient);
+            mcpClient = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
             var mcpTools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
 
             var enabledNames = agent.AgentTools

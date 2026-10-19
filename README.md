@@ -48,7 +48,7 @@ graph TD
 
         KernelMemory["<b>KernelMemory</b><br/>RAG Daemon<br/>POST /upload<br/>POST /ask<br/>GET /documents/{id}/status"]
 
-        McpServer["<b>MCP Server</b><br/>Tool Server<br/>GET /mcp/stream (SSE)<br/>POST /mcp"]
+        McpServer["<b>MCP Server</b><br/>Tool Server<br/>GET|POST|DELETE /mcp<br/>Streamable HTTP"]
     end
 
     User --> Gateway
@@ -93,7 +93,7 @@ graph RL
 | **Gateway** | `gateway` | `POST /chat`, `POST /chat/stream`, `/conversations`, `/public/*`, `/admin/documents`, `/admin/agents`, `/admin/tools` | API gateway — routes to all backend services; [public streaming chat](docs/public-chat-api.md) for browser widgets |
 | **Orchestrator** | `orchestrator` | `POST /chat`, `POST /chat/stream`, `/conversations`, `GET\|POST\|DELETE /agents` | Chat API — Microsoft Agents Framework + RAG context |
 | **KernelMemory** | `kernel-memory` | `POST /upload`, `POST /ask`, `GET /documents/{id}/status` | RAG daemon — embedding, vector store, semantic Q&A |
-| **MCP Server** | `mcp-server` | `GET /mcp/stream`, `POST /mcp` | Tool server — exposes tools to LLMs via Model Context Protocol |
+| **MCP Server** | `mcp-server` | `GET|POST|DELETE /mcp` (root endpoint retained for compatibility) | Tool server — exposes tools to LLMs via Model Context Protocol |
 
 ## Tech Stack
 
@@ -101,16 +101,18 @@ graph RL
 |---|---|
 | Runtime | .NET 10 / C# 14 |
 | Orchestration | .NET Aspire |
-| AI Agent Framework | Microsoft Agents (`Microsoft.Agents.AI` v1.0.0-rc1) |
+| AI Agent Framework | Microsoft Agents (`Microsoft.Agents.AI` v1.25.0) |
 | AI Abstractions | `Microsoft.Extensions.AI` + `Microsoft.Extensions.AI.OpenAI` |
 | RAG / Knowledge | Microsoft KernelMemory (self-hosted, Azure AI Search vector store) |
-| MCP Protocol | ModelContextProtocol SDK v0.5.0-preview.1 |
+| MCP Protocol | ModelContextProtocol SDK v2.2.0 |
 | CQRS | MediatR v12.5.0 |
-| Validation | FluentValidation v11.11.0 |
+| Validation | FluentValidation v12.2.0 |
 | HTTP Resilience | Polly via `Microsoft.Extensions.Http.Resilience` |
 | DI Convention | Scrutor v7.0.0 |
 | Database | Azure Cosmos DB for NoSQL: `myaiagent-test` (dev, tests, staging) and `myaiagent-prod` |
 | Testing | xUnit + Moq + FluentAssertions |
+
+See [dependency maintenance](docs/dependencies.md) for compatibility constraints, security patches, and the retained free license versions.
 
 ## Solution Structure
 

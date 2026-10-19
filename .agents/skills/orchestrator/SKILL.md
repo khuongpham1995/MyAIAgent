@@ -81,7 +81,7 @@ Conversation list/get/rename/delete handlers check that the session belongs to t
 
 ## External Connections
 
-**MCP Server** — tools are registered via `McpClientFactory` + `SseClientTransport`. The MCP Server URL is injected by Aspire via service discovery.
+**MCP Server** — `McpClient.CreateAsync` connects through a factory-managed `HttpClientTransport`, which auto-detects Streamable HTTP or legacy SSE. The local server exposes `/mcp` and retains the root endpoint for existing agent URLs. The MCP Server URL is injected by Aspire via service discovery.
 
 **KernelMemory** — the Orchestrator calls KernelMemory's `/ask` endpoint before generating a reply, prepending the retrieved context to the user prompt. Implemented via a typed `HttpClient` (`IKernelMemoryClient`) registered in Infrastructure. This connection is **planned but not yet implemented**.
 
@@ -105,7 +105,7 @@ the Orchestrator trusts the user id callers send, so `AddInfrastructure` throws 
 
 | Package | Purpose |
 |---|---|
-| `Microsoft.Agents.AI` v1.0.0-rc1 | Microsoft Agents Framework |
+| `Microsoft.Agents.AI` v1.25.0 | Microsoft Agents Framework |
 | `Microsoft.Extensions.AI` | `IChatClient` abstraction |
 | `Microsoft.Extensions.AI.OpenAI` | OpenAI `IChatClient` implementation |
 | `Azure.AI.OpenAI` | Azure OpenAI client |

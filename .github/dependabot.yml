@@ -10,6 +10,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Keep the selected free-license release lines; review licensing before any major migration.
+    ignore:
+      - dependency-name: MediatR
+        update-types: ["version-update:semver-major"]
+      - dependency-name: FluentAssertions
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

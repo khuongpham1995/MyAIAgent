@@ -8,6 +8,7 @@ using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Common.Infrastructure.Extensions;
 using MyAIAgent.Common.Infrastructure.Filters;
 using MyAIAgent.Orchestrator.Infrastructure.Data;
+using MyAIAgent.Orchestrator.Infrastructure.Helpers;
 using OpenAI;
 
 namespace MyAIAgent.Orchestrator.Infrastructure;
@@ -22,6 +23,9 @@ public static class IoCExtension
             .AddSingletonAsMatchingInterfaces(typeof(IoCExtension).Assembly);
 
         services.AddCosmosDb<OrchestratorDbContext>(configuration, isDevelopment);
+
+        // Tool invocations may have side effects, so the MCP transport deliberately has no retry policy.
+        services.AddHttpClient<IAgentHelper, AgentHelper>(client => client.Timeout = TimeSpan.FromSeconds(60));
 
         // Callers supply the user id, so outside Development only holders of the shared service key may call this API.
         if (!isDevelopment && !configuration.GetValue<bool>("ServiceAuthorization:Enabled"))

@@ -12,9 +12,9 @@ description: >
 
 ## Transport
 
-`Program.cs` wires HTTP transport (SSE + POST):
+`Program.cs` wires Streamable HTTP transport:
 - `AddMcpServer().WithHttpTransport().WithToolsFromAssembly()` — scans for `[McpServerTool]` methods
-- `app.MapMcp()` — maps `/mcp` routes
+- `app.MapMcp("/mcp")` — maps the primary routes; `app.MapMcp()` also retains the original root endpoint. Both inherit the shared endpoint authorization filter.
 
 Stdio transport is available but commented out. Activate for local Claude Desktop integration.
 

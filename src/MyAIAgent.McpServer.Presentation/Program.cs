@@ -23,6 +23,10 @@ app.UseExceptionHandler();
 app.UseAzureAppConfigurationWhenConfigured(app.Configuration);
 app.MapGet("/health/live", () => Results.Ok());
 app.MapGet("/health/ready", () => Results.Ok());
-app.MapMcp().AddEndpointFilter(app.Services.GetRequiredService<HttpAuthEndpointFilter>());
+var mcp = app.MapGroup(string.Empty)
+    .AddEndpointFilter(app.Services.GetRequiredService<HttpAuthEndpointFilter>());
+mcp.MapMcp("/mcp");
+// Retain the original root endpoint for agents that already store the service base URL.
+mcp.MapMcp();
 
 await app.RunMcpServerAsync();
