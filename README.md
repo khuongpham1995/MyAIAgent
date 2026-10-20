@@ -1,89 +1,186 @@
+<div align="center">
+
 # MyAIAgent
 
-A .NET backend for conversational AI, persistent chat history, MCP tools, and a separate document knowledge service. This repository is both an application foundation and a learning project: it shows how API boundaries, application handlers, external providers, and deployment tooling fit together.
+**Conversational AI, MCP tools, and document knowledge — built in C#.**
 
-Built with **C# / .NET 10**, **TypeScript automation**, and **.NET Aspire**. There is no frontend application in this repository; clients use the HTTP APIs.
+A backend application foundation and learning repository, with explicit service boundaries, persistent conversations, and local orchestration through Aspire.
 
-## What works today
+[![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?style=flat-square)](src/MyAIAgent.slnx)
+[![C#](https://img.shields.io/badge/C%23-14-239120?style=flat-square)](src/)
+[![Aspire](https://img.shields.io/badge/Aspire-local_orchestration-7C3AED?style=flat-square)](src/MyAIAgent.All/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-automation-3178C6?style=flat-square)](scripts/)
 
-| Capability | Implementation |
+[Quick start](#quick-start) · [Architecture](#architecture-at-a-glance) · [Engineering decisions](#engineering-decisions) · [Documentation](#documentation)
+
+</div>
+
+## What you can build with it
+
+| Capability | What is implemented |
 | --- | --- |
-| Chat and streaming | Gateway forwards ordinary chat and Server-Sent Events to Orchestrator. Streams include session, text, title, completion, and error events. |
-| Conversations | Cosmos DB stores sessions and messages, with owner-scoped list/get/rename/delete operations and optimistic concurrency. |
-| Configurable agents | Agent definitions supply instructions, an MCP server endpoint, and tool selection. Model calls use `Microsoft.Extensions.AI.IChatClient`. |
-| MCP tools | The MCP server exposes `web_search` and `get_current_datetime` over Streamable HTTP. |
-| Document knowledge | Self-hosted KernelMemory accepts uploads, builds embeddings in Azure AI Search, and exposes search and question-answering APIs. Gateway exposes document upload. |
-| Browser chat API | Optional visitor JWT authentication, origin checks, rate limits, streaming, and conversation routes. See the [public API guide](docs/public-chat-api.md). |
-| Local and Azure delivery | Aspire launches the four services locally. Bicep and GitHub Actions describe Azure Container Apps deployment and promotion. |
+| **Chat that streams** | JSON replies and Server-Sent Events, with session, text, title, completion, and error events. |
+| **Conversations that persist** | Cosmos DB history, owner-scoped list/get/rename/delete operations, and optimistic concurrency. |
+| **Agents with tools** | Configurable instructions, MCP endpoints, and tool selection through `Microsoft.Extensions.AI.IChatClient`. |
+| **A small MCP server** | `web_search` and `get_current_datetime` over Streamable HTTP. |
+| **Document knowledge** | A separate KernelMemory service for ingestion, embeddings, search, and question answering. Gateway forwards document uploads. |
+| **Browser integration** | An optional public API with visitor JWT validation, origin checks, rate limits, streaming, and conversation routes. |
+| **Local and Azure delivery** | Four services launched by Aspire; Bicep and GitHub Actions for Azure Container Apps delivery. |
 
-**Current integration boundary:** Orchestrator chat uses conversation history, model calls, and MCP tools. It does **not** retrieve context from KernelMemory yet. KernelMemory's RAG APIs work as a separate service; automatic document-grounded chat remains future work.
+> **Backend repository:** there is no frontend application here. Use the HTTP APIs, Gateway's Scalar API reference, or your own client.
 
-## How the services fit together
+## Architecture at a glance
+
+Gateway is the client entry point. Orchestrator owns conversation processing; MCP supplies tools; KernelMemory runs the document workflow independently.
 
 ```mermaid
-flowchart LR
-    Client[HTTP client or browser integration] --> Gateway
-    Gateway -->|chat and conversations; agent administration| Orchestrator
-    Gateway -->|document upload| KernelMemory
-    Gateway -->|tool discovery| MCP[MCP Server]
-    Orchestrator -->|configured agent tools| MCP
-    Orchestrator -->|model calls| AI[Azure OpenAI or OpenAI]
-    Orchestrator --> Cosmos[Azure Cosmos DB]
-    KernelMemory --> Search[Azure AI Search]
-    KernelMemory --> Blob[Document storage]
-    KernelMemory --> KMAI[Azure OpenAI text and embeddings]
+---
+config:
+  look: handDrawn
+  handDrawnSeed: 42
+  fontFamily: 'Comic Sans MS, Comic Sans, cursive'
+---
+flowchart TB
+    client["Your client<br/>HTTP · JSON · SSE"]
+
+    subgraph services["Aspire · local services"]
+        gateway["Gateway<br/>HTTP APIs"]
+        orchestrator["Orchestrator<br/>Chat · agents · context"]
+        mcp["MCP server<br/>Web search · UTC clock"]
+        memory["KernelMemory<br/>Document APIs"]
+    end
+
+    client --> gateway
+    gateway -->|"Chat · conversations · agents"| orchestrator
+    gateway -->|"Tool discovery"| mcp
+    gateway -->|"Document upload"| memory
+    orchestrator -->|"Discover and invoke tools"| mcp
+
+    classDef entry fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef chat fill:#ede9fe,stroke:#7c3aed,color:#2e1065
+    classDef tools fill:#ccfbf1,stroke:#0f766e,color:#134e4a
+    classDef rag fill:#fef3c7,stroke:#b45309,color:#78350f
+    classDef external fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    class gateway entry
+    class orchestrator chat
+    class mcp tools
+    class memory rag
+    class client external
+    style services fill:transparent,stroke:#94a3b8,stroke-width:1px
 ```
 
-Aspire starts the processes and exposes their endpoints. Application clients currently use configured base URLs; an Aspire project reference alone does not make those clients consume service discovery. See [architecture and request flows](docs/architecture.md) for the layer boundaries and actual execution paths.
+Orchestrator uses Azure OpenAI or OpenAI and stores sessions, messages, and agents in Cosmos DB. The MCP web-search tool uses Google Custom Search and fetches public pages.
 
-## Engineering decisions demonstrated
+The diagram shows the first-party MCP server. Agents can also use explicitly approved external HTTPS MCP origins through a separate anonymous client. Service keys stay scoped to the configured first-party origin and protocol routes.
 
-- **Clean Architecture:** application handlers depend on ports; infrastructure owns HTTP clients, model SDKs, and Cosmos persistence. Shared projects cannot reference individual services.
-- **CQRS with MediatR:** commands, queries, validators, and mappings make request handling explicit. Streaming has its own validation pipeline.
-- **Failure-aware streaming:** a truncated downstream stream becomes an error; a turn is persisted before optional title/summary updates. Provider and cancellation failures have dedicated tests.
-- **Bounded conversation context:** older messages can be summarized while persisted messages remain available. Summaries are replayed as user context rather than system instructions.
-- **Configuration boundaries:** local user-secrets, AAC nonsecret settings, Azure identities, and deployed Key Vault references have distinct roles.
-- **Repeatable verification:** one quality command runs automation checks, builds the solution, runs service tests, and checks candidate C# formatting. Cosmos tests explicitly skip without live test configuration.
+Aspire starts the processes and exposes their endpoints. The current HTTP clients read configured base URLs; project references alone do not enable client-side service discovery.
 
-These choices introduce more projects and setup than a single-process prototype. They make boundaries visible and independently testable, but do not by themselves prove scalability or production readiness.
+### What happens during a chat turn?
 
-## Start here
+1. **Identify and validate.** Gateway resolves the caller and forwards the request to Orchestrator with its service key.
+2. **Prepare context.** Orchestrator loads the caller-owned session and selected agent, builds conversation history, and discovers permitted MCP tools.
+3. **Generate and use tools.** The model can request tools through the retained MCP client. Streaming text is forwarded as it arrives.
+4. **Commit the turn.** The completed turn is saved before optional title and summary updates. A truncated downstream stream becomes an error rather than an apparent success.
 
-| Your goal | Guide |
-| --- | --- |
-| Build and run locally | [Local setup](docs/local-development.md) |
-| Understand chat, tools, storage, and RAG | [Architecture](docs/architecture.md) |
-| Find a file or understand configuration files | [Repository guide](docs/repository-guide.md) |
-| Integrate a browser client | [Public streaming chat API](docs/public-chat-api.md) |
-| Extend the project and run checks | [Contributing](CONTRIBUTING.md) |
-| Configure Azure deployment | [Deployment](docs/deployment.md) |
-| Understand credentials and trust boundaries | [Configuration security](docs/security.md) |
-| Maintain packages and license constraints | [Dependencies](docs/dependencies.md) |
+Read the [request-flow diagrams](docs/architecture.md#a-chat-turn) for persistence ordering, cancellation, and streaming details.
 
-To build and run the automated gate without Azure credentials, install .NET 10 and Node.js 20.6+ and run from the repository root:
+### A separate path for documents
+
+```mermaid
+---
+config:
+  look: handDrawn
+  handDrawnSeed: 42
+  fontFamily: 'Comic Sans MS, Comic Sans, cursive'
+---
+flowchart LR
+    upload["Upload via Gateway<br/>/admin/documents"]
+    query["Authorized direct query<br/>/search · /ask"]
+    memory["KernelMemory<br/>Ingest · retrieve · answer"]
+    index[("Azure AI Search<br/>Embeddings + source chunks")]
+    storage[("Document storage<br/>Azure Blob / local Development")]
+    ai["Azure OpenAI<br/>Embeddings + answer generation"]
+    result["Query results<br/>Source chunks or grounded answer"]
+
+    upload --> memory
+    query --> memory
+    memory -->|"Store documents"| storage
+    memory <-->|"Index and retrieve chunks"| index
+    memory <-->|"Embed · generate"| ai
+    memory -->|"Return to query caller"| result
+
+    classDef process fill:#fef3c7,stroke:#b45309,color:#78350f
+    classDef data fill:#dbeafe,stroke:#2563eb,color:#172554
+    classDef result fill:#ccfbf1,stroke:#0f766e,color:#134e4a
+    class upload,query,memory process
+    class index,storage data
+    class ai,result result
+```
+
+> **Current integration boundary:** Orchestrator does not retrieve document context from KernelMemory during chat. The document APIs form a standalone RAG capability; automatic document-grounded chat is future work. Query embeddings also use Azure OpenAI.
+
+See [document ingestion and RAG](docs/architecture.md#document-ingestion-and-rag) for routes, provider requirements, and the parts of the document model that are not yet wired into uploads.
+
+## Quick start
+
+### 1. Build and verify
+
+Install **.NET 10 SDK** and **Node.js 20.6+**, then run from the repository root:
 
 ```bash
 npm ci --ignore-scripts
 npm run quality
 ```
 
-Cosmos integration tests are skipped unless `COSMOS_TEST_ENDPOINT` is configured. Running all applications additionally requires provisioned Azure dependencies and per-service configuration; follow [local setup](docs/local-development.md) before starting Aspire:
+The default quality gate does not require Azure credentials. Cosmos integration tests are explicitly **skipped** unless `COSMOS_TEST_ENDPOINT` is configured.
+
+### 2. Configure the services
+
+Follow the [local setup guide](docs/local-development.md) to provision development dependencies, sign in with Azure CLI, configure each service's user-secrets, and trust the HTTPS development certificate. Azure App Configuration is optional locally.
+
+MCP authorization is enabled by default. Configure its active and rotation keys, with the matching active key in Gateway and Orchestrator. Keep filled-in configuration outside Git.
+
+### 3. Run with Aspire
 
 ```bash
 dotnet run --project src/MyAIAgent.All --launch-profile https
 ```
 
+Open the dashboard URL printed by AppHost. Gateway's default API reference is **[https://localhost:7200/scalar/](https://localhost:7200/scalar/)**. Use the dashboard's displayed endpoints if your local configuration differs.
+
+Start with `/health/live` on each service, then Gateway's `/admin/agents` and `/admin/tools` to verify connectivity without a model call. These local Development routes must remain private. Chat and document operations can consume paid provider usage.
+
+## Engineering decisions
+
+| Decision | Why it is here |
+| --- | --- |
+| **Clean Architecture** | Application handlers depend on ports; Infrastructure owns HTTP, model providers, and persistence. Services communicate over HTTP. |
+| **CQRS with MediatR** | Commands, queries, validators, and mappings make request handling explicit. Streaming has its own validation pipeline. |
+| **Persistence before optional metadata** | A failed title or summary update does not invalidate a committed turn. Cosmos ETags prevent stale session overwrites. |
+| **Bounded conversation context** | Older turns can be summarized while persisted messages remain available. Summaries are replayed as user context, not system instructions. |
+| **Separate configuration responsibilities** | User-secrets hold local credentials; AAC holds nonsecret settings; deployed services use Azure identities and scoped Key Vault references. |
+| **Enforced outbound boundaries** | MCP origins are approved explicitly. DNS answers are checked at connection time; external clients cannot acquire the first-party service key. |
+| **Repeatable verification** | One command checks TypeScript, automation, solution builds, service tests, and changed C# formatting. Skipped live tests remain visible. |
+
+The separate services and layers add setup and project structure. They make responsibilities easier to inspect and test; deployment scale and production readiness require further operational evidence.
+
+## Documentation
+
+| Start with… | When you want to… |
+| --- | --- |
+| [Local development](docs/local-development.md) | Configure dependencies, secrets, Aspire profiles, and HTTPS. |
+| [Architecture and request flows](docs/architecture.md) | Follow chat, streaming, tools, persistence, and document ingestion. |
+| [Repository guide](docs/repository-guide.md) | Navigate the solution and understand file responsibilities. |
+| [Public streaming chat API](docs/public-chat-api.md) | Connect a browser client and handle visitor identity and SSE. |
+| [Configuration security](docs/security.md) | Understand authorization, credentials, outbound policy, and rotation. |
+| [Deployment](docs/deployment.md) | Work with Bicep, Container Apps, and environment promotion. |
+| [Dependencies](docs/dependencies.md) | Review provider constraints, package versions, and license considerations. |
+| [Contributing](CONTRIBUTING.md) | Extend a service, maintain documentation, and run checks. |
+
 ## Current limitations
 
-- No frontend, public visitor-token issuer, or automatic Orchestrator-to-KernelMemory retrieval is included.
-- The wired KernelMemory providers require Azure OpenAI and Azure AI Search; an OpenAI-only Orchestrator configuration does not replace those dependencies.
-- MCP uses service-key authentication with trusted-origin credential forwarding and internal HTTPS ingress in deployment. Shared keys do not identify individual callers or enforce tool-specific permissions; arbitrary external MCP destinations still require a separate trust and egress policy.
-- Health endpoints report process liveness, not the health of every Azure dependency.
-- Search and Blob integrations use provider keys. Public API rate limits are process-local and require further design for multiple replicas.
-- CI/CD definitions and passing local tests are not evidence that production deployment has been exercised. Azure usage can incur charges.
-
-## Inspiration
-
-The project direction was inspired by [nashtech-garage/ntg-agent](https://github.com/nashtech-garage/ntg-agent). This repository documents its own current implementation and tradeoffs.
-
-The optional AI-assisted contributor workflow lives in the [setup guide](.agents/docs/setup.md) and [delivery workflow](.agents/docs/workflow.md).
+- **Client integration:** no frontend or public visitor-token issuer is included.
+- **Provider requirements:** the wired KernelMemory providers require Azure OpenAI and Azure AI Search, even when Orchestrator uses OpenAI.
+- **Authorization:** service keys do not identify individual callers or provide tool-specific permissions. Approved MCP tool descriptions and results remain untrusted.
+- **Operations:** health endpoints establish process availability. Search and Blob still use provider keys, and public API rate limits are process-local.
+- **Deployment evidence:** CI/CD definitions and local test results do not establish that production deployment or multi-replica behavior has been exercised. Azure usage can incur charges.
