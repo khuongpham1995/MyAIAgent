@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Azure Infrastructure
+ *
+ * Provisions an identity-authenticated AAC store with an explicit tier and diagnostic settings.
+ */
+
 targetScope = 'resourceGroup'
 
 param storeName string

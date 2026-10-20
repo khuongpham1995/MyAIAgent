@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Forwards agent creation to Orchestrator through the Gateway client port.
+ */
+
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Gateway.Application.Common.Interfaces;

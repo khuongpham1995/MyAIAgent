@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * MyAIAgent | Security Tooling
+ *
+ * Installs a checksum-verified scanner and scans available Git history and worktree content with redacted reports.
+ */
+
 import type { SpawnSyncOptions } from 'node:child_process';
 import { runProcess, type ProcessRunner } from './process.ts';
 import { createHash } from 'node:crypto';

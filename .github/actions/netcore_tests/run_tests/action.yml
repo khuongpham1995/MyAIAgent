@@ -1,3 +1,5 @@
+# Runs the full candidate-aware quality gate and preserves its evidence in CI.
+
 name: Run tests
 description: Run the full quality gate against the pull request or push comparison base.
 

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Developer Tooling · AI Workflow
+ *
+ * Parses VSTest TRX counters and rejects missing or inconsistent test evidence.
+ */
+
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 

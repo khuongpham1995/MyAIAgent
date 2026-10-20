@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Defines owner-scoped session lookup, listing, addition, and deletion for conversation handlers.
+ */
+
 using MyAIAgent.Orchestrator.Application.Conversations;
 using MyAIAgent.Orchestrator.Domain.Entities;
 

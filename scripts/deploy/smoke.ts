@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Deployment Tooling
+ *
+ * Checks deployed HTTPS readiness, anonymous rejection, and authenticated Gateway success with bounded retries.
+ */
+
 import { setTimeout } from 'node:timers/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

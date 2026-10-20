@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Verifies that the Cosmos session model requires the current ETag for concurrent updates.
+ */
+
 using Azure.Identity;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;

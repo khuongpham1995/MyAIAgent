@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Common · Domain
+ *
+ * Holds the shared service-key authentication settings, including active and rotation keys.
+ */
+
 namespace MyAIAgent.Common.Domain.Models;
 
 public sealed record ServiceAuthorizationModel

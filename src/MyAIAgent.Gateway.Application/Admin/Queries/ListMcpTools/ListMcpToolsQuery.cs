@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Carries MCP tool discovery input through the Gateway MediatR application boundary.
+ */
+
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
 

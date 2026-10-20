@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Registers Gateway application services, MediatR dispatch, and validation, including compiled application mappings.
+ */
+
 using FluentValidation;
 using Mapster;
 using MediatR;

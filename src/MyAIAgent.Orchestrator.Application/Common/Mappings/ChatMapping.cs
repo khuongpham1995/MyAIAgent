@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Maps Orchestrator HTTP chat input to ordinary and streaming application commands.
+ */
+
 using Mapster;
 using MyAIAgent.Orchestrator.Application.Chat.Commands.Chat;
 using MyAIAgent.Orchestrator.Application.Chat.Commands.StreamChat;

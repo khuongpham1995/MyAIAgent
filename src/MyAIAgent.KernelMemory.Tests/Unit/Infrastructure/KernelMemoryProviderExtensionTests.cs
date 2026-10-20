@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Tests
+ *
+ * Checks supported provider wiring and rejection of missing credentials or unsupported orchestration.
+ */
+
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.KernelMemory;

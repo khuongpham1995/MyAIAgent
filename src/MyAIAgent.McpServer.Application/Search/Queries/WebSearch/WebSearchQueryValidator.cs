@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Application
+ *
+ * Validates Query, Top before web search and page retrieval reaches the McpServer handler.
+ */
+
 using FluentValidation;
 
 namespace MyAIAgent.McpServer.Application.Search.Queries.WebSearch;

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Verifies AAC insertion preserves local configuration override precedence.
+ */
+
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;

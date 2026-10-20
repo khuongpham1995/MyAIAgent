@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Presentation
+ *
+ * Runs the MCP server and reports startup diagnostics for the configured service.
+ */
+
 using System.Reflection;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;

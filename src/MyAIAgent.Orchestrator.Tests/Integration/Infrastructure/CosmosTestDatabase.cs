@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Creates test contexts for preprovisioned Cosmos containers and cleans up records owned by the fixture.
+ */
+
 using Azure.Identity;
 using MyAIAgent.Common.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;

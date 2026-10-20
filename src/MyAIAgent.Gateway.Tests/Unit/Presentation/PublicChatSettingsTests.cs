@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Checks public-chat enablement and rejection of incomplete JWT, origin, or agent configuration.
+ */
+
 using System.Net;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;

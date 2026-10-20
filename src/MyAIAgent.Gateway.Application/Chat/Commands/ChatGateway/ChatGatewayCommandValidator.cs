@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Validates UserMessage, UserId before ordinary chat forwarding reaches the Gateway handler.
+ */
+
 using FluentValidation;
 
 namespace MyAIAgent.Gateway.Application.Chat.Commands.ChatGateway;

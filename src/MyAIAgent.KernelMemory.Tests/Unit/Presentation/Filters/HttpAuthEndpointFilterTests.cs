@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Tests
+ *
+ * Checks enabled/disabled service authentication, both key slots, and missing or invalid credentials.
+ */
+
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -134,7 +140,7 @@ public sealed class HttpAuthEndpointFilterTests
 
     #region Private Method(s)
 
-    
+
     private static EndpointFilterInvocationContext CreateContext(HttpContext httpContext)
         => new TestEndpointFilterInvocationContext(httpContext);
 

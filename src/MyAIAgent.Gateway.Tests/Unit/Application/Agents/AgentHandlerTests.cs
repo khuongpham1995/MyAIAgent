@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Covers Gateway agent creation, deletion, listing, and validation at the forwarding boundary.
+ */
+
 using FluentAssertions;
 using FluentValidation;
 using MediatR;

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Common · Infrastructure
+ *
+ * Applies the shared bounded exponential retry policy to opted-in HTTP clients.
+ */
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Polly;

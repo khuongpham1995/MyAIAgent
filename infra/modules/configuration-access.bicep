@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Azure Infrastructure
+ *
+ * Grants one runtime identity read access to an existing App Configuration store.
+ */
+
 targetScope = 'resourceGroup'
 
 param storeName string

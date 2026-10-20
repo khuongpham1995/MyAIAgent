@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Developer Tooling · AI Workflow · Tests
+ *
+ * Exercises TRX count parsing and rejection of malformed or incomplete test reports.
+ */
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';

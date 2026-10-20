@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Common · Infrastructure
+ *
+ * Registers identity-authenticated Cosmos contexts and prevents Development from targeting a non-test database.
+ */
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

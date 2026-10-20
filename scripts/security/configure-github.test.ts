@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Security Tooling · Tests
+ *
+ * Checks GitHub protection inspection and opt-in updates preserve existing controls using simulated API responses.
+ */
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { configureGithub, githubApi, type GithubApi, type Environment, type EnvironmentPayload, type DeploymentPolicy } from './configure-github.ts';

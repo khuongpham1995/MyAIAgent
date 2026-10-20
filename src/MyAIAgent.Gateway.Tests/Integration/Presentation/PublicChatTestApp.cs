@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Hosts the Gateway visitor API in memory with test identities and downstream substitutes for HTTP integration tests.
+ */
+
 using System.Security.Claims;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;

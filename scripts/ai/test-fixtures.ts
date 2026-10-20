@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Developer Tooling · AI Workflow
+ *
+ * Builds isolated temporary Git fixtures and simulated tool/TRX results for automation tests.
+ */
+
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

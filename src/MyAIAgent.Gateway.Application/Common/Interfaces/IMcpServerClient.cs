@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Defines the Gateway application port for discovering MCP tools without depending on the protocol transport.
+ */
+
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Gateway.Application.Admin;
 

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Maps incoming agent creation fields to the Gateway command forwarded to Orchestrator.
+ */
+
 using Mapster;
 using MyAIAgent.Gateway.Application.Agents.Commands.CreateAgent;
 using MyAIAgent.Gateway.Application.Agents;

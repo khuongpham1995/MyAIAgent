@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Infrastructure
+ *
+ * Validates public HTTP destinations and resolved addresses before outbound page-fetch connections.
+ */
+
 using System.Net;
 using System.Net.Sockets;
 

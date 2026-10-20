@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Presentation
+ *
+ * Runs Orchestrator and logs nonsecret startup diagnostics for its configured AI provider.
+ */
+
 using Microsoft.Extensions.Options;
 using MyAIAgent.Common.Domain.Models;
 

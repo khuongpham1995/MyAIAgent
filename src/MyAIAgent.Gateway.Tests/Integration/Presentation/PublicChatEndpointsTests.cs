@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Exercises visitor JWT authentication, origin controls, rate limits, streaming, and conversation ownership over HTTP.
+ */
+
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;

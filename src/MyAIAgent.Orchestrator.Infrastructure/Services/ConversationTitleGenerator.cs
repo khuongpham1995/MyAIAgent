@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Infrastructure
+ *
+ * Requests a short model-generated title and falls back to user text when generation cannot produce one.
+ */
+
 using System.ClientModel;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;

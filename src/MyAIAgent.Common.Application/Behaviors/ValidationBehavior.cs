@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Common · Application
+ *
+ * Collects request validation failures before MediatR dispatches an ordinary application request.
+ */
+
 using System.Collections.Immutable;
 using FluentValidation;
 using MediatR;

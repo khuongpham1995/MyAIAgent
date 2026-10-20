@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Developer Tooling · AI Workflow · Tests
+ *
+ * Checks gate ordering, failure propagation, candidate changes, and full-versus-targeted evidence using fake tools.
+ */
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';

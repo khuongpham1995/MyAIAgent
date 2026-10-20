@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Maps conversation response projections and rename inputs at the owning application boundary.
+ */
+
 using Mapster;
 using MyAIAgent.Gateway.Application.Conversations;
 using MyAIAgent.Gateway.Application.Conversations.Commands.RenameConversation;

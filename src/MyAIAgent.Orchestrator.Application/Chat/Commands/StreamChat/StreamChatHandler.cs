@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Coordinates streamed replies, session events, committed turns, and optional title/summary updates.
+ */
+
 using System.Runtime.CompilerServices;
 using System.Text;
 using MediatR;

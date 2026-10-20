@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Common · Infrastructure
+ *
+ * Selects Azure CLI or explicit managed identity credentials and validates service-root HTTPS endpoints.
+ */
+
 using Azure.Core;
 using Azure.Identity;
 using Microsoft.Extensions.Configuration;

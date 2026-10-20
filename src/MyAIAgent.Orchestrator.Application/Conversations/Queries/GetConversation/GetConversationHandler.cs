@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Checks ownership and returns conversation metadata with ordered messages.
+ */
+
 using MapsterMapper;
 using MediatR;
 using MyAIAgent.Common.Domain.Models;

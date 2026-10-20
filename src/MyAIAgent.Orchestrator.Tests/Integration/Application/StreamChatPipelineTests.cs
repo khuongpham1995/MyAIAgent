@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Checks that streaming MediatR validation runs before the Orchestrator handler.
+ */
+
 using FluentAssertions;
 using FluentValidation;
 using MediatR;

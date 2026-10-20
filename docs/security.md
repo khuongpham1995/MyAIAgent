@@ -1,5 +1,7 @@
 # Configuration security
 
+See [local development](local-development.md) for per-service setup and [architecture](architecture.md) for the actual request paths.
+
 The source repository is public. Assume every committed file, previous commit, build log, and published image can be inspected by someone outside the project.
 
 ## Configuration boundaries
@@ -45,7 +47,7 @@ GitHub CI scans history and checked-out files with no Azure identity. External A
 Inspect administrative protections with:
 
 ```bash
-npm run security:configure -- khuongpham1995/MyAIAgent
+npm run security:configure -- '<owner>/<repository>'
 ```
 
 The explicit `--apply` option enables secret scanning, push protection, vulnerability alerts, automated security fixes, and private vulnerability reporting. It creates default-branch protection when absent and restricts staging/production deployments to the default branch. It preserves existing branch protection and existing environment reviewers rather than weakening them. Verify existing protections separately.

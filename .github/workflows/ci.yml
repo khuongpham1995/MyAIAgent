@@ -1,3 +1,5 @@
+# Runs pull-request and main-branch quality, infrastructure validation, and credential-scanning checks.
+
 name: CI
 
 on:

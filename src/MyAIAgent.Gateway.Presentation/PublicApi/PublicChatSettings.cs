@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Presentation
+ *
+ * Validates optional public-chat JWT and origin settings, rejecting partial configuration at startup.
+ */
+
 using System.Text;
 using MyAIAgent.Gateway.Domain.Constants;
 

@@ -5,8 +5,8 @@ flat under `src/`; folders in `src/MyAIAgent.slnx` are solution groupings only.
 
 | Area | Actual path prefix | Responsibility / review focus |
 | --- | --- | --- |
-| Gateway | `src/MyAIAgent.Gateway.*` | API gateway, chat forwarding, public streaming chat, admin agents/tools, document upload/status |
-| Orchestrator | `src/MyAIAgent.Orchestrator.*` | Microsoft Agents AI, RAG context, MCP dispatch, chat/session and agent persistence |
+| Gateway | `src/MyAIAgent.Gateway.*` | API gateway, chat forwarding, public streaming chat, admin agents/tools, document upload |
+| Orchestrator | `src/MyAIAgent.Orchestrator.*` | IChatClient model calls, MCP dispatch, chat/session and agent persistence |
 | KernelMemory | `src/MyAIAgent.KernelMemory.*` | RAG daemon, document ingestion, document records and retrieval |
 | McpServer | `src/MyAIAgent.McpServer.*` | MCP tools, Google search and page fetching |
 | Common | `src/MyAIAgent.Common.*` | Response models, validation, DI, auth filters, errors, resilience, storage |
@@ -43,10 +43,11 @@ files for current versions; do not copy package versions from examples.
   configuration. Do not run live providers, upload documents or start Aspire merely
   to verify an unrelated change.
 
-Gateway forwards chat/agent administration to Orchestrator, document upload/status
-queries to KernelMemory, and tool discovery to McpServer. Orchestrator retrieves RAG
-context from KernelMemory and dispatches tools through McpServer. McpServer does not
-call KernelMemory. Aspire wires these service references in `src/MyAIAgent.All/`.
+Gateway forwards chat/agent administration to Orchestrator, document uploads to
+KernelMemory, and tool discovery to McpServer. Orchestrator dispatches tools through
+the agent-configured MCP endpoint; direct KernelMemory retrieval during chat is not
+yet implemented. McpServer does not call KernelMemory. Aspire wires project references
+in `src/MyAIAgent.All/`; current HTTP clients still read explicit base-URL settings.
 
 ## Tests that matter
 

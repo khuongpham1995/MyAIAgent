@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Infrastructure
+ *
+ * Defines the Cosmos document-record model and its shared database throughput configuration.
+ */
+
 using Microsoft.EntityFrameworkCore;
 using MyAIAgent.Common.Infrastructure.Data;
 using MyAIAgent.KernelMemory.Domain.Entities;

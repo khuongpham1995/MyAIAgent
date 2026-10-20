@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Checks agent lookup/deletion and failure responses for missing or invalid identifiers.
+ */
+
 using FluentAssertions;
 using FluentValidation;
 using MediatR;

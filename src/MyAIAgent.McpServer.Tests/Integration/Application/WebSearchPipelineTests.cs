@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Tests
+ *
+ * Exercises MediatR web-search validation and handler dispatch with substituted external providers.
+ */
+
 using FluentAssertions;
 using FluentValidation;
 using MediatR;

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Exercises committing agent creation and deletion against the explicitly configured live Cosmos test database.
+ */
+
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using MyAIAgent.Orchestrator.Domain.Entities;

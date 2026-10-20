@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Presentation
+ *
+ * Adapts a bare JWKS endpoint to JWT validation with SDK-managed key caching and refresh.
+ */
+
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;

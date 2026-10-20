@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Infrastructure
+ *
+ * Registers configured pipeline handlers for KernelMemory orchestration modes and counts active handlers.
+ */
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.KernelMemory;
 using Microsoft.KernelMemory.Pipeline;

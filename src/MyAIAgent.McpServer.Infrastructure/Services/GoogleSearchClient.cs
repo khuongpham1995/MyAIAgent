@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Infrastructure
+ *
+ * Calls Google Custom Search and projects provider results into the application search stream.
+ */
+
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;

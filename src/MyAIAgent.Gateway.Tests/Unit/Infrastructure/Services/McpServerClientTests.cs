@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Exercises MCP tool discovery, protocol failures, and cancellation with a simulated server transport.
+ */
+
 using System.Net;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;

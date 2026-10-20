@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Validates the upload boundary through its pipeline and forwards document content to KernelMemory.
+ */
+
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Gateway.Application.Common.Interfaces;

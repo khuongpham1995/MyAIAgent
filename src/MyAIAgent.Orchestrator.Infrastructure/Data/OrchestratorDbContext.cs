@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Infrastructure
+ *
+ * Defines the Cosmos session and agent models with shared database throughput.
+ */
+
 using Microsoft.EntityFrameworkCore;
 using MyAIAgent.Common.Infrastructure.Data;
 using MyAIAgent.Orchestrator.Domain.Entities;

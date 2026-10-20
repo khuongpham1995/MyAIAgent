@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Checks downstream conversation URLs, escaped inputs, response handling, and cancellation.
+ */
+
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;

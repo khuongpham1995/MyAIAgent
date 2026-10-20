@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Security Tooling · Tests
+ *
+ * Checks scanner integrity, report redaction, failure propagation, and safe worktree copying with fake tools.
+ */
+
 import test, { type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';

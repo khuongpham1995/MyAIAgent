@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Validates SessionId, UserId before owner-scoped conversation retrieval reaches the Gateway handler.
+ */
+
 using FluentValidation;
 using MyAIAgent.Gateway.Domain.Constants;
 

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Tests
+ *
+ * Exercises the MCP HTTP endpoint and tool invocation through a real in-process protocol server.
+ */
+
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;

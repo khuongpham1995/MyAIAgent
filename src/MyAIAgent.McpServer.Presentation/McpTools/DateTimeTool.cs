@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Presentation
+ *
+ * Exposes the current UTC date and time as an MCP tool using an injectable clock.
+ */
+
 using ModelContextProtocol.Server;
 using MyAIAgent.McpServer.Domain.Constants;
 using System.ComponentModel;

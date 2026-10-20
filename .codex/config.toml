@@ -1,3 +1,5 @@
+# Configures project-local Codex defaults and the two read-only reviewer roles.
+
 # Project-local defaults. Select Astra explicitly for native Plan mode.
 model = "gpt-6-sol"
 model_reasoning_effort = "high"

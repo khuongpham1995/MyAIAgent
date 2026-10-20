@@ -1,3 +1,5 @@
+# Installs the SDK and locked automation dependencies needed by the shared quality gate.
+
 name: Prepare solution for testing
 description: Install the Node.js and .NET SDK versions used by the quality gate.
 

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Domain
+ *
+ * Stores an agent-owned tool name and enablement flag.
+ */
+
 using MyAIAgent.Common.Domain.Abstractions;
 
 namespace MyAIAgent.Orchestrator.Domain.Entities;

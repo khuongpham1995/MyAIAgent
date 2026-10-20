@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Tests
+ *
+ * Exercises page retrieval, extraction, response limits, redirects, and public-address restrictions.
+ */
+
 using System.Net;
 using System.Text;
 using FluentAssertions;

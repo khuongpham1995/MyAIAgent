@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Infrastructure
+ *
+ * Registers search and page-fetch clients with timeouts, retry policies, and public-address connection checks.
+ */
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MyAIAgent.Common.Application.Extensions;

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Infrastructure
+ *
+ * Discovers tools through an MCP HTTP session and returns their names and descriptions to Gateway handlers.
+ */
+
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;

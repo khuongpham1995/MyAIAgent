@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Validates UserMessage, SessionId, UserId before streaming chat forwarding reaches the Gateway handler.
+ */
+
 using FluentValidation;
 using MyAIAgent.Gateway.Domain.Constants;
 

@@ -1,3 +1,5 @@
+# Builds or selects release images and promotes verified image digests through staging and production.
+
 name: CD
 
 on:

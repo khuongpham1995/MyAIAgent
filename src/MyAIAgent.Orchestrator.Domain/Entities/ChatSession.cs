@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Domain
+ *
+ * Stores conversation ownership, messages, title, and rolling summary state.
+ */
+
 using MyAIAgent.Common.Domain.Abstractions;
 
 namespace MyAIAgent.Orchestrator.Domain.Entities;

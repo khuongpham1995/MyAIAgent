@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * MyAIAgent | Security Tooling
+ *
+ * Inspects repository protections and applies the declared policy only when explicitly requested.
+ */
+
 import { runProcess, type ProcessRunner } from './process.ts';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

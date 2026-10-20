@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Common · Domain
+ *
+ * Defines the shared success/failure envelope returned by application operations and HTTP endpoints.
+ */
+
 namespace MyAIAgent.Common.Domain.Models;
 
 public record ResponseModel<T>

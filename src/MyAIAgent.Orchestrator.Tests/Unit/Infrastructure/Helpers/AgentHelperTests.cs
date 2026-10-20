@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Checks MCP tool discovery, retained connection lifetime, cancellation, and absent endpoints.
+ */
+
 using FluentAssertions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;

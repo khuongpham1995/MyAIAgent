@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Common · Infrastructure
+ *
+ * Registers the shared exception handler and problem-details services at application startup.
+ */
+
 using Microsoft.Extensions.DependencyInjection;
 using MyAIAgent.Common.Infrastructure.Handlers;
 

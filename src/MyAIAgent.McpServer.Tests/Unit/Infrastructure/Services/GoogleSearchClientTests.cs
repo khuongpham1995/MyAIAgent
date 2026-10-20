@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Tests
+ *
+ * Checks provider request construction and search-result parsing without calling Google.
+ */
+
 using System.Net;
 using System.Text;
 using FluentAssertions;

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Application
+ *
+ * Aggregates provider search results, fetches successful pages, and serializes tool output.
+ */
+
 using System.Text.Json;
 using FluentValidation;
 using MediatR;

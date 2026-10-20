@@ -18,15 +18,15 @@ description: >
 
 ```
 MyAIAgent.KernelMemory.Domain/
-  Entities/DocumentRecord.cs            ← document upload tracking entity
-  Models/KernelMemoryServiceModel.cs    ← startup config options
+  Entities/DocumentRecord.cs            ← tracking model; not written by the current upload path
 
 MyAIAgent.KernelMemory.Application/
-  Extensions/IoCExtension.cs
+  IoCExtension.cs
 
 MyAIAgent.KernelMemory.Infrastructure/
+  Models/KernelMemoryServiceModel.cs    ← web-service options model
   Data/KernelMemoryDbContext.cs         ← EF Core (DocumentRecords container on Cosmos; shared 400 RU/s database throughput)
-  Extensions/IoCExtension.cs
+  IoCExtension.cs
   Extensions/KernelMemoryPipelineExtension.cs
 
 MyAIAgent.KernelMemory.Presentation/
@@ -62,8 +62,8 @@ Both filters are instantiated manually in `WebApplicationExtension` (not via DI)
 
 | Service | Connects to KernelMemory? | Purpose |
 |---|---|---|
-| **Gateway** | Yes — `IKernelMemoryClient` / `KernelMemoryClient` (120s) | Admin: document upload, ask, status |
-| **Orchestrator** | Yes — planned, not yet implemented | RAG during chat (augment replies with indexed knowledge) |
+| **Gateway** | Yes — `IKernelMemoryClient` / `KernelMemoryClient` (120s) | Admin: document upload only |
+| **Orchestrator** | No — retrieval integration is planned | RAG during chat (augment replies with indexed knowledge) |
 | **McpServer** | **No — must never connect** | MCP Server exposes tools only; RAG is Orchestrator's concern |
 
 When adding a KernelMemory HTTP client to a service, follow this pattern in its Infrastructure `IoCExtension`:
@@ -78,39 +78,39 @@ services.AddHttpClient<IKernelMemoryClient, KernelMemoryClient>(client =>
 .AddHttpRetryPolicy();
 ```
 
-In Aspire, the base URL is injected automatically via service discovery using the `kernel-memory` resource name.
+Aspire supplies reference metadata, but the current Gateway client reads `KernelMemory:BaseUrl` directly. Set that URL to the service endpoint; project references alone do not configure the typed client.
 
 ## KernelMemory HTTP API (key endpoints)
 
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/upload` | Ingest a document (multipart form) |
-| `GET` | `/documents/{documentId}/status` | Poll indexing readiness |
+| `GET` | `/upload-status?documentId=...&index=...` | Poll indexing readiness |
 | `POST` | `/ask` | Semantic Q&A — returns an LLM-generated answer with citations |
 | `POST` | `/search` | Semantic search — returns ranked source chunks (no LLM generation) |
-| `DELETE` | `/documents/{documentId}` | Delete a document and its embeddings |
+| `DELETE` | `/documents?documentId=...&index=...` | Delete a document and its embeddings |
 
 ### `/ask` request/response shape
 
-```json
+```jsonc
 // POST /ask
-{ "question": "...", "index": "default", "filters": [], "minRelevance": 0.0, "limit": 1 }
+{ "question": "...", "index": "myaiagent-test", "filters": [], "minRelevance": 0.0 }
 
 // response
 {
   "question": "...",
   "noResult": false,
-  "result": "The answer text...",
+  "text": "The answer text...",
   "relevantSources": [
     { "sourceName": "file.pdf", "partitions": [ { "text": "...", "relevance": 0.9 } ] }
   ]
 }
 ```
 
-### `/documents/{id}/status` response shape
+### `/upload-status` response excerpt
 
 ```json
-{ "documentId": "...", "completed": true, "failed": false, "steps": [...], "remainingSteps": [] }
+{ "documentId": "...", "completed": true }
 ```
 
 ## Configuration Shape (`appsettings.json`)

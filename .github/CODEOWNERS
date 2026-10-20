@@ -1,3 +1,5 @@
+# Assigns maintainer review ownership for repository code and sensitive delivery paths.
+
 # Configuration and delivery changes need maintainer attention.
 /.github/ @khuongpham1995
 /infra/ @khuongpham1995

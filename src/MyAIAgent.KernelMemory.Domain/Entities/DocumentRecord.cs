@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Domain
+ *
+ * Models document tracking metadata independently of KernelMemory's built-in ingestion storage.
+ */
+
 using MyAIAgent.Common.Domain.Abstractions;
 
 namespace MyAIAgent.KernelMemory.Domain.Entities;

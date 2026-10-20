@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Checks agent persistence, enabled-tool construction, validation, and commit/cancellation behavior.
+ */
+
 using FluentAssertions;
 using FluentValidation;
 using MediatR;

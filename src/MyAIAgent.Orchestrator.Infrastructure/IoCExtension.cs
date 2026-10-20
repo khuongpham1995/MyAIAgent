@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Infrastructure
+ *
+ * Registers Cosmos persistence, the function-invoking chat client, MCP transport, and service authorization.
+ */
+
 using Azure;
 using Azure.AI.OpenAI;
 using Microsoft.Extensions.AI;

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Presentation
+ *
+ * Preserves upload-size HTTP errors and logs unexpected KernelMemory endpoint exceptions before rethrowing.
+ */
+
 namespace MyAIAgent.KernelMemory.Presentation.Filters;
 
 public sealed class HttpErrorsEndpointFilter(ILogger<HttpErrorsEndpointFilter> logger) : IEndpointFilter

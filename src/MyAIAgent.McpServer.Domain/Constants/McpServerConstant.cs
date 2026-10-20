@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Domain
+ *
+ * Defines MCP tool names, descriptions, parameter descriptions, and shared search errors.
+ */
+
 namespace MyAIAgent.McpServer.Domain.Constants;
 
 public static class McpServerConstant

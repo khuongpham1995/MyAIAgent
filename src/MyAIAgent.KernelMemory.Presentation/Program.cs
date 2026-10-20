@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Presentation
+ *
+ * Bootstraps the self-hosted KernelMemory daemon, configured providers, upload limits, and endpoint filters.
+ */
+
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.KernelMemory;

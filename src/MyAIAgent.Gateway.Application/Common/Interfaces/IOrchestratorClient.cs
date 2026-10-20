@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Defines Gateway operations for downstream chat, agent administration, and owner-scoped conversations.
+ */
+
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Gateway.Application.Agents;
 using MyAIAgent.Gateway.Application.Chat;

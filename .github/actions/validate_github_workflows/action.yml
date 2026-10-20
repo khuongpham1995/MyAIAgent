@@ -1,3 +1,5 @@
+# Validates GitHub workflow syntax with the pinned actionlint container.
+
 name: Validate GitHub workflows
 description: Check workflow syntax with the pinned actionlint image.
 

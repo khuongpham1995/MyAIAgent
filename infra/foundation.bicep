@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Azure Infrastructure
+ *
+ * Provisions an environment's Container Apps foundation, logs, Key Vault, and separate runtime identities.
+ */
+
 targetScope = 'resourceGroup'
 
 @allowed(['staging', 'production'])

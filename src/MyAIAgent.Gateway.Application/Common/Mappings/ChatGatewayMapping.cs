@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Maps normal and public chat inputs into Gateway requests while preserving server-resolved identity and agent selection.
+ */
+
 using Mapster;
 using MyAIAgent.Gateway.Application.Chat.Commands.ChatGateway;
 using MyAIAgent.Gateway.Application.Chat.Commands.StreamChatGateway;

@@ -1,5 +1,7 @@
 # Azure Container Apps delivery
 
+This guide describes the configured Azure delivery path and its prerequisites; it is not a record of a completed production deployment. For local Aspire, use [local development](local-development.md).
+
 The `CI` workflow validates pull requests and pushes to `main`. A successful `main`
 run triggers `CD`: four images are built once, pushed to a shared Azure Container
 Registry, deployed to staging, tested, and then promoted by digest to production.

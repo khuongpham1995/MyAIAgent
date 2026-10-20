@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Builds ordered model context, appends turns, and performs bounded best-effort summary and metadata updates.
+ */
+
 using Microsoft.Extensions.Logging;
 using MyAIAgent.Orchestrator.Application.Common.Exceptions;
 using MyAIAgent.Orchestrator.Application.Common.Interfaces;

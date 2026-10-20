@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Common · Tests
+ *
+ * Supplies asynchronous sequences for tests that exercise streaming interfaces without external I/O.
+ */
+
 namespace MyAIAgent.Common.Tests;
 
 public static class AsyncEnumerableHelper

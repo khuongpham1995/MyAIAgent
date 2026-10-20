@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Presentation
+ *
+ * Maps KernelMemory daemon endpoints and health routes, then logs nonsecret startup diagnostics.
+ */
+
 using System.Globalization;
 using Microsoft.KernelMemory;
 using Microsoft.KernelMemory.AI;

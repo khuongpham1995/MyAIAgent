@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Checks that the Gateway MediatR pipeline rejects invalid chat before invoking downstream dependencies.
+ */
+
 using FluentAssertions;
 using FluentValidation;
 using MediatR;

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Checks event order, turn commits, metadata fallback, provider failure, history summaries, and cancellation.
+ */
+
 using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;

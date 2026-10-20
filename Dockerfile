@@ -1,3 +1,5 @@
+# Builds and publishes a selected .NET service into the shared runtime image layout.
+
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG SERVICE
 WORKDIR /source

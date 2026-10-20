@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Developer Tooling · AI Workflow
+ *
+ * Defines shared candidate, tool-result, quality-report, and review-record contracts for the automation scripts.
+ */
+
 import type { SpawnSyncOptions } from 'node:child_process';
 
 export interface CandidateFile {

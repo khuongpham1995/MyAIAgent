@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Azure Infrastructure
+ *
+ * Provisions the container registry shared by staging and production image promotion.
+ */
+
 targetScope = 'resourceGroup'
 
 @description('Globally unique Azure Container Registry name shared by staging and production.')

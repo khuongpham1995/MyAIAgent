@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Domain
+ *
+ * Centralizes Gateway configuration keys, validation patterns, authentication names, and public error messages.
+ */
+
 namespace MyAIAgent.Gateway.Domain.Constants;
 
 public static class GatewayConstant

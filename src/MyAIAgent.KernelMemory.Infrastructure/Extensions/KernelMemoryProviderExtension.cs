@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Infrastructure
+ *
+ * Binds supported Azure providers and rejects unsupported memory databases or orchestration settings at startup.
+ */
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.KernelMemory;

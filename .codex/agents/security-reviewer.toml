@@ -1,3 +1,5 @@
+# Defines the Codex security reviewer and its read-only trust-boundary review contract.
+
 name = "security-reviewer"
 description = "Read-only trust-boundary and workflow security review of a stable MyAIAgent candidate."
 model = "gpt-6-sol"

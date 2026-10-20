@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Common · Infrastructure
+ *
+ * Adapts asynchronous events to SSE while exposing failures before the first event as ordinary HTTP errors.
+ */
+
 using Microsoft.AspNetCore.Http;
 using System.Net.ServerSentEvents;
 

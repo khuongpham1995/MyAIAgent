@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Checks agent selection, tool availability, provider failures, streaming output, and transport disposal.
+ */
+
 using System.ClientModel;
 using FluentAssertions;
 using Microsoft.Extensions.AI;

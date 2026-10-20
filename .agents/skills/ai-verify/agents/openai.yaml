@@ -1,3 +1,5 @@
+# Provides Codex picker metadata for the ai-verify skill; execution rules remain in SKILL.md.
+
 interface:
   display_name: "AI Verify"
   short_description: "Run both Sol reviewers on tested changes"

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Tests
+ *
+ * Verifies the web-search page-content contract preserves its URL and text.
+ */
+
 using FluentAssertions;
 using MyAIAgent.McpServer.Application.Search;
 

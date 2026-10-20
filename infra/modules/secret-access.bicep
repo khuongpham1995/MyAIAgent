@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Azure Infrastructure
+ *
+ * Grants one runtime identity access to a specific existing Key Vault secret.
+ */
+
 targetScope = 'resourceGroup'
 
 param vaultName string

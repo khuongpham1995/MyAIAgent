@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Forwards owner-scoped conversation deletion with trusted owner identity to Orchestrator.
+ */
+
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Gateway.Application.Common.Interfaces;

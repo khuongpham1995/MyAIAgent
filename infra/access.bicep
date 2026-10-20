@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Azure Infrastructure
+ *
+ * Assigns service-specific registry, configuration, secret, and Cosmos permissions after privileged bootstrap.
+ */
+
 targetScope = 'resourceGroup'
 
 @allowed(['staging', 'production'])

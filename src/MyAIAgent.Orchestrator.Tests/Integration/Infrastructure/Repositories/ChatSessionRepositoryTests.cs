@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Exercises live Cosmos session persistence, ownership queries, pagination, deletion, and concurrent metadata writes.
+ */
+
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using MyAIAgent.Orchestrator.Application.Common.Exceptions;

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Creates and commits an agent definition with its configured tool entries.
+ */
+
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Orchestrator.Domain.Entities;

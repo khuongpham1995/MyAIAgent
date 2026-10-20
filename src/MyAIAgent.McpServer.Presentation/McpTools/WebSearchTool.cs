@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Presentation
+ *
+ * Exposes web search as an MCP tool and dispatches the request through the application pipeline.
+ */
+
 using MediatR;
 using ModelContextProtocol.Server;
 using MyAIAgent.McpServer.Application.Search.Queries.WebSearch;

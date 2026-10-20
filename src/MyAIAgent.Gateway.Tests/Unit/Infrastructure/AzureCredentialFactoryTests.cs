@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Checks Azure identity selection and rejection of unsafe or malformed service endpoints.
+ */
+
 using Azure.Identity;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;

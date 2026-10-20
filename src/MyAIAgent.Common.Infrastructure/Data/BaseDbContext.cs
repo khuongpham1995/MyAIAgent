@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Common · Infrastructure
+ *
+ * Provides the common EF Core context base used by service-specific persistence contexts.
+ */
+
 using Microsoft.EntityFrameworkCore;
 
 namespace MyAIAgent.Common.Infrastructure.Data;

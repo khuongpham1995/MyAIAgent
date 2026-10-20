@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Exercises SSE parsing and safe errors for failed, malformed, or truncated downstream streams.
+ */
+
 using System.Net;
 using System.Text;
 using FluentAssertions;

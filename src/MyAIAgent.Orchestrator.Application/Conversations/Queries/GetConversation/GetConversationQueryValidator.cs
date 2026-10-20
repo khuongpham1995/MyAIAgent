@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Validates SessionId, UserId before owner-scoped conversation retrieval reaches the Orchestrator handler.
+ */
+
 using FluentValidation;
 
 namespace MyAIAgent.Orchestrator.Application.Conversations.Queries.GetConversation;

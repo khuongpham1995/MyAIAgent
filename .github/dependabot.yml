@@ -1,3 +1,5 @@
+# Schedules dependency-update proposals for the configured package ecosystems.
+
 version: 2
 updates:
   - package-ecosystem: npm

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Checks deployed JWT/role configuration and Development authentication behavior.
+ */
+
 using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authorization;

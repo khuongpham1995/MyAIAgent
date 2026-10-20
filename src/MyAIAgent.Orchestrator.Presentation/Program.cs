@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Presentation
+ *
+ * Bootstraps the chat service and maps service-key-protected chat, conversation, and agent endpoints.
+ */
+
 using MediatR;
 using MapsterMapper;
 using MyAIAgent.Common.Infrastructure.Extensions;

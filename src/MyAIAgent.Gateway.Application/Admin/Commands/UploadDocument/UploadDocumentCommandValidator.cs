@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Validates FileName, Content before document upload reaches the Gateway handler.
+ */
+
 using FluentValidation;
 
 namespace MyAIAgent.Gateway.Application.Admin.Commands.UploadDocument;

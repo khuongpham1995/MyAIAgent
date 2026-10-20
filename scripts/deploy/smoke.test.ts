@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Deployment Tooling · Tests
+ *
+ * Checks deployment smoke-test retries, response limits, authentication, and redirect rejection without Azure calls.
+ */
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { smokeTest, type HttpGet } from './smoke.ts';

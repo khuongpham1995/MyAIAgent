@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Checks chat session ownership, turn persistence, metadata-save failures, and input validation.
+ */
+
 using FluentAssertions;
 using FluentValidation;
 using MediatR;

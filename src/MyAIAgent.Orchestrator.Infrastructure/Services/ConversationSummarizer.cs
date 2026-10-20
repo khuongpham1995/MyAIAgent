@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Infrastructure
+ *
+ * Uses the configured chat client to condense older messages while preserving the existing conversation summary.
+ */
+
 using System.ClientModel;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;

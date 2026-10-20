@@ -1,5 +1,7 @@
 # Dependency maintenance
 
+For the runtime boundaries these packages support, see [architecture](architecture.md). Package maintenance does not by itself implement an integration.
+
 The solution targets .NET 10 and retains the KernelMemory service. Package versions are pinned in the owning `.csproj` files; the Aspire SDK is pinned in `MyAIAgent.All.csproj`.
 
 ## Upgrade baseline

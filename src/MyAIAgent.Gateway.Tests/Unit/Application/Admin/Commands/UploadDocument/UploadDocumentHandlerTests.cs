@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Covers upload validation, downstream forwarding, failure results, and cancellation in Gateway.
+ */
+
 using FluentAssertions;
 using FluentValidation;
 using MediatR;

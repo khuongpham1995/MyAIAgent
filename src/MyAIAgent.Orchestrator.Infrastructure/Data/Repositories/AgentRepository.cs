@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Infrastructure
+ *
+ * Implements Cosmos-backed agent lookup, listing, addition, and deletion without committing independently.
+ */
+
 using Microsoft.EntityFrameworkCore;
 using MyAIAgent.Common.Domain.Abstractions;
 using MyAIAgent.Orchestrator.Domain.Entities;

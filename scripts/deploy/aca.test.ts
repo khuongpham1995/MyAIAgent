@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Deployment Tooling · Tests
+ *
+ * Checks deployment argument validation, safe parameter encoding, and cleanup using a simulated Azure CLI.
+ */
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';

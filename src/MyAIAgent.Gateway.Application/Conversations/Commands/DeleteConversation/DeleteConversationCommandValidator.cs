@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Validates SessionId, UserId before owner-scoped conversation deletion reaches the Gateway handler.
+ */
+
 using FluentValidation;
 using MyAIAgent.Gateway.Domain.Constants;
 

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Presentation
+ *
+ * Checks active or rotation service keys and rejects missing or invalid credentials when authorization is enabled.
+ */
+
 using Microsoft.KernelMemory.Configuration;
 
 namespace MyAIAgent.KernelMemory.Presentation.Filters;

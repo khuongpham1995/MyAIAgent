@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Domain
+ *
+ * Stores an agent's instructions, MCP endpoint, default flag, and configured tool entries.
+ */
+
 using MyAIAgent.Common.Domain.Abstractions;
 
 namespace MyAIAgent.Orchestrator.Domain.Entities;

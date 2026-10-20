@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Presentation
+ *
+ * Bootstraps Gateway configuration, security, and HTTP routes for chat, conversations, and administration.
+ */
+
 using MediatR;
 using MapsterMapper;
 using Microsoft.AspNetCore.Http.Features;

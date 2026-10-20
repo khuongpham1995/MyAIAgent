@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Exercises exception handling in a hosted Gateway pipeline to verify safe error responses.
+ */
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using MyAIAgent.Common.Infrastructure.Extensions;

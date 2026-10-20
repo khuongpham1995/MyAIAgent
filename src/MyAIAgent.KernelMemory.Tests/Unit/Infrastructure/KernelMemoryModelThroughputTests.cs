@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Tests
+ *
+ * Verifies Cosmos document-record container mapping and shared throughput settings.
+ */
+
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;

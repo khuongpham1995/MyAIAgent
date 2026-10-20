@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Validates AgentId before agent deletion reaches the Orchestrator handler.
+ */
+
 using FluentValidation;
 
 namespace MyAIAgent.Orchestrator.Application.Agents.Commands.DeleteAgent;

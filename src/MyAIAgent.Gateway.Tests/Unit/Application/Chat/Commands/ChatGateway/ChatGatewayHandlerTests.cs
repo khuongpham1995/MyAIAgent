@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Checks forwarding of chat identity/input and downstream success or failure results.
+ */
+
 using FluentAssertions;
 using FluentValidation;
 using MediatR;

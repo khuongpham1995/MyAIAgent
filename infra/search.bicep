@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Azure Infrastructure
+ *
+ * Provisions the free Azure AI Search service used by KernelMemory vector indexes.
+ */
+
 targetScope = 'resourceGroup'
 
 @description('Globally unique Azure AI Search service name.')

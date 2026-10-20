@@ -1,3 +1,5 @@
+<!-- Groups the service, shared, test, and Aspire projects for solution-wide builds and navigation. -->
+
 <Solution>
   <Configurations>
     <Platform Name="Any CPU" />

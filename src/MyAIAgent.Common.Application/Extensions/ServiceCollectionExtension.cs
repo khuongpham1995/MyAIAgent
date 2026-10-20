@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Common · Application
+ *
+ * Registers implementations by lifetime marker through Scrutor while excluding the marker interfaces themselves.
+ */
+
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using MyAIAgent.Common.Domain.Abstractions;

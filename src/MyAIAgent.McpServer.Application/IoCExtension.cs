@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Application
+ *
+ * Registers McpServer application services, MediatR dispatch, and validation.
+ */
+
 using System.Reflection;
 using FluentValidation;
 using MediatR;

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Defines application access to agent definitions independently of the Cosmos persistence adapter.
+ */
+
 using MyAIAgent.Orchestrator.Domain.Entities;
 
 namespace MyAIAgent.Orchestrator.Application.Common.Interfaces;

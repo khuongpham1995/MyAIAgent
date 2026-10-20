@@ -1,5 +1,7 @@
 # AI workflow setup
 
+This guide configures the supported assistant tools, native model/mode controls, shared skills, and reviewer adapters.
+
 ## Configuration map
 
 | Location | Owns |

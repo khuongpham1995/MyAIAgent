@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Validates UserId, Page, PageSize before paginated conversation listing reaches the Orchestrator handler.
+ */
+
 using FluentValidation;
 
 namespace MyAIAgent.Orchestrator.Application.Conversations.Queries.ListConversations;

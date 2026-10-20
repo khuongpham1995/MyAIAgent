@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Checks ownership before deleting and committing a conversation.
+ */
+
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Orchestrator.Application.Common.Interfaces;

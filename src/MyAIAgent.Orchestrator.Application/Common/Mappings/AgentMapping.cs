@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Projects agent definitions and enabled tools into Orchestrator application responses.
+ */
+
 using Mapster;
 using MyAIAgent.Orchestrator.Application.Agents.Commands.CreateAgent;
 using MyAIAgent.Orchestrator.Application.Agents;

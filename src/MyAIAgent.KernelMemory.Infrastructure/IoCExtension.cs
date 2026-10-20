@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Infrastructure
+ *
+ * Registers KernelMemory infrastructure services and its identity-authenticated Cosmos context.
+ */
+
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Configuration;

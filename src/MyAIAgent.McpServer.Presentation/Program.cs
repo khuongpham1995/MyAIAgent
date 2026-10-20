@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Presentation
+ *
+ * Bootstraps MCP HTTP transport, discovers tool classes, and maps tool and health endpoints.
+ */
+
 using MyAIAgent.Common.Infrastructure.Extensions;
 using MyAIAgent.Common.Infrastructure.Filters;
 using MyAIAgent.McpServer.Application;

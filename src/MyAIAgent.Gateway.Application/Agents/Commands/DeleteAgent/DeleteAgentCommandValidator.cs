@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Validates AgentId before agent deletion reaches the Gateway handler.
+ */
+
 using FluentValidation;
 
 namespace MyAIAgent.Gateway.Application.Agents.Commands.DeleteAgent;

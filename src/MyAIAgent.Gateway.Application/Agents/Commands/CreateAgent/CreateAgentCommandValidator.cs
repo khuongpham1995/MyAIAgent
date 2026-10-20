@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Validates Name, Instructions, McpServerEndpoint before agent creation reaches the Gateway handler.
+ */
+
 using FluentValidation;
 
 namespace MyAIAgent.Gateway.Application.Agents.Commands.CreateAgent;

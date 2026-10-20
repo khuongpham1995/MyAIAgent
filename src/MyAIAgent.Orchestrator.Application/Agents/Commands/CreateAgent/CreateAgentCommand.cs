@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Carries agent creation input through the Orchestrator MediatR application boundary.
+ */
+
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
 

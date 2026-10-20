@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Deployment Tooling
+ *
+ * Validates deployment inputs and invokes Bicep-based Container Apps deployment with structured parameters.
+ */
+
 import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';

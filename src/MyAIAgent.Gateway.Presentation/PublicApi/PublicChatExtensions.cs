@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Presentation
+ *
+ * Wires visitor JWT validation, CORS, forwarding, and rate-limit middleware for optional public chat.
+ */
+
 using System.Net;
 using System.Security.Claims;
 using System.Text;

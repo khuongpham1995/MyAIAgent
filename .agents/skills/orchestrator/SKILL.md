@@ -13,7 +13,7 @@ description: >
 
 ## Overview
 
-`MyAIAgent.Orchestrator.*` is the **chat API and RAG consumer** — receives user messages, retrieves relevant context from KernelMemory, manages session history, routes through the Microsoft Agents Framework, dispatches MCP tools, and exposes `POST /chat`.
+`MyAIAgent.Orchestrator.*` is the chat and conversation service. It manages session history, calls `IChatClient` from Microsoft.Extensions.AI, and dispatches MCP tools. KernelMemory retrieval during chat is planned but not implemented. Installed Agents Framework packages do not imply that the current chat path constructs a framework agent.
 
 ## Project Structure
 
@@ -21,23 +21,20 @@ description: >
 MyAIAgent.Orchestrator.Domain/
   Entities/ChatSession.cs                ← EF Core Cosmos entity (partition: UserId, so listing and lookups stay single-partition)
   Entities/ChatSessionMessage.cs         ← owned entity (Role, Content, CreatedAt)
-  Models/ChatMessage.cs                  ← role + content (for AI calls)
-  Models/ChatRequest.cs                  ← UserMessage + History
-  Models/ChatResponse.cs                 ← (Reply, SessionId)
 
 MyAIAgent.Orchestrator.Application/
   Chat/Commands/Chat/                   ← ChatCommand, ChatHandler, ChatCommandValidator
-  Interfaces/IChatOrchestratorService.cs ← chat service port
-  Interfaces/IChatSessionRepository.cs   ← session persistence port
-  Models/ChatRequestDto.cs               ← HTTP input
+  Common/Interfaces/IChatOrchestratorService.cs ← chat service port
+  Common/Interfaces/IChatSessionRepository.cs   ← session persistence port
+  Chat/ChatRequestDto.cs               ← HTTP input
   Common/Mappings/ChatMapping.cs         ← Mapster mapping for ChatRequestDto → ChatCommand
-  Extensions/IoCExtension.cs
+  IoCExtension.cs
 
 MyAIAgent.Orchestrator.Infrastructure/
   Data/OrchestratorDbContext.cs          ← EF Core Cosmos (ChatSessions + AgentDefinitions containers; `myaiagent-test` locally and in staging, `myaiagent-prod` in production)
-  Repositories/ChatSessionRepository.cs ← IScoped
-  Services/ChatOrchestratorService.cs   ← IScoped; wraps IChatClient + IKernelMemoryClient (planned)
-  Extensions/IoCExtension.cs            ← registers IChatClient, DB provider, HttpAuthEndpointFilter
+  Data/Repositories/ChatSessionRepository.cs ← IScoped
+  Services/ChatOrchestratorService.cs   ← IScoped; uses IChatClient and retained MCP tools
+  IoCExtension.cs            ← registers IChatClient, DB provider, HttpAuthEndpointFilter
 
 MyAIAgent.Orchestrator.Presentation/
   Program.cs                             ← POST /chat, Aspire + Cosmos wiring
@@ -46,9 +43,9 @@ MyAIAgent.Orchestrator.Presentation/
 
 ## Chat Flow
 
-1. `POST /chat` receives `ChatRequestDto(SessionId?, UserMessage)`
+1. `POST /chat` receives `ChatRequestDto` with session, message, user identity, and optional agent selection
 2. The injected Mapster mapper maps the request to `ChatCommand`
-3. `ChatHandler` looks up session by `SessionId` (or creates new), builds history, calls `IChatOrchestratorService.ChatAsync`
+3. `ChatHandler` looks up the session by `SessionId` and `UserId` (or creates a new owned session), builds history, calls `IChatOrchestratorService.ChatAsync`
 4. Appends user + assistant messages to session, persists via `IChatSessionRepository`
 5. Returns `ResponseModel<ChatResponse(Reply, SessionId)>`
 
@@ -81,9 +78,9 @@ Conversation list/get/rename/delete handlers check that the session belongs to t
 
 ## External Connections
 
-**MCP Server** — `McpClient.CreateAsync` connects through a factory-managed `HttpClientTransport`, which auto-detects Streamable HTTP or legacy SSE. The local server exposes `/mcp` and retains the root endpoint for existing agent URLs. The MCP Server URL is injected by Aspire via service discovery.
+**MCP Server** — `McpClient.CreateAsync` connects through a factory-managed `HttpClientTransport`, which auto-detects Streamable HTTP or legacy SSE. The local server exposes `/mcp` and retains the root endpoint for existing agent URLs. The MCP URL comes from the selected agent definition, not automatic Aspire service-discovery resolution.
 
-**KernelMemory** — the Orchestrator calls KernelMemory's `/ask` endpoint before generating a reply, prepending the retrieved context to the user prompt. Implemented via a typed `HttpClient` (`IKernelMemoryClient`) registered in Infrastructure. This connection is **planned but not yet implemented**.
+**KernelMemory** — no retrieval client or call is currently registered in Orchestrator. Adding retrieval before model generation is future work; do not describe it as an existing request path.
 
 ## Configuration Shape (`appsettings.json`)
 
@@ -97,7 +94,7 @@ Conversation list/get/rename/delete handlers check that the session belongs to t
 
 Use `dotnet user-secrets` for API keys. Never commit them.
 
-`ServiceAuthorization` (shared key checked by `HttpAuthEndpointFilter`) is off in Development and must be on elsewhere:
+`ServiceAuthorization` (shared key checked by `HttpAuthEndpointFilter`) is off in tracked local defaults, may be enabled locally, and must be on elsewhere:
 the Orchestrator trusts the user id callers send, so `AddInfrastructure` throws outside Development unless
 `ServiceAuthorization:Enabled` is true. The Gateway sends `Orchestrator:AccessKey` in the `Authorization` header.
 

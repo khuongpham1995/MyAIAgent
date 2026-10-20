@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Guards the allowed project-reference graph across service layers and shared Common projects.
+ */
+
 using System.Xml.Linq;
 using FluentAssertions;
 

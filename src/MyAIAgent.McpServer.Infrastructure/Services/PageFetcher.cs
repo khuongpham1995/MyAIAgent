@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Infrastructure
+ *
+ * Retrieves bounded public page responses, follows validated redirects, and extracts readable text.
+ */
+
 using Microsoft.Extensions.Logging;
 using MyAIAgent.McpServer.Application.Common.Interfaces;
 using MyAIAgent.McpServer.Application.Search;

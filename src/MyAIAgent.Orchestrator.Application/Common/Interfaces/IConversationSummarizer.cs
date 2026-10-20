@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Defines best-effort condensation of older messages into rolling conversation context.
+ */
+
 using MyAIAgent.Orchestrator.Application.Chat;
 
 namespace MyAIAgent.Orchestrator.Application.Common.Interfaces;

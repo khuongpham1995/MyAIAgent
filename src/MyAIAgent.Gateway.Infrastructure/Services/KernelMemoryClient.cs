@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Infrastructure
+ *
+ * Forwards multipart document uploads to KernelMemory and translates transport failures into application results.
+ */
+
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;

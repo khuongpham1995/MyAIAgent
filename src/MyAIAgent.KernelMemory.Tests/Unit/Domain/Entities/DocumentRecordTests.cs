@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Tests
+ *
+ * Verifies the document tracking entity's identifier and metadata behavior.
+ */
+
 using FluentAssertions;
 using MyAIAgent.KernelMemory.Domain.Entities;
 

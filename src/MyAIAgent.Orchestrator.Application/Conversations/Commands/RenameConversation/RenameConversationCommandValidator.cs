@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Validates SessionId, UserId, Title before owner-scoped conversation renaming reaches the Orchestrator handler.
+ */
+
 using FluentValidation;
 
 namespace MyAIAgent.Orchestrator.Application.Conversations.Commands.RenameConversation;

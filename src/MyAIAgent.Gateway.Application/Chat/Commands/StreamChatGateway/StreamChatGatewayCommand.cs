@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Carries streaming chat forwarding input through the Gateway MediatR application boundary.
+ */
+
 using MediatR;
 
 namespace MyAIAgent.Gateway.Application.Chat.Commands.StreamChatGateway;

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Resolves and validates the explicit endpoint used by live Cosmos integration tests.
+ */
+
 namespace MyAIAgent.Orchestrator.Tests.Integration.Infrastructure;
 
 public static class CosmosTestEnvironment

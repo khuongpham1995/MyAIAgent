@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Infrastructure
+ *
+ * Implements owner-scoped Cosmos conversation queries and tracks session changes for the unit of work.
+ */
+
 using Microsoft.EntityFrameworkCore;
 using MyAIAgent.Common.Domain.Abstractions;
 using MyAIAgent.Orchestrator.Domain.Entities;

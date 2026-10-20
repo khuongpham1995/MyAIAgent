@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Verifies application mappings preserve request fields and trusted identity or enabled-tool projections.
+ */
+
 using FluentAssertions;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;

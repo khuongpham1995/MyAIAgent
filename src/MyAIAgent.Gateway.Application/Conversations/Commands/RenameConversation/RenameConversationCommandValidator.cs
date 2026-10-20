@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Validates SessionId, UserId, Title before owner-scoped conversation renaming reaches the Gateway handler.
+ */
+
 using FluentValidation;
 using MyAIAgent.Gateway.Domain.Constants;
 

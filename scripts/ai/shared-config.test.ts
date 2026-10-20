@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Developer Tooling · AI Workflow · Tests
+ *
+ * Checks shared assistant configuration, canonical skill links, workflow policy, and safe repository automation.
+ */
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Presentation
+ *
+ * Maps owner-scoped conversation routes shared by the normal and visitor Gateway surfaces.
+ */
+
 using System.Security.Claims;
 using MapsterMapper;
 using MediatR;

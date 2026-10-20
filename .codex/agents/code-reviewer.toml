@@ -1,3 +1,5 @@
+# Defines the Codex code reviewer and its read-only review contract.
+
 name = "code-reviewer"
 description = "Read-only correctness, architecture and test review of a stable MyAIAgent candidate."
 model = "gpt-6-sol"

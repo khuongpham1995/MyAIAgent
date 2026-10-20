@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Presentation
+ *
+ * Maps visitor chat and conversation endpoints with server-derived ownership and public API authorization.
+ */
+
 using MapsterMapper;
 using MediatR;
 using MyAIAgent.Common.Infrastructure.Extensions;

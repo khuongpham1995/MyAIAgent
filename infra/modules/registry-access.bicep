@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Azure Infrastructure
+ *
+ * Grants one runtime identity pull access to an existing container registry.
+ */
+
 targetScope = 'resourceGroup'
 
 param registryName string

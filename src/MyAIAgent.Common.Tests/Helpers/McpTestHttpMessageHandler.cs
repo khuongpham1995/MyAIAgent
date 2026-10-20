@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Common · Tests
+ *
+ * Simulates MCP protocol responses and failures so discovery and transport tests do not need a live server.
+ */
+
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;

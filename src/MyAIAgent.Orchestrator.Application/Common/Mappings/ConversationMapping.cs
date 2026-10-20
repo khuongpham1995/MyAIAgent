@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Maps conversation response projections and rename inputs at the owning application boundary.
+ */
+
 using Mapster;
 using MyAIAgent.Orchestrator.Application.Conversations;
 using MyAIAgent.Orchestrator.Application.Conversations.Commands.RenameConversation;

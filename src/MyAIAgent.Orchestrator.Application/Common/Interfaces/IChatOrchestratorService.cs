@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Defines ordinary and streaming model-reply operations consumed by chat handlers.
+ */
+
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Orchestrator.Application.Chat;
 

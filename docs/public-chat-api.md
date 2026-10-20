@@ -5,6 +5,8 @@ widgets served from origins you allow. Responses use
 Server-Sent Events (SSE) over `POST`. The gateway only validates JWTs; your own
 backend issues them.
 
+See [local setup](local-development.md) for service dependencies and [architecture](architecture.md) for the downstream chat flow. Public chat does not add document retrieval to Orchestrator.
+
 ## Enabling it
 
 Public chat is off until a JWT setting is configured. Partial or ambiguous
@@ -26,8 +28,11 @@ Locally, set the key with user-secrets (never commit it):
 ```bash
 dotnet user-secrets --project src/MyAIAgent.Gateway.Presentation set "PublicChat:Jwt:Issuer" "http://localhost"
 dotnet user-secrets --project src/MyAIAgent.Gateway.Presentation set "PublicChat:Jwt:Audience" "chat-api"
-dotnet user-secrets --project src/MyAIAgent.Gateway.Presentation set "PublicChat:Jwt:SigningKey" "$(openssl rand -base64 48)"
+dotnet user-secrets --project src/MyAIAgent.Gateway.Presentation set "PublicChat:Jwt:SigningKey" "<private-random-signing-key-at-least-32-bytes>"
+dotnet user-secrets --project src/MyAIAgent.Gateway.Presentation set "PublicChat:AllowedOrigins:0" "http://localhost:3000"
 ```
+
+Replace the signing-key placeholder privately; generate a cryptographically random value. The sample origin must match the browser application you run. Configure `PublicChat:AgentId` to restrict public visitors to an existing agent (required outside Development).
 
 ## Token contract
 

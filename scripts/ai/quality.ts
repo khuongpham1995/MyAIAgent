@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * MyAIAgent | Developer Tooling · AI Workflow
+ *
+ * Runs deterministic build/test/format gates and records evidence bound to the candidate content.
+ */
+
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';

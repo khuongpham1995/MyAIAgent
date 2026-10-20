@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Infrastructure
+ *
+ * Maps owned messages and concurrency metadata to Cosmos sessions partitioned by user identity.
+ */
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using MyAIAgent.Orchestrator.Domain.Entities;

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Exercises conversation pagination, ownership, renaming, deletion, and validation in the owning service.
+ */
+
 using FluentAssertions;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;

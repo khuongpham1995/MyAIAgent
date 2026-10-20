@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Carries agent deletion input through the Orchestrator MediatR application boundary.
+ */
+
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
 

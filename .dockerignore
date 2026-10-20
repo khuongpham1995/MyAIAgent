@@ -1,3 +1,5 @@
+# Excludes development artifacts and private local files from container build contexts.
+
 .git
 .github
 .agents

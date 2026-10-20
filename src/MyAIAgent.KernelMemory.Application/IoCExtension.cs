@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Application
+ *
+ * Registers KernelMemory application services, MediatR dispatch, and validation.
+ */
+
 using System.Reflection;
 using FluentValidation;
 using MediatR;

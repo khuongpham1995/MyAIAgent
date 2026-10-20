@@ -16,7 +16,7 @@ description: >
 - `AddMcpServer().WithHttpTransport().WithToolsFromAssembly()` — scans for `[McpServerTool]` methods
 - `app.MapMcp("/mcp")` — maps the primary routes; `app.MapMcp()` also retains the original root endpoint. Both inherit the shared endpoint authorization filter.
 
-Stdio transport is available but commented out. Activate for local Claude Desktop integration.
+The checked-in startup configures HTTP only. Stdio would require a separate transport change.
 
 ## Project Structure
 
@@ -25,10 +25,10 @@ McpServer.Domain/
   Constants/McpServerConstant.cs   ← all tool names and descriptions
 
 McpServer.Application/
-  Handlers/[Entity]/               ← IRequest + handler + validator per tool
+  Search/Queries/WebSearch/       ← query + handler + validator for web search
 
 McpServer.Presentation/
-  McpTools/[Entity]Tool.cs         ← [McpServerToolType] class, dispatches via ISender
+  McpTools/[Entity]Tool.cs         ← tool class; ISender for application operations, TimeProvider for the clock
 ```
 
 ## Tool Registration Rules
@@ -37,14 +37,14 @@ See `.agents/rules/dotnet/mcp.md` for the full pattern (constants, tool class st
 
 Key invariants:
 - Tool names and descriptions are **constants** in `McpServerConstant.cs`
-- Tool class injects `ISender` only — never infrastructure directly
-- Tool methods return `string` — JSON-serialized on success, plain message on failure
-- All tool methods accept and propagate `CancellationToken`
+- Web-search tools dispatch through `ISender`; the clock-only date/time tool uses `TimeProvider`. Neither calls infrastructure directly.
+- Tool methods return `string`: web search serializes successful results as JSON; the clock tool returns a UTC timestamp.
+- Tool methods that perform asynchronous work or I/O accept and propagate `CancellationToken`. The synchronous clock-only tool does not need one.
 
 ## Constant Structure
 
-`McpServerConstant` uses nested static classes per entity — one nested class per tool group (e.g., `CustomerTool`, `DocumentTool`). Each nested class holds the tool name constant, description constant, and any parameter description constants. See `McpServer.Domain/Constants/McpServerConstant.cs` for the current structure.
+`McpServerConstant` declares constants for web search, UTC date/time, their parameter descriptions, and the search error. See `McpServer.Domain/Constants/McpServerConstant.cs` for the current structure.
 
 ## Testing
 
-Test the **handler**, not the tool wrapper. The tool is a thin dispatcher — the handler contains the business logic. See `.agents/rules/common/testing.md` for test structure and naming conventions.
+For tools backed by application operations, test the **handler**, which contains the business logic. Cover MCP registration and direct tools such as `DateTimeTool` through transport integration tests. See `.agents/rules/common/testing.md` for test structure and naming conventions.

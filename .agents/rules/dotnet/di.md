@@ -9,7 +9,7 @@ description: >
 
 ## Marker Interface Pattern
 
-`MyAIAgent.Common.Domain` provides three marker interfaces. Implement the correct one — Scrutor auto-registers it via `ServiceCollectionExtension` in `Common.Infrastructure`. No manual `AddScoped/AddSingleton/AddTransient` call needed.
+`MyAIAgent.Common.Domain` provides three marker interfaces. Implement the correct one — Scrutor auto-registers it via `ServiceCollectionExtension` in `Common.Application`. No manual `AddScoped/AddSingleton/AddTransient` call needed.
 
 | Interface | Lifetime | Use for |
 |---|---|---|

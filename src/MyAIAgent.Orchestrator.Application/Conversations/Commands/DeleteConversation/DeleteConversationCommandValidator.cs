@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Validates SessionId, UserId before owner-scoped conversation deletion reaches the Orchestrator handler.
+ */
+
 using FluentValidation;
 
 namespace MyAIAgent.Orchestrator.Application.Conversations.Commands.DeleteConversation;

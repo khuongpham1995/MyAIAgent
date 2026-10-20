@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Common · Application
+ *
+ * Runs FluentValidation before a MediatR stream begins so invalid input never reaches the stream handler.
+ */
+
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using FluentValidation;

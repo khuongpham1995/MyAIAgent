@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Developer Tooling · AI Workflow · Tests
+ *
+ * Exercises evidence freshness, file manifests, staging completeness, and refusal of mismatched review records.
+ */
+
 import test, { type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import { chmodSync, mkdirSync, readFileSync, renameSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';

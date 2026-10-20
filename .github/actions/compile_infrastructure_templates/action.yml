@@ -1,3 +1,5 @@
+# Compiles infrastructure templates with the pinned Bicep CLI without deploying resources.
+
 name: Compile infrastructure templates
 description: Compile the Bicep templates with the pinned CLI version.
 

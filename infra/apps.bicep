@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Azure Infrastructure
+ *
+ * Deploys four Container Apps with separate identities, secret references, service configuration, and ingress boundaries.
+ */
+
 targetScope = 'resourceGroup'
 
 @allowed(['staging', 'production'])

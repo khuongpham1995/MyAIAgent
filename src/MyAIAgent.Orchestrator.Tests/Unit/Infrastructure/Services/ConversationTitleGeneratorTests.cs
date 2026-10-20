@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Checks title cleanup, length limits, and fallback when model output is blank or fails.
+ */
+
 using System.ClientModel;
 using FluentAssertions;
 using Microsoft.Extensions.AI;

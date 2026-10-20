@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Defines the Gateway application port for consuming downstream chat events asynchronously.
+ */
+
 using MyAIAgent.Gateway.Application.Chat;
 
 namespace MyAIAgent.Gateway.Application.Common.Interfaces;

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Presentation
+ *
+ * Defines the configuration values for public chat IP, visitor, and concurrent-stream limits.
+ */
+
 namespace MyAIAgent.Gateway.Presentation.PublicApi;
 
 public sealed record PublicChatRateLimits(

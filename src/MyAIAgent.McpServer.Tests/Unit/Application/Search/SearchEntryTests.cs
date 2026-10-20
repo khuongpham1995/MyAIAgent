@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Tests
+ *
+ * Verifies the search-result contract preserves provider links and snippets.
+ */
+
 using FluentAssertions;
 using MyAIAgent.McpServer.Application.Search;
 

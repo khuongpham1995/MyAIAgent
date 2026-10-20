@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Forwards validated streaming chat requests through the Orchestrator stream client.
+ */
+
 using MediatR;
 using MyAIAgent.Gateway.Application.Common.Interfaces;
 

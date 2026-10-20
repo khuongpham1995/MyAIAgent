@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Domain
+ *
+ * Stores an individual role/content message and timestamp within its owning session.
+ */
+
 using MyAIAgent.Common.Domain.Abstractions;
 
 namespace MyAIAgent.Orchestrator.Domain.Entities;

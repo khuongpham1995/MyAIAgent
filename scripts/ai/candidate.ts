@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * MyAIAgent | Developer Tooling · AI Workflow
+ *
+ * Captures worktree content and checks that quality/review evidence matches the current or staged candidate.
+ */
+
 import { spawnSync } from 'node:child_process';
 import { createHash, type BinaryLike } from 'node:crypto';
 import { lstatSync, readFileSync, readlinkSync } from 'node:fs';

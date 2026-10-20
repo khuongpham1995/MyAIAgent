@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Deletes an existing agent and commits the change, or returns a missing-agent result.
+ */
+
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Orchestrator.Application.Common.Interfaces;

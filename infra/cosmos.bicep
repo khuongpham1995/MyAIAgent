@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Azure Infrastructure
+ *
+ * Provisions test/production Cosmos databases and partitioned containers with shared throughput and identity authentication.
+ */
+
 targetScope = 'resourceGroup'
 
 @description('Globally unique Cosmos DB account name.')

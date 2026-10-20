@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Aspire · AppHost
+ *
+ * Composes the four local service processes and their references for the Aspire dashboard.
+ */
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 var mcpServer = builder.AddProject<Projects.MyAIAgent_McpServer_Presentation>("mcp-server")

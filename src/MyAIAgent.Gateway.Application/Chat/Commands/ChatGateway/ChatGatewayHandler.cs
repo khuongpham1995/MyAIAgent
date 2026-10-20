@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Forwards a validated message and trusted user identity to the Orchestrator chat client.
+ */
+
 using MediatR;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Gateway.Application.Common.Interfaces;

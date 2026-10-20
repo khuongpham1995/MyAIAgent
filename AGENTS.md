@@ -1,5 +1,7 @@
 # MyAIAgent working agreements
 
+These working agreements define how contributors and coding assistants plan, implement, verify, and deliver changes in this repository.
+
 - Proceed autonomously on well-scoped requests; verify before handing work back.
 - Ask only when ambiguity materially affects implementation, safety, cost, or behavior.
 - Preserve user changes and unrelated worktree state. Make focused, maintainable changes.

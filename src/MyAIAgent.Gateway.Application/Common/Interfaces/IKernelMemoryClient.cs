@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Defines the Gateway application port for forwarding document uploads to the KernelMemory daemon.
+ */
+
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Gateway.Application.Admin;
 

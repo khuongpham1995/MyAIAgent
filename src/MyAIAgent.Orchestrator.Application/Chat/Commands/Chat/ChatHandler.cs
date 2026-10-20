@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Coordinates session ownership, model replies, turn persistence, and best-effort summary updates.
+ */
+
 using MediatR;
 using Microsoft.Extensions.Logging;
 using MyAIAgent.Common.Domain.Models;

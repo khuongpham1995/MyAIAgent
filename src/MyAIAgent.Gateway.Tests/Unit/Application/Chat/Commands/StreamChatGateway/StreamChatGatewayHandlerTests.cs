@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Checks streaming request forwarding, validation, downstream errors, and cancellation.
+ */
+
 using FluentAssertions;
 using Moq;
 using MyAIAgent.Common.Tests;

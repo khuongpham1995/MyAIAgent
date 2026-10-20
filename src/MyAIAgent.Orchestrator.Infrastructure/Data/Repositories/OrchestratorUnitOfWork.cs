@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Infrastructure
+ *
+ * Commits Orchestrator persistence changes and translates EF failures into application persistence errors.
+ */
+
 using Microsoft.EntityFrameworkCore;
 using MyAIAgent.Common.Domain.Abstractions;
 using MyAIAgent.Orchestrator.Application.Common.Exceptions;

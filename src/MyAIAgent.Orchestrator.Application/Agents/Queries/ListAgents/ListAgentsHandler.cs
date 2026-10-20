@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Lists persisted agent definitions and maps their enabled tools to response summaries.
+ */
+
 using MediatR;
 using MapsterMapper;
 using MyAIAgent.Common.Domain.Models;

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Validates UserId, Page, PageSize before paginated conversation listing reaches the Gateway handler.
+ */
+
 using FluentValidation;
 
 namespace MyAIAgent.Gateway.Application.Conversations.Queries.ListConversations;

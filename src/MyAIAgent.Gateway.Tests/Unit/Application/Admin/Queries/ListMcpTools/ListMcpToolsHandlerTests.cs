@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Covers Gateway tool-discovery responses and failure handling without a live MCP server.
+ */
+
 using FluentAssertions;
 using Moq;
 using MyAIAgent.Common.Domain.Models;

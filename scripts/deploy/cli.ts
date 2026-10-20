@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Deployment Tooling
+ *
+ * Validates required deployment settings and gateway hostnames shared by deployment commands.
+ */
+
 export class UsageError extends Error {}
 
 export function requiredEnvironment(env: NodeJS.ProcessEnv, name: string): string {

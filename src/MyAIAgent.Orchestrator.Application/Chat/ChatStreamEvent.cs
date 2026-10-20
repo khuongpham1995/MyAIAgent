@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Application
+ *
+ * Defines the session, text, title, completion, and error payloads exchanged by the chat stream.
+ */
+
 using System.Text.Json.Serialization;
 
 namespace MyAIAgent.Orchestrator.Application.Chat;

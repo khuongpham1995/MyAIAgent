@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Azure Infrastructure
+ *
+ * Grants one identity data access to selected containers within an approved Cosmos database.
+ */
+
 targetScope = 'resourceGroup'
 
 param accountName string

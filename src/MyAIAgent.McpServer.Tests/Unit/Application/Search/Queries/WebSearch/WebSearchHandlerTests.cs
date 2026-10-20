@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Tests
+ *
+ * Covers search aggregation, failed page fetches, result serialization, and cancellation.
+ */
+
 using System.Text.Json;
 using FluentAssertions;
 using FluentValidation;

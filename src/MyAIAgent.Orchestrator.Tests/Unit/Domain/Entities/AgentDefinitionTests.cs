@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Tests
+ *
+ * Verifies agent identifier generation and storage of configuration and tool entries.
+ */
+
 using FluentAssertions;
 using MyAIAgent.Orchestrator.Domain.Entities;
 

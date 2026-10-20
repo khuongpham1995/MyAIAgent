@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Tests
+ *
+ * Checks that the pinned Azure OpenAI SDK exposes the APIs required by KernelMemory integration.
+ */
+
 using System.Net;
 using System.Text;
 using FluentAssertions;

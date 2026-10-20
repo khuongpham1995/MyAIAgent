@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | McpServer · Tests
+ *
+ * Verifies page-fetch result success/failure construction and content values.
+ */
+
 using FluentAssertions;
 using MyAIAgent.McpServer.Application.Search;
 

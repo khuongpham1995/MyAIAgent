@@ -1,3 +1,5 @@
+# Provides Codex picker metadata for the ai-plan skill; execution rules remain in SKILL.md.
+
 interface:
   display_name: "AI Plan"
   short_description: "Plan the task with Astra in native Plan mode"

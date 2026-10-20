@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Orchestrator · Infrastructure
+ *
+ * Prepares agent instructions, history, and MCP tools for ordinary or streaming IChatClient replies.
+ */
+
 using System.ClientModel;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;

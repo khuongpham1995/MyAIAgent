@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Tests
+ *
+ * Captures outgoing HTTP requests and supplies controlled responses for Gateway client tests.
+ */
+
 namespace MyAIAgent.Gateway.Tests.Unit.Infrastructure.Services;
 
 internal sealed class StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler

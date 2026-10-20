@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | KernelMemory · Tests
+ *
+ * Checks upload-size response handling and rethrowing of unexpected KernelMemory endpoint failures.
+ */
+
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -61,7 +67,7 @@ public sealed class HttpErrorsEndpointFilterTests
     }
 
     #region Private Method(s)
-    
+
     private static EndpointFilterInvocationContext CreateContext(HttpContext httpContext)
         => new TestEndpointFilterInvocationContext(httpContext);
 
@@ -71,6 +77,6 @@ public sealed class HttpErrorsEndpointFilterTests
         public override IList<object?> Arguments => [];
         public override T GetArgument<T>(int index) => throw new NotSupportedException();
     }
-    
+
     #endregion
 }

@@ -1,3 +1,9 @@
+/**
+ * MyAIAgent | Gateway · Infrastructure
+ *
+ * Registers typed downstream clients with service keys, timeouts, and selected retry behavior.
+ */
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MyAIAgent.Common.Application.Extensions;
