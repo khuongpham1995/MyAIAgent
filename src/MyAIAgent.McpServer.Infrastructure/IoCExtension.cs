@@ -17,15 +17,24 @@ namespace MyAIAgent.McpServer.Infrastructure;
 
 public static class IoCExtension
 {
-    public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isDevelopment)
     {
+        if (!isDevelopment && !configuration.GetValue<bool>("ServiceAuthorization:Enabled"))
+            throw new InvalidOperationException("ServiceAuthorization:Enabled must be true outside Development.");
+
         services
             .AddTransientAsMatchingInterfaces(typeof(IoCExtension).Assembly)
             .AddScopedAsMatchingInterfaces(typeof(IoCExtension).Assembly)
             .AddSingletonAsMatchingInterfaces(typeof(IoCExtension).Assembly);
 
-        services.Configure<ServiceAuthorizationModel>(
-            configuration.GetSection("ServiceAuthorization"));
+        services.AddOptions<ServiceAuthorizationModel>()
+            .Bind(configuration.GetSection("ServiceAuthorization"))
+            .Validate(auth => !auth.Enabled
+                || (!string.IsNullOrWhiteSpace(auth.AccessKey1) && !string.IsNullOrWhiteSpace(auth.AccessKey2)),
+                "ServiceAuthorization requires both active and rotation keys when enabled.")
+            .Validate(auth => !auth.Enabled || auth.HttpHeaderName == "Authorization",
+                "MCP ServiceAuthorization:HttpHeaderName must be Authorization.")
+            .ValidateOnStart();
 
         services.AddSingleton<HttpAuthEndpointFilter>();
 

@@ -4,7 +4,6 @@
  * Maps KernelMemory daemon endpoints and health routes, then logs nonsecret startup diagnostics.
  */
 
-using System.Globalization;
 using Microsoft.KernelMemory;
 using Microsoft.KernelMemory.AI;
 using Microsoft.KernelMemory.DocumentStorage;
@@ -70,12 +69,8 @@ internal static class WebApplicationExtension
         // Kestrel default is 30 MB — used when no explicit limit is configured
         const double kestrelDefaultMaxUploadMb = 30_000_000d / 1024 / 1024;
 
-        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-        var envLabel = string.IsNullOrEmpty(env) ? "WARNING: ASPNETCORE_ENVIRONMENT not defined" : env;
-        var handlers = $"{syncHandlersCount} synchronous / {asyncHandlersCount} asynchronous";
-        var webServiceStatus = config.Service.RunWebService ? "Enabled" : "Disabled";
-        var authStatus = config.ServiceAuthorization.Enabled ? "Enabled" : "Disabled";
-        var maxUploadMb = (config.Service.MaxUploadSizeMb ?? kestrelDefaultMaxUploadMb).ToString("0.#", CultureInfo.CurrentCulture);
+        var environment = services.GetRequiredService<IHostEnvironment>().EnvironmentName;
+        var maxUploadMb = config.Service.MaxUploadSizeMb ?? kestrelDefaultMaxUploadMb;
         var memoryDb = services.GetService<IMemoryDb>()?.GetType().FullName;
         var documentStorage = services.GetService<IDocumentStorage>()?.GetType().FullName;
         var embeddingGenerator = services.GetService<ITextEmbeddingGenerator>()?.GetType().FullName;
@@ -87,22 +82,19 @@ internal static class WebApplicationExtension
             logger.LogError("Access keys 1 and 2 have the same value. Keys should be different to allow rotation.");
         }
 
-        logger.LogInformation("*******************************************************************************");
-        logger.LogInformation("* Environment         : {Environment}", envLabel);
-        logger.LogInformation("* Memory type         : {MemoryType}", memoryType);
-        logger.LogInformation("* Pipeline handlers   : {Handlers}", handlers);
-        logger.LogInformation("* Web service         : {WebServiceStatus}", webServiceStatus);
+        logger.LogInformation(
+            "KernelMemory configured for {Environment}: {MemoryType}, {SyncHandlerCount} synchronous and {AsyncHandlerCount} asynchronous handlers, HTTP enabled: {HttpEnabled}",
+            environment, memoryType, syncHandlersCount, asyncHandlersCount, config.Service.RunWebService);
 
         if (config.Service.RunWebService)
         {
-            logger.LogInformation("* Web service auth    : {AuthStatus}", authStatus);
-            logger.LogInformation("* Max HTTP req size   : {MaxUploadMb} Mb", maxUploadMb);
+            logger.LogInformation(
+                "KernelMemory HTTP configuration: authorization enabled: {AuthorizationEnabled}, upload limit {MaxUploadMb:0.#} MiB",
+                config.ServiceAuthorization.Enabled, maxUploadMb);
         }
 
-        logger.LogInformation("* Memory Db           : {MemoryDb}", memoryDb);
-        logger.LogInformation("* Document storage    : {DocumentStorage}", documentStorage);
-        logger.LogInformation("* Embedding generation: {EmbeddingGenerator}", embeddingGenerator);
-        logger.LogInformation("* Text generation     : {TextGenerator}", textGenerator);
-        logger.LogInformation("*******************************************************************************");
+        logger.LogInformation(
+            "KernelMemory providers: memory database {MemoryDb}, document storage {DocumentStorage}, embeddings {EmbeddingGenerator}, text generation {TextGenerator}",
+            memoryDb, documentStorage, embeddingGenerator, textGenerator);
     }
 }

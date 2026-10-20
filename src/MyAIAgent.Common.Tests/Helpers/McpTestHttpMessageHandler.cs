@@ -10,14 +10,19 @@ using System.Text.Json;
 
 namespace MyAIAgent.Common.Tests;
 
-public sealed class McpTestHttpMessageHandler(bool waitForCancellation = false, HttpStatusCode? failureStatus = null, bool failToolListing = false) : HttpMessageHandler
+public sealed class McpTestHttpMessageHandler(bool waitForCancellation = false, HttpStatusCode? failureStatus = null, bool failToolListing = false, string? requiredKey = null) : HttpMessageHandler
 {
     public List<string> Methods { get; } = [];
+    public List<string?> AuthorizationHeaders { get; } = [];
     public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         Started.TrySetResult();
+        var authorization = request.Headers.TryGetValues("Authorization", out var headers) ? headers.SingleOrDefault() : null;
+        AuthorizationHeaders.Add(authorization);
+        if (requiredKey is not null && authorization != requiredKey)
+            return new HttpResponseMessage(authorization is null ? HttpStatusCode.Unauthorized : HttpStatusCode.Forbidden);
         if (failureStatus is { } status)
             return new HttpResponseMessage(status);
         if (waitForCancellation)

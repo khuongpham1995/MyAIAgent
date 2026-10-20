@@ -19,15 +19,18 @@ using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Common.Infrastructure.Filters;
 using MyAIAgent.McpServer.Domain.Constants;
 using MyAIAgent.McpServer.Presentation.McpTools;
+using MyAIAgent.McpServer.Presentation.Extensions;
 
 namespace MyAIAgent.McpServer.Tests.Integration.Presentation;
 
 public sealed class McpTransportTests
 {
     [Theory]
-    [InlineData("/mcp")]
-    [InlineData("/")]
-    public async Task Mcp_WhenAuthenticated_ShouldDiscoverAndInvokeToolOverHttp(string endpoint)
+    [InlineData("/mcp", "test-primary-key")]
+    [InlineData("/", "test-primary-key")]
+    [InlineData("/mcp", "test-rotation-key")]
+    [InlineData("/", "test-rotation-key")]
+    public async Task Mcp_WhenAuthenticated_ShouldDiscoverAndInvokeToolOverHttp(string endpoint, string key)
     {
         // Arrange
         await using var app = await StartServerAsync();
@@ -35,7 +38,7 @@ public sealed class McpTransportTests
         await using var transport = new HttpClientTransport(new HttpClientTransportOptions
         {
             Endpoint = new Uri("http://localhost" + endpoint),
-            AdditionalHeaders = new Dictionary<string, string> { ["Authorization"] = "test-primary-key" }
+            AdditionalHeaders = new Dictionary<string, string> { ["Authorization"] = key }
         }, httpClient);
         await using var client = await McpClient.CreateAsync(transport, cancellationToken: CancellationToken.None);
 
@@ -47,6 +50,48 @@ public sealed class McpTransportTests
         tools.Should().ContainSingle(tool => tool.Name == McpServerConstant.GetCurrentDateTimeToolName);
         result.IsError.Should().NotBeTrue();
         DateTimeOffset.TryParse(result.Content.OfType<TextContentBlock>().Single().Text, out _).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("/mcp", "GET", null)]
+    [InlineData("/mcp", "DELETE", null)]
+    [InlineData("/", "GET", null)]
+    [InlineData("/", "DELETE", null)]
+    [InlineData("/mcp", "GET", "wrong-key")]
+    [InlineData("/mcp", "DELETE", "wrong-key")]
+    [InlineData("/", "GET", "wrong-key")]
+    [InlineData("/", "DELETE", "wrong-key")]
+    public async Task Mcp_WhenSessionRequestIsUnauthorized_ShouldRejectIt(string endpoint, string method, string? key)
+    {
+        // Arrange
+        await using var app = await StartServerAsync();
+        using var client = app.GetTestClient();
+        using var request = new HttpRequestMessage(new HttpMethod(method), endpoint);
+        request.Headers.Add("Accept", "text/event-stream");
+        request.Headers.Add("Mcp-Session-Id", "untrusted-session");
+        if (key is not null) request.Headers.Add("Authorization", key);
+
+        // Act
+        using var response = await client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(key is null ? HttpStatusCode.Unauthorized : HttpStatusCode.Forbidden);
+    }
+
+    [Theory]
+    [InlineData("/health/live")]
+    [InlineData("/health/ready")]
+    public async Task Health_WhenAnonymous_ShouldRemainAccessible(string path)
+    {
+        // Arrange
+        await using var app = await StartServerAsync();
+        using var client = app.GetTestClient();
+
+        // Act
+        using var response = await client.GetAsync(path);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Theory]
@@ -76,11 +121,49 @@ public sealed class McpTransportTests
         response.StatusCode.Should().Be(expected);
     }
 
-    private static async Task<WebApplication> StartServerAsync()
+    [Theory]
+    [InlineData("/mcp", null)]
+    [InlineData("/", null)]
+    [InlineData("/mcp", "wrong-key")]
+    [InlineData("/", "wrong-key")]
+    public async Task Mcp_WhenToolCallIsUnauthorized_ShouldNotExecuteTheTool(string endpoint, string? key)
+    {
+        // Arrange
+        var clock = new CountingClock();
+        await using var app = await StartServerAsync(clock);
+        using var client = app.GetTestClient();
+        client.DefaultRequestHeaders.Add("Accept", "application/json, text/event-stream");
+        if (key is not null) client.DefaultRequestHeaders.Add("Authorization", key);
+
+        // Act
+        using var response = await client.PostAsJsonAsync(endpoint, new
+        {
+            jsonrpc = "2.0",
+            id = 1,
+            method = "tools/call",
+            @params = new { name = McpServerConstant.GetCurrentDateTimeToolName, arguments = new { } }
+        });
+
+        // Assert
+        response.StatusCode.Should().Be(key is null ? HttpStatusCode.Unauthorized : HttpStatusCode.Forbidden);
+        clock.Reads.Should().Be(0);
+    }
+
+    private sealed class CountingClock : TimeProvider
+    {
+        public int Reads { get; private set; }
+        public override DateTimeOffset GetUtcNow()
+        {
+            Reads++;
+            return DateTimeOffset.UnixEpoch;
+        }
+    }
+
+    private static async Task<WebApplication> StartServerAsync(TimeProvider? clock = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
-        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddSingleton(clock ?? TimeProvider.System);
         builder.Services.AddSingleton(Options.Create(new ServiceAuthorizationModel
         {
             Enabled = true,
@@ -91,9 +174,7 @@ public sealed class McpTransportTests
         builder.Services.AddSingleton<HttpAuthEndpointFilter>();
         builder.Services.AddMcpServer().WithHttpTransport().WithTools<DateTimeTool>();
         var app = builder.Build();
-        var mcp = app.MapGroup(string.Empty).AddEndpointFilter(app.Services.GetRequiredService<HttpAuthEndpointFilter>());
-        mcp.MapMcp("/mcp");
-        mcp.MapMcp();
+        app.MapMcpServiceEndpoints();
         await app.StartAsync();
         return app;
     }

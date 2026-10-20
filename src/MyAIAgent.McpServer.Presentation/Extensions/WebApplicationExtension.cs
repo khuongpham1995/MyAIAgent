@@ -1,18 +1,44 @@
 /**
  * MyAIAgent | McpServer · Presentation
  *
- * Runs the MCP server and reports startup diagnostics for the configured service.
+ * Protects MCP transport routes, maps anonymous health checks, and reports startup diagnostics.
  */
 
 using System.Reflection;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 using MyAIAgent.Common.Domain.Models;
+using MyAIAgent.Common.Infrastructure.Filters;
 
 namespace MyAIAgent.McpServer.Presentation.Extensions;
 
-internal static class WebApplicationExtension
+public static class WebApplicationExtension
 {
+    public static WebApplication MapMcpServiceEndpoints(this WebApplication app)
+    {
+        var authorization = app.Services.GetRequiredService<HttpAuthEndpointFilter>();
+        // Some SDK transport methods are raw request delegates or return 405 in stateless mode.
+        // Authorize before protocol dispatch, including requests that cannot run an endpoint filter.
+        app.Use(async (context, next) =>
+        {
+            if ((context.Request.Path == "/" || context.Request.Path.StartsWithSegments("/mcp", StringComparison.OrdinalIgnoreCase))
+                && authorization.Authorize(context) is { } rejection)
+            {
+                await rejection.ExecuteAsync(context);
+                return;
+            }
+
+            await next(context);
+        });
+        app.MapGet("/health/live", () => Results.Ok());
+        app.MapGet("/health/ready", () => Results.Ok());
+        var mcp = app.MapGroup(string.Empty);
+        mcp.MapMcp("/mcp");
+        // Keep the original root endpoint for stored agent definitions.
+        mcp.MapMcp();
+        return app;
+    }
+
     internal static async Task RunMcpServerAsync(this WebApplication app)
     {
         var auth = app.Services.GetRequiredService<IOptions<ServiceAuthorizationModel>>().Value;
@@ -34,29 +60,19 @@ internal static class WebApplicationExtension
         IHostEnvironment environment,
         ServiceAuthorizationModel auth)
     {
-        var env = environment.EnvironmentName;
-        var authStatus = auth.Enabled ? "Enabled" : "Disabled";
         var tools = DiscoverTools();
 
-        logger.LogInformation("*******************************************************************************");
-        logger.LogInformation("* Environment         : {Environment}", env);
-        logger.LogInformation("* Transport           : HTTP (SSE + POST)");
-        logger.LogInformation("* Auth                : {AuthStatus}", authStatus);
-        logger.LogInformation("* Registered tools    : {ToolCount}", tools.Count);
-
-        foreach (var tool in tools)
-            logger.LogInformation("*   - {ToolName}", tool);
-
-        logger.LogInformation("*******************************************************************************");
+        logger.LogInformation(
+            "MCP configured for {Environment}: Streamable HTTP, authorization enabled: {AuthorizationEnabled}, {ToolCount} tools: {ToolNames}",
+            environment.EnvironmentName, auth.Enabled, tools.Count, string.Join(", ", tools));
     }
 
     private static List<string> DiscoverTools()
-        => Assembly.GetExecutingAssembly()
+        => [.. Assembly.GetExecutingAssembly()
             .GetTypes()
             .Where(t => t.GetCustomAttribute<McpServerToolTypeAttribute>() is not null)
             .SelectMany(t => t.GetMethods())
             .Select(m => m.GetCustomAttribute<McpServerToolAttribute>())
             .Where(a => a is not null)
-            .Select(a => a!.Name ?? "unnamed")
-            .ToList();
+            .Select(a => a!.Name ?? "unnamed")];
 }

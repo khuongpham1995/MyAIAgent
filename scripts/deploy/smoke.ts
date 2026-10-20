@@ -69,19 +69,22 @@ export async function smokeTest(args: string[], { run = runProcess, request = fe
     '--query', 'accessToken', '--output', 'tsv'], { encoding: 'utf8', shell: false, timeout: 30_000, maxBuffer: 1024 * 1024 });
   const token = result.stdout?.toString().trim();
   if (result.status !== 0 || result.error || result.signal || !token) throw new Error('Could not obtain the smoke-test access token.');
-  for (let attempt = 0; attempt < 30; attempt++) {
-    const response = await probe('/admin/agents', token);
-    status = response.status;
-    if (status === 200 && response.success) return;
-    if (attempt < 29) await delay(10_000);
+  for (const path of ['/admin/agents', '/admin/tools']) {
+    let succeeded = false;
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const response = await probe(path, token);
+      status = response.status;
+      if (status === 200 && response.success) { succeeded = true; break; }
+      if (attempt < 29) await delay(10_000);
+    }
+    if (!succeeded) throw new Error(`Authenticated admin smoke test failed for ${path}: HTTP ${status}`);
   }
-  throw new Error(`Authenticated admin smoke test failed: HTTP ${status}`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     await smokeTest(process.argv.slice(2));
-    console.log('Gateway readiness and authorization smoke tests passed.');
+    console.log('Gateway readiness, authorization, and MCP discovery smoke tests passed.');
   } catch (error) {
     console.error(error instanceof Error ? error.message : 'Smoke test failed.');
     process.exitCode = error instanceof UsageError ? 2 : 1;

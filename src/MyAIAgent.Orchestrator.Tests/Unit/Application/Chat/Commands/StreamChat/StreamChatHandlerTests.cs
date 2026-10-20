@@ -18,6 +18,31 @@ namespace MyAIAgent.Orchestrator.Tests.Unit.Application.Chat.Commands.StreamChat
 
 public sealed class StreamChatHandlerTests
 {
+    [Theory]
+    [InlineData(401)]
+    [InlineData(403)]
+    public async Task Handle_WhenMcpAuthenticationFails_ShouldEmitSafeErrorAndPersistNothing(int status)
+    {
+        // Arrange
+        orchestrator.Setup(s => s.StreamChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(() => FailBeforeAsync(new HttpRequestException(
+                "MCP service authentication failed.", null, (System.Net.HttpStatusCode)status)));
+
+        // Act
+        var events = await CollectAsync(BuildHandler().Handle(new StreamChatCommand(null, "Hi", "visitor:a"), CancellationToken.None));
+
+        // Assert
+        events.Select(e => e.Type).Should().Equal("session", "error");
+        events[^1].Message.Should().Be("AI service temporarily unavailable.");
+        unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        sessionRepository.Verify(r => r.AddAsync(It.IsAny<ChatSession>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static async IAsyncEnumerable<string> FailBeforeAsync(Exception exception)
+    {
+        yield return await Task.FromException<string>(exception);
+    }
+
     private readonly Mock<IChatOrchestratorService> orchestrator = new();
     private readonly Mock<IChatSessionRepository> sessionRepository = new();
     private readonly Mock<IUnitOfWork> unitOfWork = new();

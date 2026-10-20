@@ -6,6 +6,8 @@
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using MyAIAgent.Common.Infrastructure.Http;
+using System.Net;
 using ModelContextProtocol.Client;
 using MyAIAgent.Orchestrator.Domain.Entities;
 
@@ -43,9 +45,16 @@ public sealed class AgentHelper(HttpClient httpClient, ILogger<AgentHelper> logg
 
         try
         {
-            // Auto-detection supports Streamable HTTP and existing SSE endpoints without replaying tool calls.
+            var endpoint = new Uri(agent.McpServerEndpoint);
+            // The registered base address is trusted; other agent endpoints retain anonymous transport compatibility.
+            var isTrusted = httpClient.BaseAddress is { } origin
+                && McpServiceClientSettings.IsTrustedEndpoint(origin, endpoint);
             transport = new HttpClientTransport(
-                new HttpClientTransportOptions { Endpoint = new Uri(agent.McpServerEndpoint) }, httpClient);
+                new HttpClientTransportOptions
+                {
+                    Endpoint = endpoint,
+                    TransportMode = isTrusted ? HttpTransportMode.StreamableHttp : HttpTransportMode.AutoDetect
+                }, httpClient);
             mcpClient = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
             var mcpTools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
 
@@ -65,6 +74,13 @@ public sealed class AgentHelper(HttpClient httpClient, ILogger<AgentHelper> logg
             await DisposeQuietlyAsync(mcpClient);
             await DisposeQuietlyAsync(transport);
             throw;
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            await DisposeQuietlyAsync(mcpClient);
+            await DisposeQuietlyAsync(transport);
+            // Chat and streaming handlers already turn HTTP failures into safe errors without committing a turn.
+            throw new HttpRequestException("MCP service authentication failed.", null, ex.StatusCode);
         }
         catch (HttpRequestException ex)
         {

@@ -24,7 +24,8 @@ public sealed class McpServerClient(
         {
             await using var transport = new HttpClientTransport(new HttpClientTransportOptions
             {
-                Endpoint = new Uri(httpClient.BaseAddress!, "/mcp")
+                Endpoint = new Uri(httpClient.BaseAddress!, "/mcp"),
+                TransportMode = HttpTransportMode.StreamableHttp
             }, httpClient);
             await using var client = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
             var tools = await client.ListToolsAsync(cancellationToken: cancellationToken);

@@ -292,6 +292,9 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 
+# Local Playwright browser logs, snapshots, and screenshots
+.playwright-mcp/
+
 # Visual Studio 6 build log
 *.plg
 

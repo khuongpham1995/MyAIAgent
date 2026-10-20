@@ -17,6 +17,24 @@ namespace MyAIAgent.Orchestrator.Tests.Unit.Infrastructure.Helpers;
 
 public sealed class AgentHelperTests
 {
+    [Theory]
+    [InlineData(401)]
+    [InlineData(403)]
+    public async Task GetAgentToolsAsync_WhenAuthenticationFails_ShouldFailInsteadOfSilentlyDroppingTools(int status)
+    {
+        // Arrange
+        using var handler = new McpTestHttpMessageHandler(failureStatus: (System.Net.HttpStatusCode)status);
+        using var httpClient = new HttpClient(handler);
+        var helper = new AgentHelper(httpClient, NullLogger<AgentHelper>.Instance);
+
+        // Act
+        var action = () => helper.GetAgentToolsAsync(
+            new AgentDefinition { McpServerEndpoint = "https://mcp.example/mcp" }, CancellationToken.None);
+
+        // Assert
+        await action.Should().ThrowAsync<HttpRequestException>();
+    }
+
     [Fact]
     public async Task GetAgentToolsAsync_WhenServerUsesStreamableHttp_ShouldKeepToolsUsableUntilTurnEnds()
     {

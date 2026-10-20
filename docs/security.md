@@ -19,10 +19,10 @@ Each service has a separate user-assigned managed identity. `infra/access.bicep`
 
 | Service | Secret access | Cosmos access |
 | --- | --- | --- |
-| Gateway | Active Orchestrator/KernelMemory keys; optional public JWT signing secret | None |
-| Orchestrator | Azure OpenAI key and its active/rotation service keys | ChatSessions and AgentDefinitions in its environment database |
+| Gateway | Active Orchestrator/KernelMemory/MCP keys; optional public JWT signing secret | None |
+| Orchestrator | Azure OpenAI key, its active/rotation service keys, and the active MCP key | ChatSessions and AgentDefinitions in its environment database |
 | KernelMemory | Azure OpenAI, Search and Blob credentials; its active/rotation service keys | DocumentRecords in its environment database |
-| McpServer | Google Search key | None |
+| McpServer | Google Search key and its active/rotation service keys | None |
 
 All four identities can pull images from the shared registry and read nonsecret AAC settings for their environment. Key Vault grants are secret-scoped; there is no shared vault-wide runtime reader. Role assignments belong to privileged bootstrap, not routine CD.
 
@@ -32,7 +32,11 @@ Conversation writes require the current Cosmos ETag. An overlapping request cann
 
 Azure AI Search and Blob provider credentials still use keys because the pinned KernelMemory provider configuration uses them. The shared Search admin key can reach both indexes; independent service identities do not remove that provider-level cross-environment risk. Use separate Search services or migrate that provider to scoped identity-based access when stronger isolation is required.
 
-MCP tool authentication remains an inherited limitation: the deployment uses internal ingress, but `ServiceAuthorization` is disabled by default and the MCP clients do not send a service key. A workload on the internal network can invoke tools. Configure fail-closed MCP authorization and authenticated callers in a separate change before production use.
+MCP authorization is enabled by default and cannot be disabled outside Development. Both active and rotation keys must be configured. Authentication runs before MCP protocol dispatch on the root and /mcp paths; health checks remain anonymous. Missing credentials return 401; invalid credentials return 403. The header is `Authorization`.
+
+Gateway and Orchestrator require `McpServer:AccessKey` outside Development. The shared HTTP handler adds it only to the exact trusted `McpServer:BaseUrl` origin and the root or /mcp protocol paths (including /mcp/), with no credentials, query, or fragment in the URL. Redirects and cookies are disabled. Production origins require HTTPS; Development also permits loopback HTTP. Deployment uses the internal HTTPS FQDN, not a redirect from the short HTTP name. An agent-controlled external MCP endpoint does not receive this key. HTTP authentication failures propagate to safe chat errors instead of an apparently successful turn without tools.
+
+This is service authentication, not per-caller identity or per-tool authorization. Other agent-provided MCP URLs remain an existing outbound trust/SSRF concern; no general external-MCP allowlist is introduced here. Keep agent administration restricted and enforce an egress policy before trusting arbitrary servers.
 
 ## Repository controls
 
@@ -59,6 +63,8 @@ The initial solo-maintainer policy requires a PR, current successful `quality` a
 If a credential was committed, revoke or rotate it immediately. Removing the current file or adding a Git ignore rule does not remove exposure through existing clones or history. Review affected service logs and Azure access records. History rewriting is a separate coordinated operation and does not replace revocation.
 
 For Orchestrator/KernelMemory keys, put a fresh value in the inactive slot, deploy consumers with that value, confirm authenticated requests, then replace the old slot. Maintain distinct values in the two slots. Container Apps Key Vault references and already-created HTTP clients do not guarantee immediate refresh; use a controlled revision rollout and verify both sides before retiring a key.
+
+For MCP, callers read only `mcp-key`; the server reads that secret plus `mcp-rotation-key`. To rotate without requiring callers to read the rotation slot: put the new value into `mcp-rotation-key`, roll out/restart MCP and verify that value works, then replace `mcp-key` with the new value and restart both callers. The server accepts either slot during propagation (the slots may temporarily match). Once both callers are verified, replace the rotation slot with a distinct fresh standby value and restart MCP. Do not retire the old value until the first server rollout succeeds. Configuration snapshots and Key Vault refresh timing require explicit verification; live key refresh is not promised.
 
 Key Vault purge protection and audit diagnostics are configured in foundation infrastructure. AAC diagnostics are configured in its provisioning template. Restrict log readers and retention, and do not log configuration dumps, Authorization headers, request bodies, or secret values. Network restrictions/private endpoints can add protection, but require a separately reviewed network design and cost estimate.
 

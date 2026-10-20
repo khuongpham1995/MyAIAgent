@@ -13,6 +13,7 @@ using MyAIAgent.Common.Application.Extensions;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Common.Infrastructure.Extensions;
 using MyAIAgent.Common.Infrastructure.Filters;
+using MyAIAgent.Common.Infrastructure.Http;
 using MyAIAgent.Orchestrator.Infrastructure.Data;
 using MyAIAgent.Orchestrator.Infrastructure.Helpers;
 using OpenAI;
@@ -30,12 +31,17 @@ public static class IoCExtension
 
         services.AddCosmosDb<OrchestratorDbContext>(configuration, isDevelopment);
 
-        // Tool invocations may have side effects, so the MCP transport deliberately has no retry policy.
-        services.AddHttpClient<IAgentHelper, AgentHelper>(client => client.Timeout = TimeSpan.FromSeconds(60));
-
         // Callers supply the user id, so outside Development only holders of the shared service key may call this API.
         if (!isDevelopment && !configuration.GetValue<bool>("ServiceAuthorization:Enabled"))
             throw new InvalidOperationException("ServiceAuthorization:Enabled must be true outside Development.");
+
+        var mcpSettings = McpServiceClientSettings.Load(configuration, isDevelopment);
+        // Tool invocations may have side effects, so the MCP transport deliberately has no retry policy.
+        services.AddHttpClient<IAgentHelper, AgentHelper>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(60);
+            client.BaseAddress = mcpSettings.Origin;
+        }).AddMcpServiceAuthentication(mcpSettings);
 
         services.Configure<ServiceAuthorizationModel>(
             configuration.GetSection("ServiceAuthorization"));

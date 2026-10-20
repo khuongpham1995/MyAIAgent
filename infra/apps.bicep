@@ -45,6 +45,7 @@ var gatewayName = '${prefix}-gateway'
 var orchestratorName = '${prefix}-orchestrator'
 var kernelMemoryName = '${prefix}-kernelmemory'
 var mcpName = '${prefix}-mcpserver'
+var mcpBaseUrl = 'https://${mcpName}.internal.${environment.properties.defaultDomain}'
 
 resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
   name: registryName
@@ -73,6 +74,7 @@ var services = [
       [
         { name: 'kernel-memory-key', vaultSecret: 'kernel-memory-key' }
         { name: 'orchestrator-key', vaultSecret: 'orchestrator-key' }
+        { name: 'mcp-key', vaultSecret: 'mcp-key' }
       ],
       empty(publicChatJwtVaultEntry) ? [] : [
         { name: 'public-chat-signing-key', vaultSecret: publicChatJwtVaultEntry }
@@ -84,7 +86,7 @@ var services = [
       { name: 'Authentication__Audience', value: audience }
       { name: 'Orchestrator__BaseUrl', value: 'http://${orchestratorName}' }
       { name: 'KernelMemory__BaseUrl', value: 'http://${kernelMemoryName}' }
-      { name: 'McpServer__BaseUrl', value: 'http://${mcpName}' }
+      { name: 'McpServer__AccessKey', secretRef: 'mcp-key' }
       { name: 'KernelMemory__AccessKey', secretRef: 'kernel-memory-key' }
       { name: 'Orchestrator__AccessKey', secretRef: 'orchestrator-key' }
       // The Container Apps ingress is the only way in, so its X-Forwarded-For entry identifies the client.
@@ -112,6 +114,7 @@ var services = [
       { name: 'azure-openai-key', vaultSecret: 'azure-openai-key' }
       { name: 'orchestrator-key', vaultSecret: 'orchestrator-key' }
       { name: 'orchestrator-rotation-key', vaultSecret: 'orchestrator-rotation-key' }
+      { name: 'mcp-key', vaultSecret: 'mcp-key' }
     ]
     env: [
       { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
@@ -124,6 +127,7 @@ var services = [
       { name: 'AzureOpenAI__DeploymentName', value: azureOpenAiDeployment }
       { name: 'AzureOpenAI__ApiKey', secretRef: 'azure-openai-key' }
       { name: 'KernelMemory__BaseUrl', value: 'http://${kernelMemoryName}' }
+      { name: 'McpServer__AccessKey', secretRef: 'mcp-key' }
     ]
   }
   {
@@ -174,11 +178,16 @@ var services = [
     maxReplicas: 2
     secrets: [
       { name: 'google-search-key', vaultSecret: 'google-search-key' }
+      { name: 'mcp-key', vaultSecret: 'mcp-key' }
+      { name: 'mcp-rotation-key', vaultSecret: 'mcp-rotation-key' }
     ]
     env: [
       { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
       { name: 'GoogleSearch__ApiKey', secretRef: 'google-search-key' }
       { name: 'GoogleSearch__SearchEngineId', value: googleSearchEngineId }
+      { name: 'ServiceAuthorization__Enabled', value: 'true' }
+      { name: 'ServiceAuthorization__AccessKey1', secretRef: 'mcp-key' }
+      { name: 'ServiceAuthorization__AccessKey2', secretRef: 'mcp-rotation-key' }
     ]
   }
 ]
@@ -232,7 +241,10 @@ resource apps 'Microsoft.App/containerApps@2024-03-01' = [for (service, index) i
             { name: 'AppConfiguration__Endpoint', value: appConfigurationEndpoint }
             { name: 'AppConfiguration__KeyPrefix', value: service.configurationPrefix }
             { name: 'AppConfiguration__Label', value: stage }
-          ])
+          ], index < 2 ? [
+            // Keep runtime environment properties out of the services array used to declare resource names.
+            { name: 'McpServer__BaseUrl', value: mcpBaseUrl }
+          ] : [])
           probes: [
             {
               type: 'Startup'

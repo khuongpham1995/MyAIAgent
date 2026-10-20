@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MyAIAgent.Common.Application.Extensions;
 using MyAIAgent.Common.Infrastructure.Extensions;
+using MyAIAgent.Common.Infrastructure.Http;
 using MyAIAgent.Gateway.Domain.Constants;
 using MyAIAgent.Gateway.Application.Common.Interfaces;
 using MyAIAgent.Gateway.Infrastructure.Services;
@@ -29,9 +30,6 @@ public static class IoCExtension
         var kernelMemoryBaseUrl = configuration[GatewayConstant.Config.KernelMemoryBaseUrl]
             ?? throw new InvalidOperationException($"Configuration key '{GatewayConstant.Config.KernelMemoryBaseUrl}' is missing");
 
-        var mcpServerBaseUrl = configuration[GatewayConstant.Config.McpServerBaseUrl]
-            ?? throw new InvalidOperationException($"Configuration key '{GatewayConstant.Config.McpServerBaseUrl}' is missing");
-
         // The Orchestrator trusts the user id it is given, so in production it only accepts callers holding this key.
         var orchestratorAccessKey = configuration[GatewayConstant.Config.OrchestratorAccessKey];
         if (!isDevelopment && string.IsNullOrWhiteSpace(orchestratorAccessKey))
@@ -40,6 +38,8 @@ public static class IoCExtension
         var kernelMemoryAccessKey = configuration["KernelMemory:AccessKey"];
         if (!isDevelopment && string.IsNullOrWhiteSpace(kernelMemoryAccessKey))
             throw new InvalidOperationException("KernelMemory:AccessKey is required in production.");
+
+        var mcpSettings = McpServiceClientSettings.Load(configuration, isDevelopment);
 
         services.AddHttpClient<IOrchestratorClient, OrchestratorClient>(client =>
         {
@@ -66,9 +66,9 @@ public static class IoCExtension
 
         services.AddHttpClient<IMcpServerClient, McpServerClient>(client =>
         {
-            client.BaseAddress = new Uri(mcpServerBaseUrl);
+            client.BaseAddress = mcpSettings.Origin;
             client.Timeout = TimeSpan.FromSeconds(10);
-        }).AddHttpRetryPolicy();
+        }).AddMcpServiceAuthentication(mcpSettings);
     }
 
     private static void AddServiceKey(HttpClient client, string? accessKey)

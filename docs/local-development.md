@@ -38,11 +38,11 @@ Cosmos and AAC use `AzureCliCredential` in Development. Do not supply Cosmos acc
 
 ## 3. Configure each application
 
-Gateway, Orchestrator, and KernelMemory have separate user-secrets stores. Configure the owning Presentation project; AppHost secrets are not copied into child applications. Keep public `appsettings*.json` files unchanged.
+Gateway, Orchestrator, KernelMemory, and MCP have separate user-secrets stores. Configure the owning Presentation project; AppHost secrets are not copied into child applications. Keep public `appsettings*.json` files unchanged.
 
 The JSON blocks below use `dotnet user-secrets set` through standard input. Replace placeholders privately; never commit a filled-in configuration file. The user-secrets store is outside Git but is not encrypted.
 
-Create distinct active and rotation service keys, using 64 hexadecimal characters for each key. Use the same active key in the corresponding Gateway setting. For example, generate one value locally with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`; generate a fresh value for each slot. Do not use the example placeholder text as a key.
+Create distinct active and rotation service keys, using 64 hexadecimal characters for each key. Use the same active key in the corresponding Gateway setting; also set the MCP active key in Orchestrator. For example, generate one value locally with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`; generate a fresh value for each slot. Do not use the example placeholder text as a key.
 
 ### Orchestrator
 
@@ -57,7 +57,9 @@ dotnet user-secrets set --project src/MyAIAgent.Orchestrator.Presentation <<'JSO
   "AzureOpenAI:ApiKey": "<provider-key>",
   "ServiceAuthorization:Enabled": "true",
   "ServiceAuthorization:AccessKey1": "<orchestrator-active-key>",
-  "ServiceAuthorization:AccessKey2": "<orchestrator-rotation-key>"
+  "ServiceAuthorization:AccessKey2": "<orchestrator-rotation-key>",
+  "McpServer:BaseUrl": "http://localhost:5255",
+  "McpServer:AccessKey": "<mcp-active-key>"
 }
 JSON
 ```
@@ -104,7 +106,8 @@ dotnet user-secrets set --project src/MyAIAgent.Gateway.Presentation <<'JSON'
   "Orchestrator:AccessKey": "<orchestrator-active-key>",
   "KernelMemory:BaseUrl": "http://localhost:5227",
   "KernelMemory:AccessKey": "<kernel-memory-active-key>",
-  "McpServer:BaseUrl": "http://localhost:5255"
+  "McpServer:BaseUrl": "http://localhost:5255",
+  "McpServer:AccessKey": "<mcp-active-key>"
 }
 JSON
 ```
@@ -113,11 +116,27 @@ These addresses match the checked-in service launch profiles. Gateway's tracked 
 
 ### MCP server
 
-The MCP project currently has no `UserSecretsId`. For Google search, provide `GoogleSearch__ApiKey` and `GoogleSearch__SearchEngineId` as local process environment variables before launching AppHost (or through your IDE's private environment configuration). Do not add them to tracked launch settings. The default disabled service authorization is a local/deployment limitation described in [security](security.md).
+MCP authorization is enabled by default. Configure its own user-secrets store:
+
+```bash
+dotnet user-secrets set --project src/MyAIAgent.McpServer.Presentation <<'JSON'
+{
+  "ServiceAuthorization:Enabled": "true",
+  "ServiceAuthorization:AccessKey1": "<mcp-active-key>",
+  "ServiceAuthorization:AccessKey2": "<mcp-rotation-key>",
+  "GoogleSearch:ApiKey": "<google-search-key>",
+  "GoogleSearch:SearchEngineId": "<search-engine-id>"
+}
+JSON
+```
+
+Google settings are needed only for web search, not tool discovery or the clock tool. Keep the default service header name `Authorization`. For an isolated local experiment, MCP can explicitly set `ServiceAuthorization:Enabled=false` in Development; disabling it outside Development is rejected at startup.
+
+Both callers scope the MCP key to the exact origin in `McpServer:BaseUrl` and the paths `/`, `/mcp`, or `/mcp/`, without a query or fragment. Set matching origins in Gateway and Orchestrator. Other agent endpoints never receive this key. Outside Development the trusted origin must use HTTPS; locally HTTP is permitted only for loopback. Redirects are not followed. Restart all affected processes after changing keys or origins.
 
 ### Optional AAC
 
-To use AAC, set `AppConfiguration:Endpoint` and `AppConfiguration:Label=Development` in each consuming project's user-secrets. Leave the endpoint empty to use only local configuration. For MCP, use process environment variables such as `AppConfiguration__Endpoint` and `AppConfiguration__Label` if required; remember that variables inherited by AppHost may reach every child process.
+To use AAC, set `AppConfiguration:Endpoint` and `AppConfiguration:Label=Development` in each consuming project's user-secrets. Leave the endpoint empty to use only local configuration. MCP also loads its per-project user-secrets; avoid setting service-specific secrets on AppHost environment variables that reach every child process.
 
 Each project already declares its key prefix: `Gateway:`, `Orchestrator:`, `KernelMemory:`, or `McpServer:`. Prefixes are removed once when importing settings. For example:
 
@@ -137,7 +156,7 @@ dotnet run --project src/MyAIAgent.All --launch-profile https
 
 The `http` AppHost profile is also available and explicitly permits local unencrypted dashboard transport; dashboard authentication stays enabled. KernelMemory currently has only an `https` service profile, so it still exposes HTTPS as well as HTTP when AppHost uses its `http` profile. Retain the development certificate setup.
 
-Gateway and Orchestrator have matching `http`/`https` profiles that set both environment variables to Development. Stop an older AppHost before starting another instance to avoid port conflicts. Restart AppHost after editing profiles or secrets.
+Gateway, Orchestrator, and MCP have matching `http`/`https` profiles that set both environment variables to Development. Stop an older AppHost before starting another instance to avoid port conflicts. Restart AppHost after editing profiles or secrets.
 
 | Service | HTTP | HTTPS |
 | --- | --- | --- |
@@ -146,7 +165,7 @@ Gateway and Orchestrator have matching `http`/`https` profiles that set both env
 | KernelMemory | `http://localhost:5227` | `https://localhost:7074` |
 | MCP | `http://localhost:5255` | `https://localhost:7117` |
 
-Use the dashboard's displayed endpoints if local settings differ. Check `/health/live` on each service, then `GET http://localhost:5200/admin/agents`; the latter exercises Gateway forwarding, the Orchestrator key, and Cosmos. A successful envelope has `isSuccess: true`. Local Gateway routes use Development identity; do not expose them publicly.
+Use the dashboard's displayed endpoints if local settings differ. Check `/health/live` on each service, then `GET http://localhost:5200/admin/agents`; the latter exercises Gateway forwarding, the Orchestrator key, and Cosmos. Also check `GET http://localhost:5200/admin/tools` to verify Gateway-to-MCP authentication and discovery without invoking a model or Google search. A successful envelope has `isSuccess: true`. Local Gateway routes use Development identity; do not expose them publicly.
 
 To try chat, send `POST /chat` to Gateway with `{"sessionId":null,"userMessage":"Hello","agentId":null}`. This consumes model usage. With no default agent, chat runs without tools. To use tools, create an agent through `/admin/agents` with `name`, `instructions`, `mcpServerEndpoint` (for example `http://localhost:5255/mcp`), `isDefault`, and optional `enabledTools`. A missing or empty tool allowlist currently exposes all discovered tools; explicitly choose names when restricting tools.
 
@@ -159,7 +178,7 @@ Document upload/search/ask examples and current routes are in [architecture](arc
 | AAC endpoint validation at startup | The service must run in Development to load user-secrets. An enabled endpoint must be an HTTPS service root, without credentials, query, or fragment. |
 | Cosmos startup failure | Endpoint syntax, Azure CLI tenant, `myaiagent-test`, and test-container data-plane permissions. |
 | AAC 403 | The signed-in identity needs App Configuration data access; wait for new grants to propagate. |
-| Downstream 401/403 | Gateway's active service key must match a configured active/rotation key in the target service. |
+| Downstream 401/403 | Each caller's active service key must match a target active/rotation key. For MCP check both Gateway and Orchestrator user-secrets and the exact trusted origin. |
 | KernelMemory configuration error | Both provider endpoints/keys, deployment compatibility, distinct service keys, and `DocumentStorageType`. |
 | Port already in use | Stop the previous AppHost/debug session; remove stale `Urls` overrides. |
 | Healthy processes but requests fail | Liveness does not check provider credentials, model quota, Cosmos access, or Google configuration. |

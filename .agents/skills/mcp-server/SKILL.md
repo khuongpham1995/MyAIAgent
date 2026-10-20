@@ -14,9 +14,11 @@ description: >
 
 `Program.cs` wires Streamable HTTP transport:
 - `AddMcpServer().WithHttpTransport().WithToolsFromAssembly()` — scans for `[McpServerTool]` methods
-- `app.MapMcp("/mcp")` — maps the primary routes; `app.MapMcp()` also retains the original root endpoint. Both inherit the shared endpoint authorization filter.
+- `app.MapMcp("/mcp")` — maps the primary routes; `app.MapMcp()` also retains the original root endpoint. Both are protected by service-key authorization middleware before protocol dispatch, including unsupported transport methods. Health endpoints remain anonymous.
 
-The checked-in startup configures HTTP only. Stdio would require a separate transport change.
+The checked-in startup configures HTTP only. Stdio would require a separate transport change. Service authorization is enabled by default and cannot be disabled outside Development; active and rotation keys are required when enabled.
+
+Gateway and Orchestrator use factory-managed clients with `McpServiceKeyHandler`. The key is scoped to the exact configured `McpServer:BaseUrl` origin and the root or `/mcp` paths. Production requires HTTPS; local Development permits loopback HTTP. Redirects and cookies are disabled. Trusted calls use Streamable HTTP explicitly; external agent endpoints remain anonymous and retain transport auto-detection. Authentication rejection must not silently fall back to chat without tools.
 
 ## Project Structure
 

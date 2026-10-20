@@ -31,7 +31,8 @@ function fixture(responses: { status: number; body?: string }[]) {
 test('smoke checks readiness, anonymous rejection and authenticated success with bounded retries', async () => {
   // Arrange
   const context = fixture([{ status: 503 }, { status: 200 }, { status: 401 },
-    { status: 503 }, { status: 200, body: '{"isSuccess":true}' }]);
+    { status: 503 }, { status: 200, body: '{"isSuccess":true}' },
+    { status: 200, body: '{"isSuccess":true}' }]);
 
   // Act
   await smokeTest(['gateway.example.test', 'audience'], context);
@@ -42,7 +43,20 @@ test('smoke checks readiness, anonymous rejection and authenticated success with
   assert.equal(context.calls[0].url, 'https://gateway.example.test/health/ready');
   assert.equal(context.calls[2].options.headers, undefined);
   assert.deepEqual(context.calls[3].options.headers, { Authorization: `Bearer ${context.token}` });
+  assert.equal(context.calls.at(-1)?.url, 'https://gateway.example.test/admin/tools');
+  assert.deepEqual(context.calls.at(-1)?.options.headers, { Authorization: `Bearer ${context.token}` });
   assert.ok(context.calls.every(call => call.options.redirect === 'error' && call.options.signal instanceof AbortSignal));
+});
+
+test('MCP discovery must succeed even after authenticated agent listing passes', async () => {
+  // Arrange
+  const context = fixture([{ status: 200 }, { status: 401 }, { status: 200, body: '{"isSuccess":true}' },
+    ...Array.from({ length: 30 }, () => ({ status: 200, body: '{"isSuccess":false}' }))]);
+
+  // Act & Assert
+  await assert.rejects(smokeTest(['gateway.example.test', 'audience'], context), /failed for \/admin\/tools/);
+  assert.equal(context.calls.length, 33);
+  assert.equal(context.delays.length, 29);
 });
 
 test('anonymous admin success fails before requesting a token', async () => {

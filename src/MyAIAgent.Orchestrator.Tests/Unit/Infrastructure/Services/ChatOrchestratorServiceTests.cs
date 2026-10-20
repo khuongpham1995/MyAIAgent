@@ -22,6 +22,56 @@ namespace MyAIAgent.Orchestrator.Tests.Unit.Infrastructure.Services;
 
 public sealed class ChatOrchestratorServiceTests
 {
+    [Theory]
+    [InlineData(401)]
+    [InlineData(403)]
+    public async Task ChatAsync_WhenMcpAuthenticationFails_ShouldReturnSafeFailureWithoutCallingModel(int status)
+    {
+        // Arrange
+        var client = new Mock<IChatClient>();
+        var repository = new Mock<IAgentRepository>();
+        var helper = new Mock<IAgentHelper>();
+        var agent = new AgentDefinition();
+        repository.Setup(r => r.FindDefaultAsync(It.IsAny<CancellationToken>())).ReturnsAsync(agent);
+        helper.Setup(h => h.GetAgentToolsAsync(agent, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("MCP service authentication failed.", null, (System.Net.HttpStatusCode)status));
+        var service = BuildService(client, repository, helper);
+
+        // Act
+        var result = await service.ChatAsync(new ChatRequest("Hi", []), CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("AI service temporarily unavailable.");
+        client.Invocations.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(401)]
+    [InlineData(403)]
+    public async Task StreamChatAsync_WhenMcpAuthenticationFails_ShouldPropagateBeforeCallingModel(int status)
+    {
+        // Arrange
+        var client = new Mock<IChatClient>();
+        var repository = new Mock<IAgentRepository>();
+        var helper = new Mock<IAgentHelper>();
+        var agent = new AgentDefinition();
+        repository.Setup(r => r.FindDefaultAsync(It.IsAny<CancellationToken>())).ReturnsAsync(agent);
+        helper.Setup(h => h.GetAgentToolsAsync(agent, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("MCP service authentication failed.", null, (System.Net.HttpStatusCode)status));
+        var service = BuildService(client, repository, helper);
+
+        // Act
+        var action = async () =>
+        {
+            await foreach (var _ in service.StreamChatAsync(new ChatRequest("Hi", []), CancellationToken.None)) { }
+        };
+
+        // Assert
+        await action.Should().ThrowAsync<HttpRequestException>();
+        client.Invocations.Should().BeEmpty();
+    }
+
     private static ChatOrchestratorService BuildService(
         Mock<IChatClient>? chatClient = null,
         Mock<IAgentRepository>? agentRepo = null,

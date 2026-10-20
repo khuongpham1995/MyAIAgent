@@ -30,26 +30,29 @@ public sealed class HttpAuthEndpointFilter(
         return model;
     }
 
-    public async ValueTask<object?> InvokeAsync(
-        EndpointFilterInvocationContext context,
-        EndpointFilterDelegate next)
+    public IResult? Authorize(HttpContext context)
     {
         if (!config.Enabled)
-            return await next(context);
+            return null;
 
-        if (!context.HttpContext.Request.Headers.TryGetValue(config.HttpHeaderName, out var apiKey))
+        if (!context.Request.Headers.TryGetValue(config.HttpHeaderName, out var apiKey))
         {
-            logger.LogWarning("Missing API key header on {Path}", context.HttpContext.Request.Path);
+            logger.LogWarning("Missing API key header on {Path}", context.Request.Path);
             return Results.Problem(detail: "Missing API key HTTP header", statusCode: 401);
         }
 
         if (config.AccessKey1.Equals(apiKey, StringComparison.Ordinal)
             || config.AccessKey2.Equals(apiKey, StringComparison.Ordinal))
         {
-            return await next(context);
+            return null;
         }
 
-        logger.LogWarning("Invalid API key on {Path}", context.HttpContext.Request.Path);
+        logger.LogWarning("Invalid API key on {Path}", context.Request.Path);
         return Results.Problem(detail: "Invalid API key", statusCode: 403);
     }
+
+    public async ValueTask<object?> InvokeAsync(
+        EndpointFilterInvocationContext context,
+        EndpointFilterDelegate next) =>
+        Authorize(context.HttpContext) is { } rejection ? rejection : await next(context);
 }

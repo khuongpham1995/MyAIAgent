@@ -46,7 +46,9 @@ files for current versions; do not copy package versions from examples.
 Gateway forwards chat/agent administration to Orchestrator, document uploads to
 KernelMemory, and tool discovery to McpServer. Orchestrator dispatches tools through
 the agent-configured MCP endpoint; direct KernelMemory retrieval during chat is not
-yet implemented. McpServer does not call KernelMemory. Aspire wires project references
+yet implemented. McpServer does not call KernelMemory. MCP requires service-key authorization outside Development. Gateway and Orchestrator send its key only to the configured trusted MCP origin and protocol paths; never put the key on arbitrary agent-provided endpoints.
+
+Aspire wires project references
 in `src/MyAIAgent.All/`; current HTTP clients still read explicit base-URL settings.
 
 ## Tests that matter

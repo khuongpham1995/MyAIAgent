@@ -77,7 +77,7 @@ dotnet run --project src/MyAIAgent.All --launch-profile https
 
 - No frontend, public visitor-token issuer, or automatic Orchestrator-to-KernelMemory retrieval is included.
 - The wired KernelMemory providers require Azure OpenAI and Azure AI Search; an OpenAI-only Orchestrator configuration does not replace those dependencies.
-- MCP authentication is disabled by default and current MCP clients do not send a service key. Deployment relies on internal ingress for this service; review that boundary before production use.
+- MCP uses service-key authentication with trusted-origin credential forwarding and internal HTTPS ingress in deployment. Shared keys do not identify individual callers or enforce tool-specific permissions; arbitrary external MCP destinations still require a separate trust and egress policy.
 - Health endpoints report process liveness, not the health of every Azure dependency.
 - Search and Blob integrations use provider keys. Public API rate limits are process-local and require further design for multiple replicas.
 - CI/CD definitions and passing local tests are not evidence that production deployment has been exercised. Azure usage can incur charges.

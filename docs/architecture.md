@@ -40,7 +40,7 @@ sequenceDiagram
     G->>G: Resolve caller identity and validate input
     G->>O: Forward request with service key
     O->>DB: Load owned session and agent definition
-    O->>T: Discover tools for configured agent
+    O->>T: Discover tools (service key only for trusted MCP)
     O->>M: Instructions, history, user message, tools
     opt Model requests a tool
         M->>T: Invoke tool through retained MCP client
@@ -101,7 +101,7 @@ AAC is inserted after appsettings files and before local overrides. Development 
 
 Aspire `.WithReference(...)` supplies service metadata, but the current typed clients read explicit `BaseUrl` settings. Agent tool discovery reads `AgentDefinition.McpServerEndpoint`. The [local guide](local-development.md) therefore sets addresses matching the service launch profiles.
 
-Outside Development, Gateway uses Entra role policies for its normal chat/admin surfaces. The optional public API validates a different visitor JWT and derives its own owner identity. Orchestrator trusts caller-supplied user IDs behind a shared service key. MCP's default authorization gap and provider-key boundaries are detailed in [security](security.md).
+Outside Development, Gateway uses Entra role policies for its normal chat/admin surfaces. The optional public API validates a different visitor JWT and derives its own owner identity. Orchestrator trusts caller-supplied user IDs behind a shared service key. MCP requires its service key by default, and both callers attach it only to its configured trusted origin and protocol paths. Other stored MCP endpoints remain anonymous. Authentication rejection during discovery stops the chat before model invocation instead of silently dropping tools. Credential scope, rotation, and provider-key boundaries are detailed in [security](security.md).
 
 ## What the tests establish
 

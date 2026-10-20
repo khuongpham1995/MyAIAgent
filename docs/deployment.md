@@ -8,7 +8,7 @@ Registry, deployed to staging, tested, and then promoted by digest to production
 The production job uses a protected GitHub Environment. A manual CD run with a
 previously built commit SHA redeploys that release and is the rollback path.
 
-For local deployment, install Node.js 20.6+ and run `npm ci --ignore-scripts` before running `npm run deploy:aca -- staging <gateway-image> <orchestrator-image> <kernel-memory-image> <mcp-image>`. CI/CD installs these locked tools automatically. The deployment command writes the validated gateway hostname to `GITHUB_OUTPUT` when running in Actions. Use `npm run deploy:smoke -- <gateway-fqdn> <Entra-audience>` for HTTPS readiness and authorization checks; it allows 30 attempts per retry phase, a 10-second delay, and 10/30-second request timeouts. Authenticated responses must contain `isSuccess: true` within a 1 MiB JSON body. Redirects are rejected so a service token cannot be forwarded. Azure deployment calls have a 30-minute timeout; token retrieval has a 30-second timeout.
+For local deployment, install Node.js 20.6+ and run `npm ci --ignore-scripts` before running `npm run deploy:aca -- staging <gateway-image> <orchestrator-image> <kernel-memory-image> <mcp-image>`. CI/CD installs these locked tools automatically. The deployment command writes the validated gateway hostname to `GITHUB_OUTPUT` when running in Actions. Use `npm run deploy:smoke -- <gateway-fqdn> <Entra-audience>` for HTTPS readiness and authorization checks; it allows 30 attempts per retry phase, a 10-second delay, and 10/30-second request timeouts. The authenticated phases check both `/admin/agents` and `/admin/tools`; tool discovery performs no model or Google call. Authenticated responses must contain `isSuccess: true` within a 1 MiB JSON body. Redirects are rejected so a service token cannot be forwarded. Azure deployment calls have a 30-minute timeout; token retrieval has a 30-second timeout.
 
 ## Bootstrap
 
@@ -29,6 +29,8 @@ Bootstrap requires an Azure identity allowed to create resources and role assign
    | `kernel-memory-key` | Gateway, KernelMemory |
    | `kernel-memory-rotation-key` | KernelMemory |
    | `google-search-key` | McpServer |
+   | `mcp-key` | Gateway, Orchestrator, McpServer |
+   | `mcp-rotation-key` | McpServer |
 
    Active and rotation keys must differ. The optional public-chat signing secret must also exist before granting its access. **Do not create `cosmos-connection` or an AAC connection-string secret**; those services use identities.
 6. Deploy `infra/access.bicep` in each application resource group **after the secrets exist**. Supply `stage`, the foundation `identityNames` object, `vaultName`, `registryName`/`registryResourceGroup`, `appConfigurationName`/`appConfigurationResourceGroup`, `cosmosAccountName`/`cosmosResourceGroup`, and optional `publicChatJwtVaultEntry`. It grants each service only its listed secrets, registry pull, AAC read, and required Cosmos containers in the environment database. Resource groups may differ but must be in the current subscription. Allow time for RBAC propagation before starting applications.
@@ -113,18 +115,16 @@ Only Gateway has external ingress. Orchestrator, KernelMemory and MCP are
 reachable only inside the Container Apps environment. The Orchestrator trusts the
 user id it is given, so it requires the shared service key (`ServiceAuthorization`)
 and refuses to start in production without it; Gateway sends the key. KernelMemory
-keeps its API-key filter enabled and Gateway sends that key too. MCP's internal API
-filter is still disabled. Restrict network access to the Container Apps environment and review
-service-to-service authentication before adding more callers.
+keeps its API-key filter enabled and Gateway sends that key too. MCP authorization is enabled by default and required outside Development. Gateway and Orchestrator send its active service key only to the configured MCP origin and protocol paths. Both use `https://myaiagent-<stage>-mcpserver.internal.<environment-default-domain>`; automatic redirects are disabled. Provision both MCP secrets and their scoped grants before deploying this revision. Existing callers without the key will be rejected. Restrict network access to the Container Apps environment and review service-to-service authorization before adding more callers.
 The MCP page fetcher accepts only public HTTP(S) destinations on standard ports,
 checks each redirect, and limits a page response to 1 MiB. Outbound DNS and
 network policy should also deny access to private and metadata endpoints.
 
 The readiness endpoints currently indicate that the ASP.NET process has
 started. They do not query Azure OpenAI, Cosmos DB, Blob Storage, or Google.
-The staging smoke test exercises a real gateway-to-Orchestrator request. Add
+The staging smoke test exercises real Gateway-to-Orchestrator and Gateway-to-MCP discovery requests. Add
 dependency-specific diagnostics if those services become operationally critical.
 Existing persisted agents with localhost MCP endpoints must be updated to the
-internal `http://myaiagent-<stage>-mcpserver` address before those tools can run in ACA.
+internal HTTPS MCP address configured as `McpServer:BaseUrl` (with optional `/mcp`) before those tools can run in ACA.
 Validate document upload size and request duration against ACA ingress limits in
 staging before enabling large uploads.
