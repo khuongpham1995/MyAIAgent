@@ -167,6 +167,8 @@ Gateway, Orchestrator, and MCP have matching `http`/`https` profiles that set bo
 
 Use the dashboard's displayed endpoints if local settings differ. Check `/health/live` on each service, then `GET http://localhost:5200/admin/agents`; the latter exercises Gateway forwarding, the Orchestrator key, and Cosmos. Also check `GET http://localhost:5200/admin/tools` to verify Gateway-to-MCP authentication and discovery without invoking a model or Google search. A successful envelope has `isSuccess: true`. Local Gateway routes use Development identity; do not expose them publicly.
 
+Gateway's interactive API documentation is available at `/scalar/` on its HTTP or HTTPS endpoint. It selects the `kyle-ai-agent` OpenAPI document by default.
+
 To try chat, send `POST /chat` to Gateway with `{"sessionId":null,"userMessage":"Hello","agentId":null}`. This consumes model usage. With no default agent, chat runs without tools. To use tools, create an agent through `/admin/agents` with `name`, `instructions`, `mcpServerEndpoint` (for example `http://localhost:5255/mcp`), `isDefault`, and optional `enabledTools`. A missing or empty tool allowlist currently exposes all discovered tools; explicitly choose names when restricting tools.
 
 Document upload/search/ask examples and current routes are in [architecture](architecture.md). Public visitor authentication requires the additional setup in [public-chat-api.md](public-chat-api.md).
@@ -182,6 +184,19 @@ Document upload/search/ask examples and current routes are in [architecture](arc
 | KernelMemory configuration error | Both provider endpoints/keys, deployment compatibility, distinct service keys, and `DocumentStorageType`. |
 | Port already in use | Stop the previous AppHost/debug session; remove stale `Urls` overrides. |
 | Healthy processes but requests fail | Liveness does not check provider credentials, model quota, Cosmos access, or Google configuration. |
+
+### Playwright HTTPS certificate trust
+
+The browser and Playwright's Node HTTP client can use different certificate stores. If `.NET` reports a trusted development certificate but Playwright API requests fail with a self-signed certificate error, export the public certificate and supply it to the Node process that starts Playwright:
+
+```bash
+dotnet dev-certs https --check --trust
+mkdir -p artifacts/certs
+dotnet dev-certs https --export-path "$PWD/artifacts/certs/localhost.pem" --format Pem
+export NODE_EXTRA_CA_CERTS="$PWD/artifacts/certs/localhost.pem"
+```
+
+Run these commands from the repository root. Omitting `--password` and `--no-password` exports only the public certificate. The output stays in the ignored `artifacts/` directory. Start or restart Playwright from this shell so Node reads `NODE_EXTRA_CA_CERTS` at process startup; an already running IDE or MCP server does not inherit a later shell export. Re-export after replacing the development certificate. Keep certificate validation enabled; do not use `ignoreHTTPSErrors` or `NODE_TLS_REJECT_UNAUTHORIZED=0` as a substitute for trust.
 
 ## Optional live Cosmos tests
 

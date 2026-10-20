@@ -68,6 +68,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference(options =>
     {
         options.Title = "Kyle's AI Agent";
+        options.AddDocument("kyle-ai-agent", isDefault: true);
         options.WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
     });
 }
