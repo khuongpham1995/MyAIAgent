@@ -16,6 +16,21 @@ public static class McpHttpClientExtension
         builder.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             AllowAutoRedirect = false,
-            UseCookies = false
-        }).AddHttpMessageHandler(() => new McpServiceKeyHandler(settings));
+            UseCookies = false,
+            UseProxy = false,
+            ConnectCallback = (context, cancellationToken) => new OutboundConnectionPolicy()
+                .ConnectAsync(context.DnsEndPoint, settings.IsAllowedServiceAddress, cancellationToken)
+        }).AddHttpMessageHandler(() => new OutboundRequestHandler(settings.IsTrustedEndpoint))
+          .AddHttpMessageHandler(() => new McpServiceKeyHandler(settings));
+
+    public static IHttpClientBuilder AddExternalMcpPolicy(
+        this IHttpClientBuilder builder, McpServiceClientSettings settings) =>
+        builder.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            AllowAutoRedirect = false,
+            UseCookies = false,
+            UseProxy = false,
+            ConnectCallback = (context, cancellationToken) => new OutboundConnectionPolicy()
+                .ConnectAsync(context.DnsEndPoint, OutboundAddressPolicy.IsPublicAddress, cancellationToken)
+        }).AddHttpMessageHandler(() => new OutboundRequestHandler(settings.IsAllowedExternalEndpoint, anonymous: true));
 }

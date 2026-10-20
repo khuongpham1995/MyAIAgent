@@ -36,6 +36,9 @@ public static class IoCExtension
             throw new InvalidOperationException("ServiceAuthorization:Enabled must be true outside Development.");
 
         var mcpSettings = McpServiceClientSettings.Load(configuration, isDevelopment);
+        services.AddSingleton(mcpSettings);
+        services.AddHttpClient(AgentHelper.ExternalClientName, client => client.Timeout = TimeSpan.FromSeconds(60))
+            .AddExternalMcpPolicy(mcpSettings);
         // Tool invocations may have side effects, so the MCP transport deliberately has no retry policy.
         services.AddHttpClient<IAgentHelper, AgentHelper>(client =>
         {

@@ -7,6 +7,9 @@
 using FluentAssertions;
 using FluentValidation;
 using MediatR;
+using Microsoft.Extensions.Configuration;
+using MyAIAgent.Common.Infrastructure.Http;
+using MyAIAgent.Orchestrator.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -121,6 +124,9 @@ public sealed class CreateAgentHandlerTests
         services.AddSingleton(new Mock<IChatSessionRepository>().Object);
         services.AddSingleton(new Mock<IUnitOfWork>().Object);
         services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<IMcpEndpointPolicy>(new McpEndpointPolicy(McpServiceClientSettings.Load(
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            { ["McpServer:BaseUrl"] = "http://localhost:5255" }).Build(), true)));
 
         var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
@@ -147,6 +153,9 @@ public sealed class CreateAgentHandlerTests
         services.AddSingleton(new Mock<IChatSessionRepository>().Object);
         services.AddSingleton(new Mock<IUnitOfWork>().Object);
         services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<IMcpEndpointPolicy>(new McpEndpointPolicy(McpServiceClientSettings.Load(
+            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            { ["McpServer:BaseUrl"] = "http://localhost:5255" }).Build(), true)));
 
         var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();

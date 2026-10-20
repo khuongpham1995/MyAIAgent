@@ -31,6 +31,7 @@ public sealed class IoCExtensionTests
                 ["ServiceAuthorization:Enabled"] = serviceAuthorizationEnabled?.ToString(),
                 ["McpServer:BaseUrl"] = "https://mcp.test",
                 ["McpServer:AccessKey"] = mcpKey,
+                ["McpServer:AllowedExternalOrigins:0"] = "https://external.example",
             })
             .Build();
 
@@ -80,6 +81,7 @@ public sealed class IoCExtensionTests
         var services = new ServiceCollection();
         services.AddInfrastructure(Config(true), isDevelopment: false);
         services.AddHttpClient<IAgentHelper, AgentHelper>().ConfigurePrimaryHttpMessageHandler(() => handler);
+        services.AddHttpClient(AgentHelper.ExternalClientName).ConfigurePrimaryHttpMessageHandler(() => handler);
         using var provider = services.BuildServiceProvider();
         var helper = provider.GetRequiredService<IAgentHelper>();
 

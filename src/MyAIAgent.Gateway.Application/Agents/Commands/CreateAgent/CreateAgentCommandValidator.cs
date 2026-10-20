@@ -20,8 +20,9 @@ public sealed class CreateAgentCommandValidator : AbstractValidator<CreateAgentC
             .NotEmpty().WithMessage("Agent instructions are required.");
 
         RuleFor(x => x.McpServerEndpoint)
-            .Must(v => Uri.TryCreate(v, UriKind.Absolute, out _))
-            .WithMessage("MCP server endpoint must be a valid absolute URI when provided.")
+            .Must(v => Uri.TryCreate(v, UriKind.Absolute, out var uri)
+                && uri.Scheme is "http" or "https" && uri.UserInfo.Length == 0 && uri.Fragment.Length == 0)
+            .WithMessage("MCP server endpoint must be an HTTP or HTTPS URI without credentials or a fragment when provided.")
             .When(x => !string.IsNullOrEmpty(x.McpServerEndpoint));
     }
 }

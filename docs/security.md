@@ -36,7 +36,21 @@ MCP authorization is enabled by default and cannot be disabled outside Developme
 
 Gateway and Orchestrator require `McpServer:AccessKey` outside Development. The shared HTTP handler adds it only to the exact trusted `McpServer:BaseUrl` origin and the root or /mcp protocol paths (including /mcp/), with no credentials, query, or fragment in the URL. Redirects and cookies are disabled. Production origins require HTTPS; Development also permits loopback HTTP. Deployment uses the internal HTTPS FQDN, not a redirect from the short HTTP name. An agent-controlled external MCP endpoint does not receive this key. HTTP authentication failures propagate to safe chat errors instead of an apparently successful turn without tools.
 
-This is service authentication, not per-caller identity or per-tool authorization. Other agent-provided MCP URLs remain an existing outbound trust/SSRF concern; no general external-MCP allowlist is introduced here. Keep agent administration restricted and enforce an egress policy before trusting arbitrary servers.
+This is service authentication, not per-caller identity or per-tool authorization. Keep agent administration restricted; an approved MCP server still supplies untrusted tool descriptions and results.
+
+## Outbound destination policy
+
+Orchestrator permits agent endpoints on the configured first-party MCP service or origins explicitly listed in `McpServer:AllowedExternalOrigins`. The external list defaults to empty. Each entry is an HTTPS origin (scheme, host, and effective port), with no credentials, wildcard, path beyond `/`, query, or fragment. Explicit nonstandard HTTPS ports are supported. Paths and protocol queries on approved external origins are permitted; endpoint fragments and URL user information are rejected. Configuration is validated at startup and captured until restart.
+
+First-party and external MCP traffic use separate factory-managed clients. The first-party client permits only the configured origin and protocol paths. The external client is anonymous and cannot use the first-party client or its key, including when a legacy SSE server advertises another message URL. Every SDK-generated request must satisfy its client's destination policy. Proxies, automatic redirects, cookies, and default credentials are not used. HTTP/1.1 is selected explicitly so every connection passes through the checked TCP connection callback.
+
+The shared connection policy resolves each new connection once, rejects the entire DNS answer if any address is prohibited, and connects directly to the validated addresses. TLS still validates the original hostname. Public connections exclude IANA special-purpose address blocks (conservatively including globally reachable special-purpose assignments), IPv6 addresses outside `2000::/3`, scoped IPv6, and Azure's `168.63.129.16` platform address. IPv4-mapped IPv6 addresses are classified as IPv4. Failed or empty DNS answers do not bypass validation. This range table requires maintenance as address assignments change.
+
+Only the configured first-party service may use RFC1918 or IPv6 unique-local destinations. Development also permits loopback when the configured first-party origin is itself loopback. There is no general Development bypass: external MCP and page-fetch destinations must remain public. Link-local, metadata, and other special-purpose addresses remain prohibited even for the first-party service, including the unique-local metadata addresses `fd00:ec2::254` (AWS) and `fd20:ce::254` (Google Cloud).
+
+Agent creation checks endpoint permissions without DNS or HTTP requests. Existing stored endpoints are checked again before use; unapproved agents are not automatically rewritten. A destination-policy denial during discovery produces a safe chat failure before model invocation or turn persistence. Denial logs use agent identifiers and bounded reasons rather than URLs, queries, or resolved addresses. Cancellation remains propagated.
+
+Page fetching shares the address classifier and connection checks while retaining public HTTP/HTTPS on default ports, validated redirects, no HTTPS downgrade, five redirects, and a 1 MiB response limit. Policy denials are not retried. Transient failures retain the bounded retry policy. Network-level egress controls remain complementary protection; an application allowlist does not establish the trustworthiness of an approved server.
 
 ## Repository controls
 
@@ -70,6 +84,11 @@ Key Vault purge protection and audit diagnostics are configured in foundation in
 
 ## References
 
+- [IANA IPv4 special-purpose addresses](https://www.iana.org/assignments/iana-ipv4-special-registry/)
+- [IANA IPv6 special-purpose addresses](https://www.iana.org/assignments/iana-ipv6-special-registry/)
+- [Azure platform address 168.63.129.16](https://learn.microsoft.com/en-us/azure/virtual-network/what-is-ip-address-168-63-129-16)
+- [AWS instance metadata endpoints](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html)
+- [Google Cloud metadata endpoints](https://cloud.google.com/compute/docs/metadata/querying-metadata)
 - [Secure Azure App Configuration](https://learn.microsoft.com/azure/azure-app-configuration/secure-azure-app-configuration)
 - [Cosmos identity-based access](https://learn.microsoft.com/azure/cosmos-db/nosql/how-to-connect-role-based-access-control)
 - [Secure Key Vault](https://learn.microsoft.com/azure/key-vault/general/secure-key-vault)

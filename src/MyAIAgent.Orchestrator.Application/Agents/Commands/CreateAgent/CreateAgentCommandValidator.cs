@@ -5,12 +5,13 @@
  */
 
 using FluentValidation;
+using MyAIAgent.Orchestrator.Application.Common.Interfaces;
 
 namespace MyAIAgent.Orchestrator.Application.Agents.Commands.CreateAgent;
 
 public sealed class CreateAgentCommandValidator : AbstractValidator<CreateAgentCommand>
 {
-    public CreateAgentCommandValidator()
+    public CreateAgentCommandValidator(IMcpEndpointPolicy endpointPolicy)
     {
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Agent name is required.")
@@ -18,7 +19,7 @@ public sealed class CreateAgentCommandValidator : AbstractValidator<CreateAgentC
         RuleFor(x => x.Instructions)
             .NotEmpty().WithMessage("Agent instructions are required.");
         RuleFor(x => x.McpServerEndpoint)
-            .Must(v => string.IsNullOrEmpty(v) || Uri.TryCreate(v, UriKind.Absolute, out _))
-            .WithMessage("MCP server endpoint must be a valid absolute URI when provided.");
+            .Must(endpointPolicy.IsAllowed)
+            .WithMessage("MCP server endpoint must use the configured service or an approved public HTTPS origin.");
     }
 }

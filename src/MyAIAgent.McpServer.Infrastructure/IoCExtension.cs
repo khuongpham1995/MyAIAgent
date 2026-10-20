@@ -10,6 +10,7 @@ using MyAIAgent.Common.Application.Extensions;
 using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.Common.Infrastructure.Extensions;
 using MyAIAgent.Common.Infrastructure.Filters;
+using MyAIAgent.Common.Infrastructure.Http;
 using MyAIAgent.McpServer.Application.Common.Interfaces;
 using MyAIAgent.McpServer.Infrastructure.Services;
 
@@ -52,7 +53,9 @@ public static class IoCExtension
             AllowAutoRedirect = false,
             UseProxy = false,
             UseCookies = false,
-            ConnectCallback = PublicPageAddressPolicy.ConnectAsync
-        }).AddHttpRetryPolicy();
+            ConnectCallback = (context, cancellationToken) => new OutboundConnectionPolicy()
+                .ConnectAsync(context.DnsEndPoint, OutboundAddressPolicy.IsPublicAddress, cancellationToken)
+        }).AddHttpMessageHandler(() => new OutboundRequestHandler(PublicPageAddressPolicy.IsAllowedUri, rejectRedirects: false))
+          .AddHttpRetryPolicy(excludeBlockedDestinations: true);
     }
 }

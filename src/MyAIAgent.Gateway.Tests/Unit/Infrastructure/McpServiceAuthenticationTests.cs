@@ -97,6 +97,13 @@ public sealed class McpServiceAuthenticationTests
         client.DefaultRequestHeaders.Add("Authorization", "must-not-leak");
 
         // Act
+        if (!trusted)
+        {
+            var action = () => client.GetAsync(endpoint);
+            await action.Should().ThrowAsync<OutboundDestinationBlockedException>();
+            capture.RequestCount.Should().Be(0);
+            return;
+        }
         using var response = await client.GetAsync(endpoint);
 
         // Assert
@@ -164,10 +171,10 @@ public sealed class McpServiceAuthenticationTests
         using var client = provider.GetRequiredService<IHttpClientFactory>().CreateClient("mcp");
 
         // Act
-        using var response = await client.GetAsync(new Uri(settings.Origin, "/mcp"));
+        var action = () => client.GetAsync(new Uri(settings.Origin, "/mcp"));
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Found);
+        await action.Should().ThrowAsync<OutboundDestinationBlockedException>();
         sourceKey.Should().Be(Key);
         sinkRequests.Should().Be(0);
     }

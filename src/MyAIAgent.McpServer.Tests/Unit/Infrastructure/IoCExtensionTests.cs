@@ -10,11 +10,44 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MyAIAgent.McpServer.Infrastructure;
+using MyAIAgent.McpServer.Application.Common.Interfaces;
+using MyAIAgent.McpServer.Infrastructure.Services;
+using MyAIAgent.Common.Infrastructure.Http;
 
 namespace MyAIAgent.McpServer.Tests.Unit.Infrastructure;
 
 public sealed class IoCExtensionTests
 {
+    [Fact]
+    public async Task GetContentAsync_WhenDnsPolicyRejects_ShouldNotRetry()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddInfrastructure(new ConfigurationBuilder().Build(), isDevelopment: true);
+        using var handler = new DeniedHandler();
+        services.AddHttpClient<IPageFetcher, PageFetcher>().ConfigurePrimaryHttpMessageHandler(() => handler);
+        using var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = await provider.GetRequiredService<IPageFetcher>().GetContentAsync("https://public.example/page");
+
+        // Assert
+        result.Success.Should().BeFalse();
+        handler.Requests.Should().Be(1);
+        result.Error.Should().Be("Failed to retrieve page content.");
+    }
+
+    private sealed class DeniedHandler : HttpMessageHandler
+    {
+        public int Requests { get; private set; }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests++;
+            throw new HttpRequestException("Connection failed", new OutboundDestinationBlockedException("dns-address"));
+        }
+    }
+
     [Theory]
     [InlineData("Production")]
     [InlineData("Staging")]

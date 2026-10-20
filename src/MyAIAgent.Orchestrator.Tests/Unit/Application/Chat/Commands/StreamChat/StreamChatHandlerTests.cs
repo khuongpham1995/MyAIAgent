@@ -13,11 +13,29 @@ using MyAIAgent.Orchestrator.Application.Chat.Commands.StreamChat;
 using MyAIAgent.Orchestrator.Application.Common.Exceptions;
 using MyAIAgent.Orchestrator.Application.Common.Interfaces;
 using MyAIAgent.Orchestrator.Domain.Entities;
+using MyAIAgent.Common.Infrastructure.Http;
 
 namespace MyAIAgent.Orchestrator.Tests.Unit.Application.Chat.Commands.StreamChat;
 
 public sealed class StreamChatHandlerTests
 {
+    [Fact]
+    public async Task Handle_WhenDestinationPolicyRejects_ShouldEmitErrorWithoutCommittingTurn()
+    {
+        // Arrange
+        orchestrator.Setup(s => s.StreamChatAsync(It.IsAny<ChatRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(() => FailBeforeAsync(new OutboundDestinationBlockedException("dns-address")));
+
+        // Act
+        var events = await CollectAsync(BuildHandler().Handle(new StreamChatCommand(null, "Hi", "visitor:a"), CancellationToken.None));
+
+        // Assert
+        events.Select(e => e.Type).Should().Equal("session", "error");
+        events[^1].Message.Should().Be("AI service temporarily unavailable.");
+        unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        sessionRepository.Verify(r => r.AddAsync(It.IsAny<ChatSession>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Theory]
     [InlineData(401)]
     [InlineData(403)]

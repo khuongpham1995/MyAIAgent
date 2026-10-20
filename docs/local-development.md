@@ -134,6 +134,8 @@ Google settings are needed only for web search, not tool discovery or the clock 
 
 Both callers scope the MCP key to the exact origin in `McpServer:BaseUrl` and the paths `/`, `/mcp`, or `/mcp/`, without a query or fragment. Set matching origins in Gateway and Orchestrator. Other agent endpoints never receive this key. Outside Development the trusted origin must use HTTPS; locally HTTP is permitted only for loopback. Redirects are not followed. Restart all affected processes after changing keys or origins.
 
+External MCP origins are blocked by default. To approve one, set an array in Orchestrator's user-secrets, for example `"McpServer:AllowedExternalOrigins": ["https://mcp.example.com:8443"]`. Entries must be HTTPS origins without credentials, paths, queries, fragments, or wildcards. External endpoints may use paths and protocol queries, but must resolve only to public addresses; local/private external servers are not allowed even in Development. The configured first-party MCP origin is the explicit exception for local Aspire and internal deployment. Existing agent endpoints must match either that service's protocol routes or an approved external origin. Restart Orchestrator after changing the list. See [security](security.md#outbound-destination-policy) for connection and DNS enforcement.
+
 ### Optional AAC
 
 To use AAC, set `AppConfiguration:Endpoint` and `AppConfiguration:Label=Development` in each consuming project's user-secrets. Leave the endpoint empty to use only local configuration. MCP also loads its per-project user-secrets; avoid setting service-specific secrets on AppHost environment variables that reach every child process.

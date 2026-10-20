@@ -17,11 +17,33 @@ using MyAIAgent.Orchestrator.Application.Common.Interfaces;
 using MyAIAgent.Orchestrator.Application.Chat;
 using MyAIAgent.Orchestrator.Infrastructure.Helpers;
 using MyAIAgent.Orchestrator.Infrastructure.Services;
+using MyAIAgent.Common.Infrastructure.Http;
 
 namespace MyAIAgent.Orchestrator.Tests.Unit.Infrastructure.Services;
 
 public sealed class ChatOrchestratorServiceTests
 {
+    [Fact]
+    public async Task ChatAsync_WhenDestinationPolicyRejects_ShouldReturnSafeFailureWithoutCallingModel()
+    {
+        // Arrange
+        var client = new Mock<IChatClient>();
+        var repository = new Mock<IAgentRepository>();
+        var helper = new Mock<IAgentHelper>();
+        var agent = new AgentDefinition();
+        repository.Setup(r => r.FindDefaultAsync(It.IsAny<CancellationToken>())).ReturnsAsync(agent);
+        helper.Setup(h => h.GetAgentToolsAsync(agent, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OutboundDestinationBlockedException("agent-endpoint"));
+
+        // Act
+        var result = await BuildService(client, repository, helper).ChatAsync(new ChatRequest("Hi", []), CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be("AI service temporarily unavailable.");
+        client.Invocations.Should().BeEmpty();
+    }
+
     [Theory]
     [InlineData(401)]
     [InlineData(403)]

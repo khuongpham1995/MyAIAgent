@@ -95,6 +95,11 @@ public sealed class PageFetcherTests
 
     [Theory]
     [InlineData("8.8.8.8", true)]
+    [InlineData("168.63.129.16", false)]
+    [InlineData("192.88.99.1", false)]
+    [InlineData("2001:db8::1", false)]
+    [InlineData("2002:a00:1::1", false)]
+    [InlineData("3fff::1", false)]
     [InlineData("127.0.0.1", false)]
     [InlineData("10.2.3.4", false)]
     [InlineData("172.16.0.1", false)]

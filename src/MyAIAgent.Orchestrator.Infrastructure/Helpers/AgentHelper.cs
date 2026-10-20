@@ -32,9 +32,12 @@ public sealed class AgentToolSet(IReadOnlyList<AITool> tools, params IAsyncDispo
     }
 }
 
-public sealed class AgentHelper(HttpClient httpClient, ILogger<AgentHelper> logger)
+public sealed class AgentHelper(HttpClient httpClient, ILogger<AgentHelper> logger,
+    McpServiceClientSettings settings, IHttpClientFactory clientFactory)
     : IAgentHelper
 {
+    public const string ExternalClientName = "external-mcp";
+
     public async Task<AgentToolSet> GetAgentToolsAsync(AgentDefinition agent, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(agent.McpServerEndpoint))
@@ -42,19 +45,22 @@ public sealed class AgentHelper(HttpClient httpClient, ILogger<AgentHelper> logg
 
         HttpClientTransport? transport = null;
         McpClient? mcpClient = null;
+        HttpClient? externalClient = null;
 
         try
         {
+            if (!settings.IsAllowedEndpoint(agent.McpServerEndpoint))
+                throw new OutboundDestinationBlockedException("agent-endpoint");
             var endpoint = new Uri(agent.McpServerEndpoint);
-            // The registered base address is trusted; other agent endpoints retain anonymous transport compatibility.
-            var isTrusted = httpClient.BaseAddress is { } origin
-                && McpServiceClientSettings.IsTrustedEndpoint(origin, endpoint);
+            var isTrusted = settings.IsTrustedEndpoint(endpoint);
+            if (!isTrusted)
+                externalClient = clientFactory.CreateClient(ExternalClientName);
             transport = new HttpClientTransport(
                 new HttpClientTransportOptions
                 {
                     Endpoint = endpoint,
                     TransportMode = isTrusted ? HttpTransportMode.StreamableHttp : HttpTransportMode.AutoDetect
-                }, httpClient);
+                }, externalClient ?? httpClient);
             mcpClient = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
             var mcpTools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
 
@@ -67,33 +73,56 @@ public sealed class AgentHelper(HttpClient httpClient, ILogger<AgentHelper> logg
                 ? mcpTools
                 : mcpTools.Where(t => enabledNames.Contains(t.Name));
 
-            return new AgentToolSet([.. filtered.Cast<AITool>()], transport, mcpClient);
+            return externalClient is null
+                ? new AgentToolSet([.. filtered.Cast<AITool>()], transport, mcpClient)
+                : new AgentToolSet([.. filtered.Cast<AITool>()], new AsyncClientOwner(externalClient), transport, mcpClient);
         }
         catch (OperationCanceledException)
         {
             await DisposeQuietlyAsync(mcpClient);
             await DisposeQuietlyAsync(transport);
+            externalClient?.Dispose();
             throw;
+        }
+        catch (Exception ex) when (OutboundDestinationBlockedException.Find(ex) is not null)
+        {
+            await DisposeQuietlyAsync(mcpClient);
+            await DisposeQuietlyAsync(transport);
+            externalClient?.Dispose();
+            var reason = OutboundDestinationBlockedException.Find(ex)!.Reason;
+            logger.LogWarning("MCP destination rejected for agent {AgentId}: {Reason}", agent.Id, reason);
+            throw new OutboundDestinationBlockedException(reason);
         }
         catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
         {
             await DisposeQuietlyAsync(mcpClient);
             await DisposeQuietlyAsync(transport);
+            externalClient?.Dispose();
             // Chat and streaming handlers already turn HTTP failures into safe errors without committing a turn.
             throw new HttpRequestException("MCP service authentication failed.", null, ex.StatusCode);
         }
         catch (HttpRequestException ex)
         {
-            logger.LogWarning(ex, "Transient failure loading MCP tools from {Endpoint}", agent.McpServerEndpoint);
+            logger.LogWarning("MCP discovery failed for agent {AgentId}: {FailureType}", agent.Id, ex.GetType().Name);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Unexpected error loading MCP tools from {Endpoint}", agent.McpServerEndpoint);
+            logger.LogError("MCP discovery failed for agent {AgentId}: {FailureType}", agent.Id, ex.GetType().Name);
         }
 
         await DisposeQuietlyAsync(mcpClient);
         await DisposeQuietlyAsync(transport);
+        externalClient?.Dispose();
         return AgentToolSet.Empty;
+    }
+
+    private sealed class AsyncClientOwner(HttpClient client) : IAsyncDisposable
+    {
+        public ValueTask DisposeAsync()
+        {
+            client.Dispose();
+            return ValueTask.CompletedTask;
+        }
     }
 
     private static async ValueTask DisposeQuietlyAsync(IAsyncDisposable? resource)
