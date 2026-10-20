@@ -177,10 +177,8 @@ The separate services and layers add setup and project structure. They make resp
 | [Dependencies](docs/dependencies.md) | Review provider constraints, package versions, and license considerations. |
 | [Contributing](CONTRIBUTING.md) | Extend a service, maintain documentation, and run checks. |
 
-## Current limitations
+## Current scope
 
-- **Client integration:** no frontend or public visitor-token issuer is included.
-- **Provider requirements:** the wired KernelMemory providers require Azure OpenAI and Azure AI Search, even when Orchestrator uses OpenAI.
-- **Authorization:** service keys do not identify individual callers or provide tool-specific permissions. Approved MCP tool descriptions and results remain untrusted.
-- **Operations:** health endpoints establish process availability. Search and Blob still use provider keys, and public API rate limits are process-local.
-- **Deployment evidence:** CI/CD definitions and local test results do not establish that production deployment or multi-replica behavior has been exercised. Azure usage can incur charges.
+- **Backend only:** bring your own frontend and visitor-token issuer.
+- **Document retrieval:** KernelMemory runs independently; Orchestrator chat integration is future work.
+- **Deployment:** production and multi-replica operation have not yet been validated.

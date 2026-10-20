@@ -1,16 +1,10 @@
 # Public streaming chat API
 
-The gateway exposes a streaming chat API under `/public` for browser chat
-widgets served from origins you allow. Responses use
-Server-Sent Events (SSE) over `POST`. The gateway only validates JWTs; your own
-backend issues them.
-
-See [local setup](local-development.md) for service dependencies and [architecture](architecture.md) for the downstream chat flow. Public chat does not add document retrieval to Orchestrator.
+Connect a browser widget to Gateway's `/public` API using JWTs and POST-based SSE. Your backend issues tokens; Gateway validates them. Start with [local setup](local-development.md). Chat uses the [Orchestrator flow](architecture.md#a-chat-turn), without document retrieval.
 
 ## Enabling it
 
-Public chat is off until a JWT setting is configured. Partial or ambiguous
-configuration stops the gateway at startup.
+Public chat stays off until JWT configuration begins. Partial/ambiguous settings fail startup.
 
 | Setting | Required | Notes |
 | --- | --- | --- |
@@ -20,7 +14,7 @@ configuration stops the gateway at startup.
 | `PublicChat:Jwt:SigningKey` | one of these two | Shared HS256 secret, at least 32 bytes. Keep it in Key Vault or user-secrets |
 | `PublicChat:AgentId` | production | Agent every public conversation uses. Clients cannot choose the agent |
 | `PublicChat:AllowedOrigins` | yes | Origins allowed to call the API from a browser, for example `https://app.example.com`. Exact HTTPS origins only, no wildcards; there is no built-in default |
-| `PublicChat:TrustForwardedHeaders` | no | Set `true` only when the app is reachable solely through a proxy such as the Container Apps ingress. Needed so rate limits see the real client IP; when it is `false` behind a proxy, every visitor shares one IP budget. Only enable it when the gateway cannot be reached except through that proxy, because the right-most `X-Forwarded-For` entry is then trusted |
+| `PublicChat:TrustForwardedHeaders` | no | Enable only behind an exclusive trusted proxy; trusts the right-most `X-Forwarded-For`. Otherwise proxy clients share one IP budget. |
 | `PublicChat:RateLimits` | no | `IpPermitLimit` (60), `IpWindowMinutes` (10), `VisitorBurst` (20), `VisitorReplenishSeconds` (30), `MaxConcurrentStreams` (10, per instance), `MaxConcurrentStreamsPerVisitor` (2) |
 
 Locally, set the key with user-secrets (never commit it):
@@ -32,7 +26,7 @@ dotnet user-secrets --project src/MyAIAgent.Gateway.Presentation set "PublicChat
 dotnet user-secrets --project src/MyAIAgent.Gateway.Presentation set "PublicChat:AllowedOrigins:0" "http://localhost:3000"
 ```
 
-Replace the signing-key placeholder privately; generate a cryptographically random value. The sample origin must match the browser application you run. Configure `PublicChat:AgentId` to restrict public visitors to an existing agent (required outside Development).
+Replace the signing key with a private cryptographically random value and match your browser's origin. Set `PublicChat:AgentId` to an existing agent; required outside Development.
 
 ## Token contract
 
@@ -44,10 +38,7 @@ Your backend signs one JWT per visitor and sends it as `Authorization: Bearer <j
 | `sub` | Stable visitor id, 1 to 128 characters. Conversations are owned by `visitor:<sub>` |
 | `exp` | Required. Short lifetimes such as one hour, renewed by your backend, are recommended |
 
-Tokens with another issuer or audience, an expired token, a bad signature, an
-unexpected algorithm, or a missing or overlong `sub` get `401`. Microsoft Entra
-tokens are not accepted here, and visitor tokens are not accepted by the
-Entra-protected routes.
+Invalid claims, signature, expiry, algorithm, or `sub` return `401`. Visitor JWTs and Entra tokens are not interchangeable across the two API surfaces.
 
 ## Endpoints
 
@@ -69,37 +60,32 @@ Request body (at most 2000 characters of message):
 { "sessionId": null, "userMessage": "Hello" }
 ```
 
-Leave `sessionId` out for a new conversation and reuse the id from the `session`
-event to continue one. An invalid body returns `400` as normal JSON before any
-streaming starts. After that the status is `200` and failures arrive as an `error` event.
-A `sessionId` that this visitor does not own, or that does not exist, is not an error: the request starts a
-new conversation and the `session` event carries the new id. Only the conversation routes below answer `404`.
+Omit `sessionId` for a new conversation; reuse the `session` event ID to continue. Unknown/foreign IDs also start a new conversation. For those IDs, conversation get/rename/delete return `404` instead.
 
-Events, in order (each is an SSE `event:` with a JSON `data:` payload that repeats the type):
+Invalid input returns JSON `400` before streaming. Once streaming starts, status is `200` and failures use `error` events.
+
+Each SSE `event:` has a JSON `data:` payload:
 
 | Event | Payload | Notes |
 | --- | --- | --- |
 | `session` | `{"type":"session","sessionId":"..."}` | First event, so a new conversation id is known immediately |
 | `delta` | `{"type":"delta","text":"..."}` | Zero or more reply chunks |
 | `title` | `{"type":"title","title":"..."}` | Only on the first turn of a new conversation |
-| `done` | `{"type":"done","sessionId":"..."}` | Last event. The turn was saved before `title` was sent |
-| `error` | `{"type":"error","message":"..."}` | Terminal. Nothing is saved for that turn |
+| `done` | `{"type":"done","sessionId":"..."}` | Successful terminal event; the turn is saved |
+| `error` | `{"type":"error","message":"..."}` | Failed/interrupted stream; inspect history before retrying |
 
-The `session` event is sent before the reply exists. If the stream fails with an
-`error` event, or the client disconnects before the reply finishes, nothing is saved
-and that `sessionId` does not exist: start a new conversation instead of resuming it.
-The title and the history summary are best effort. If the model is slow or fails, the
-title falls back to the start of your first message and the summary is retried on a later turn.
+- `session` precedes persistence. Provider failure before the turn save leaves no new turn; a new session may not exist yet.
+- The turn commits **before** optional title/summary work. A later disconnect or downstream truncation can therefore hide an already-saved turn. Check history before resending; missing `done` does not prove a save failed.
+- Title/summary work is best effort: title falls back to the first message; summary retries on a later turn.
+- Handle terminal `error` and EOF without `done` as unsuccessful streams, including downstream failures on HTTP `200`.
 
-Failures between the gateway and the Orchestrator arrive as an `error` event on a `200` stream.
-A visitor can hold at most two streams at once, and IPv6 clients share one budget per `/64` prefix.
-Rate limits answer `429` with a `Retry-After` header. Limits are held per gateway
-instance, so with several replicas the effective limit is the configured value
-times the replica count.
+### Rate limits
+
+Default: two streams per visitor. IPv6 budgets group clients by `/64`. Limits return `429` / `Retry-After` and are per Gateway instance; replicas multiply the effective budget. Defaults are configurable in `PublicChat:RateLimits` above.
 
 ## Browser example
 
-`EventSource` cannot send `POST` or an `Authorization` header, so read the stream with `fetch`:
+Use `fetch`; `EventSource` cannot send POST with an Authorization header. In `onEvent`, handle `error` and record `done`; treat EOF without `done` as interrupted.
 
 ```js
 async function streamChat(token, userMessage, sessionId, onEvent) {
@@ -129,11 +115,7 @@ async function streamChat(token, userMessage, sessionId, onEvent) {
 
 ## Operating notes
 
-- Visitors can write to the history, so the stored summary is replayed to the model as user content, not as a system message. Give the public agent only low-risk, read-only tools.
-- The Orchestrator trusts the `userId` it is given. It must stay on an internal ingress; consider enabling its `ServiceAuthorization` API key.
-- Conversation history keeps the last messages verbatim and folds older turns into a
-  stored summary, so long conversations stay within the model's context.
-- The same streaming and conversation routes exist for Entra callers at
-  `POST /chat/stream` and `/conversations...`, guarded by the `ChatAccess` policy.
-- Conversations live in Cosmos DB (`ChatSessions` container). Local development uses the test database, so
-  conversations you create while testing are visible to anyone else using the same test database.
+- Give public agents low-risk, read-only tools. Visitor-controlled summaries are replayed as user content; recent messages remain verbatim.
+- Keep Orchestrator internal: it trusts forwarded `userId` and requires `ServiceAuthorization` outside Development.
+- Entra callers use `POST /chat/stream` and `/conversations...` under `ChatAccess`.
+- Cosmos `ChatSessions` persists history. Others with direct access to the shared test database can read local test data.

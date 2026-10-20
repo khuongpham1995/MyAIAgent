@@ -1,23 +1,38 @@
 # Azure Container Apps delivery
 
-This guide describes the configured Azure delivery path and its prerequisites; it is not a record of a completed production deployment. For local Aspire, use [local development](local-development.md).
+Provision Azure dependencies and deliver four services to Container Apps. This describes configured automation, not a completed production deployment. For Aspire, see [local development](local-development.md).
 
-The `CI` workflow validates pull requests and pushes to `main`. A successful `main`
-run triggers `CD`: four images are built once, pushed to a shared Azure Container
-Registry, deployed to staging, tested, and then promoted by digest to production.
-The production job uses a protected GitHub Environment. A manual CD run with a
-previously built commit SHA redeploys that release and is the rollback path.
+**Checks:** PRs and `main` pushes run CI.
 
-For local deployment, install Node.js 20.6+ and run `npm ci --ignore-scripts` before running `npm run deploy:aca -- staging <gateway-image> <orchestrator-image> <kernel-memory-image> <mcp-image>`. CI/CD installs these locked tools automatically. The deployment command writes the validated gateway hostname to `GITHUB_OUTPUT` when running in Actions. Use `npm run deploy:smoke -- <gateway-fqdn> <Entra-audience>` for HTTPS readiness and authorization checks; it allows 30 attempts per retry phase, a 10-second delay, and 10/30-second request timeouts. The authenticated phases check both `/admin/agents` and `/admin/tools`; tool discovery performs no model or Google call. Authenticated responses must contain `isSuccess: true` within a 1 MiB JSON body. Redirects are rejected so a service token cannot be forwarded. Azure deployment calls have a 30-minute timeout; token retrieval has a 30-second timeout.
+**Release:** successful `main` CI → build four images once → staging + smoke tests → production approval → promote the same digests. Manual CD with a previous release SHA provides rollback.
+
+## Delivery commands
+
+Install Node.js 20.6+, then run from the repository root:
+
+```bash
+npm ci --ignore-scripts
+npm run deploy:aca -- staging <gateway-image> <orchestrator-image> <kernel-memory-image> <mcp-image>
+npm run deploy:smoke -- <gateway-fqdn> <Entra-audience>
+```
+
+CI/CD installs the same locked tools. Deployment writes the validated Gateway hostname to `GITHUB_OUTPUT` in Actions.
+
+| Smoke/deployment check | Bound |
+| --- | --- |
+| HTTPS readiness and authorization | 30 attempts per phase, 10-second delays; 10/30-second request timeouts |
+| Authenticated requests | `/admin/agents` and `/admin/tools`; `isSuccess: true`, JSON ≤ 1 MiB; no model/Google call |
+| Redirects | Rejected to prevent token forwarding |
+| Azure deployment / token retrieval | 30 minutes / 30 seconds |
 
 ## Bootstrap
 
-Bootstrap requires an Azure identity allowed to create resources and role assignments. Routine CD identities must not have role-assignment or secret-reading permissions. No Azure resources are deployed by the local quality gate.
+Use a privileged bootstrap identity for resources/role assignments. Routine CD must not read secrets or assign roles. The local quality gate deploys nothing.
 
-1. Create the shared registry with `infra/registry.bicep`. Deploy `infra/foundation.bicep` separately to staging and production resource groups. It creates the environment, logging workspace, RBAC Key Vault with purge protection/audit logs, and four service identities. Save `identityNames`, `identityPrincipalIds`, `vaultName`, `environmentName`, and `logAnalyticsWorkspaceId` from its outputs.
-2. Provision Cosmos with `infra/cosmos.bicep` in a shared data resource group. It disables account-key authentication and creates `myaiagent-test` and `myaiagent-prod`, each with 400 RU/s shared throughput. `ChatSessions` uses `/UserId`, `AgentDefinitions` uses `/Id`, and `DocumentRecords` uses `/IndexName`. These names and partition keys must match the EF model. Creating extra databases or dedicated container throughput can exceed the free-tier allowance. Partition keys cannot be changed in place; plan a migration for existing data.
-3. Provision a separate Azure App Configuration store for each environment with `infra/appconfiguration.bicep`, or harden existing stores equivalently. Supply `storeName`, `skuName`, and the foundation logging workspace ID explicitly. The template disables access keys and enables diagnostics; paid tiers also enable purge protection. **Review the selected tier and cost before deploying**; do not assume two free stores are available. Keep credentials out of AAC. Use keys such as `Gateway:PublicChat:AgentId` with the `staging` or `production` label. Labels/prefixes do not isolate permissions between environments.
-4. Provide Azure AI Search using `infra/search.bicep` and Blob Storage for KernelMemory. Search Free has 50 MB, three indexes, no SLA, and may be removed when idle. The two environments currently share this service and its admin credential. Blob configuration uses `AzureBlobs` in deployment; verify document retrieval after restarting a replica.
+1. **Foundation:** create the shared registry with `infra/registry.bicep`. Deploy `infra/foundation.bicep` per environment: Container Apps environment, logs, protected/audited RBAC vault, four identities. Save `identityNames`, `identityPrincipalIds`, `vaultName`, `environmentName`, `logAnalyticsWorkspaceId`.
+2. **Cosmos:** deploy `infra/cosmos.bicep` in the shared data group. It disables account keys and creates `myaiagent-test` / `myaiagent-prod`, each with 400 RU/s shared throughput. Match EF partitions: `ChatSessions` → `/UserId`, `AgentDefinitions` → `/Id`, `DocumentRecords` → `/IndexName`. Extra throughput/databases can exceed free-tier limits; partition changes need migration.
+3. **AAC:** deploy `infra/appconfiguration.bicep` per environment, or harden existing stores. Supply `storeName`, `skuName`, and logging workspace ID. Access keys are disabled; diagnostics enabled; paid tiers add purge protection. **Review costs; two free stores are not guaranteed.** Use nonsecret keys such as `Gateway:PublicChat:AgentId` with `staging` / `production` labels. Labels/prefixes do not isolate access.
+4. **Documents:** provide Search (`infra/search.bicep`) and Blob Storage (`AzureBlobs`). Search Free has 50 MB, three indexes, no SLA, and may be removed when idle. Both environments share Search/admin credentials. Verify retrieval after a replica restart.
 5. Populate the following secrets in each environment vault with distinct environment values where the provider supports separate keys:
 
    | Secret | Consumers |
@@ -32,15 +47,17 @@ Bootstrap requires an Azure identity allowed to create resources and role assign
    | `mcp-key` | Gateway, Orchestrator, McpServer |
    | `mcp-rotation-key` | McpServer |
 
-   Active and rotation keys must differ. The optional public-chat signing secret must also exist before granting its access. **Do not create `cosmos-connection` or an AAC connection-string secret**; those services use identities.
-6. Deploy `infra/access.bicep` in each application resource group **after the secrets exist**. Supply `stage`, the foundation `identityNames` object, `vaultName`, `registryName`/`registryResourceGroup`, `appConfigurationName`/`appConfigurationResourceGroup`, `cosmosAccountName`/`cosmosResourceGroup`, and optional `publicChatJwtVaultEntry`. It grants each service only its listed secrets, registry pull, AAC read, and required Cosmos containers in the environment database. Resource groups may differ but must be in the current subscription. Allow time for RBAC propagation before starting applications.
-7. Grant developer identities Cosmos data-plane access only to the test containers, using `infra/modules/cosmos-access.bicep` with `databaseName=myaiagent-test`, the developer principal ID, and the needed container names. Developers use `az login` and `CosmosDb:Endpoint`; applications/tests never create resources. Do not grant developers access to production merely to enable local runs.
-8. Register the single-tenant Entra API for Gateway. Set `api.requestedAccessTokenVersion` to `2`, expose `api://<application-client-id>`, and use the bare client GUID for `ENTRA_AUDIENCE`. Define `Chat.Access` and `Agent.Admin`, assign intended callers, and give deployment identities `Agent.Admin` for smoke tests. Gateway derives owners from validated `tid`/`oid` claims; clients cannot select a different owner.
-9. Create `staging` and `production` GitHub Environments. Bind separate Azure federated identities to `repo:<owner>/<repo>:environment:staging` and `...:production`. Grant staging deployment rights plus `AcrPush`; grant production only its deployment rights. Keep both identities separate from runtime identities. Store their `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` in the corresponding GitHub Environment. Use the protection inspection/application script described in [security.md](security.md) to restrict environment deployments and protect the default branch.
+   Keep active/rotation keys distinct. Create any public-chat signing secret before its grant. **No `cosmos-connection` or AAC connection-string secret:** these use identities.
+6. **Runtime grants:** deploy `infra/access.bicep` per app group **after secrets exist**. Supply `stage`, `identityNames`, `vaultName`, `registryName`/`registryResourceGroup`, `appConfigurationName`/`appConfigurationResourceGroup`, `cosmosAccountName`/`cosmosResourceGroup`, and optional `publicChatJwtVaultEntry`. Grants cover scoped secrets, registry pull, AAC read, and environment Cosmos containers. Resource groups must be in the current subscription; allow RBAC propagation.
+7. **Developers:** grant only test-container Cosmos data access with `infra/modules/cosmos-access.bicep`, `databaseName=myaiagent-test`, principal ID, and container names. Use `az login` / `CosmosDb:Endpoint`; never grant production access for local tests.
+8. **Gateway Entra API:** single tenant, `api.requestedAccessTokenVersion=2`, exposed URI `api://<application-client-id>`, bare client GUID for `ENTRA_AUDIENCE`. Define/assign `Chat.Access` and `Agent.Admin`; deployment identities need `Agent.Admin` for smoke tests. Owners derive from validated `tid`/`oid`.
+9. **GitHub Environments:** create `staging` / `production` with separate federated identities bound to `repo:<owner>/<repo>:environment:<stage>`. Staging needs deployment + `AcrPush`; production deployment only. Keep these separate from runtime identities. Set `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` per environment. Apply [repository protections](security.md#repository-controls).
 
 ### Migrating the previous shared identity/key setup
 
-Before deploying the new revision, provision service identities and grants, set the new CD variables below, and validate access. Remove the old vault-wide `Key Vault Secrets User` assignment and detach the previous shared runtime identity from all apps. Incremental Bicep deployments do not delete old identities or role assignments automatically. After all consumers have migrated, remove obsolete `cosmos-connection`/AAC connection-string secrets and revoke old keys. Disabling Cosmos/AAC access keys immediately breaks old key-based consumers; coordinate this as a migration instead of applying it blindly to a live account. No data migration is included here.
+1. Provision service identities/grants, set CD variables, and validate access.
+2. Remove old vault-wide `Key Vault Secrets User` grants and detach the shared runtime identity. Incremental Bicep does not remove old assignments/identities.
+3. After all callers migrate, remove obsolete Cosmos/AAC secrets and revoke keys. Disabling account keys breaks unmigrated callers. No data migration is included.
 
 Set the following GitHub Environment variables in both environments:
 
@@ -59,11 +76,7 @@ Set the following GitHub Environment variables in both environments:
 | `AZURE_EMBEDDING_DEPLOYMENT`, `AZURE_TEXT_DEPLOYMENT` | KernelMemory provider settings |
 | `GOOGLE_SEARCH_ENGINE_ID` | MCP search engine identifier |
 
-Optional variables override the browser chat API settings described in
-[public-chat-api.md](public-chat-api.md). Empty values are omitted so labeled AAC
-settings can take effect. Public chat stays off when neither source configures it;
-to disable an AAC-configured feature, remove its AAC configuration rather than
-setting a deployment variable to an empty value. Signing secrets remain in Key Vault.
+Optional [public-chat settings](public-chat-api.md) override AAC when nonempty. Empty values are omitted: remove AAC settings to disable an AAC-configured feature. Public chat stays off when neither source configures it. Signing secrets stay in Key Vault.
 
 | Variable | Purpose |
 | --- | --- |
@@ -73,56 +86,29 @@ setting a deployment variable to an empty value. Signing secrets remain in Key V
 | `PUBLIC_CHAT_AGENT_ID` | Orchestrator agent id that public visitors talk to |
 | `PUBLIC_CHAT_ALLOWED_ORIGIN` | Browser origin allowed to call the public API, for example `https://app.example.com`; required once public chat is enabled |
 
-The two environments must use the **same** `ACR_NAME` and
-`ACR_RESOURCE_GROUP` so production receives the exact staging image digests.
-Do not put API keys or connection strings in GitHub variables, workflow logs,
-or committed parameter files. Container Apps resolves Key Vault references
-through its runtime identity.
+Use the **same** `ACR_NAME` / `ACR_RESOURCE_GROUP` in both environments for digest promotion. Never put secrets in GitHub variables, logs, or committed parameters. Container Apps resolves vault references through runtime identity.
 
 ## Operations
 
-- A pull request runs the full project quality gate and compiles all Bicep
-  templates. It does not receive an Azure identity.
-- A successful push to `main` deploys staging. The smoke test waits for
-  readiness, requires HTTP 401 for anonymous admin access, and requires HTTP
-  200 for an `Agent.Admin` token. Production waits for environment approval.
-- To roll back, run **CD** manually from `main` with `release_sha` set to a
-  prior successful release commit. The workflow verifies that the SHA is on
-  `main`, reads existing ACR digests without rebuilding, and repeats staging
-  and production promotion. Keep previous image manifests in ACR.
-  Delivery scripts and infrastructure come from the pinned workflow revision;
-  release source is checked out separately for image builds. Historical releases
-  do not need to contain the current TypeScript tools. Confirm that a rollback
-  image supports the current configuration and infrastructure contracts, especially
-  across the identity migration described above.
-- An app deployment failure leaves the existing healthy single revision
-  serving traffic. If the production smoke test fails after deployment, run
-  the rollback workflow. Check ACA revision and system logs for the cause.
+- **PR:** quality gate + Bicep compile, without Azure identity.
+- **Staging:** after successful `main` CI, smoke checks readiness, anonymous admin 401, and `Agent.Admin` 200. Production requires approval.
+- **Rollback:** run CD from `main` with a prior successful `release_sha`. The SHA must be on `main`; existing ACR digests are reused. Keep old manifests and verify image compatibility with current settings/infrastructure, especially identity changes. Scripts/infrastructure come from the pinned workflow revision; release source is checked out separately.
+- **Failure:** a failed app deployment leaves the healthy single revision serving. Roll back failed production smoke checks; inspect ACA revision/system logs.
 
-Naming changed twice: the gateway was renamed from `MainSubSys`, and the `myaia` /
-`myaiaagent` prefixes became `myaiagent`. Container apps are now
-`myaiagent-<stage>-<service>` (the gateway was `myaia-<stage>-mainsubsys`) and registry
-repositories are `myaiagent-<service>` (previously `myaiaagent-<service>`). The first
-deployment therefore creates new apps with new FQDNs while the old ones keep running:
-repoint clients, then delete the old apps by hand. Manual rollbacks to commits built
-before the rename cannot find images under the new repository names. Re-running
-`foundation.bicep` with the new prefix would also create a second Log Analytics workspace,
-Container Apps environment, runtime identity and Key Vault (the vault starts empty); keep
-using the existing foundation resources, whose names the workflow takes from GitHub
-variables, unless you intend to rebuild them.
+### Renamed resources
 
-Only Gateway has external ingress. Orchestrator, KernelMemory and MCP are
-reachable only inside the Container Apps environment. The Orchestrator trusts the
-user id it is given, so it requires the shared service key (`ServiceAuthorization`)
-and refuses to start in production without it; Gateway sends the key. KernelMemory
-keeps its API-key filter enabled and Gateway sends that key too. MCP authorization is enabled by default and required outside Development. Gateway and Orchestrator send its active service key only to the configured MCP origin and protocol paths. Both use `https://myaiagent-<stage>-mcpserver.internal.<environment-default-domain>`; automatic redirects are disabled. Provision both MCP secrets and their scoped grants before deploying this revision. Existing callers without the key will be rejected. Restrict network access to the Container Apps environment and review service-to-service authorization before adding more callers.
-Agent-configured external MCP endpoints are blocked unless their HTTPS origins are listed in Orchestrator's `McpServer:AllowedExternalOrigins`. Configure individual AAC array entries such as `Orchestrator:McpServer:AllowedExternalOrigins:0` for the selected environment label, or use indexed environment variables such as `McpServer__AllowedExternalOrigins__0`. Restart Orchestrator after changes. Existing external agents will fail validation/use until approved; no migration rewrites stored endpoints. The configured first-party origin remains allowed and may resolve to private internal addresses. External MCP and page fetching reject private, metadata, and special-purpose addresses at connection time, including DNS answers containing mixed public/private addresses. The MCP page fetcher retains standard ports, validated redirects, and a 1 MiB response limit. Enforce complementary outbound network restrictions for deployed workloads.
+| Resource | Current name | Previous name |
+| --- | --- | --- |
+| Container app | `myaiagent-<stage>-<service>` | Gateway: `myaia-<stage>-mainsubsys` (`MainSubSys`) |
+| Image repository | `myaiagent-<service>` | `myaiaagent-<service>` |
 
-The readiness endpoints currently indicate that the ASP.NET process has
-started. They do not query Azure OpenAI, Cosmos DB, Blob Storage, or Google.
-The staging smoke test exercises real Gateway-to-Orchestrator and Gateway-to-MCP discovery requests. Add
-dependency-specific diagnostics if those services become operationally critical.
-Existing persisted agents with localhost MCP endpoints must be updated to the
-internal HTTPS MCP address configured as `McpServer:BaseUrl` (with optional `/mcp`) before those tools can run in ACA.
-Validate document upload size and request duration against ACA ingress limits in
-staging before enabling large uploads.
+Renamed apps get new FQDNs; repoint clients before manually deleting old apps. Pre-rename rollback images are absent under new repository names. Re-running foundation with a new prefix also creates duplicate logs/environment/identity/vault resources, with an empty vault. Retain existing foundation names in GitHub variables unless rebuilding intentionally.
+
+### Service access and verification
+
+- Only Gateway has external ingress. Keep Orchestrator, KernelMemory, and MCP internal; shared keys are required outside Development. Provision keys/grants before rollout. See [security](security.md#mcp-service-access) for scope and rotation.
+- Both MCP callers use `https://myaiagent-<stage>-mcpserver.internal.<environment-default-domain>`, without redirects. Update stored localhost agent endpoints to this configured origin, optionally `/mcp`.
+- External MCP is blocked unless approved in `McpServer:AllowedExternalOrigins`. Use AAC entries such as `Orchestrator:McpServer:AllowedExternalOrigins:0` with the environment label, or `McpServer__AllowedExternalOrigins__0`. Restart Orchestrator. Existing agents are not rewritten; see [outbound policy](security.md#outbound-destination-policy).
+- First-party MCP permits internal addresses. External MCP/pages reject private, metadata, special-purpose, and mixed DNS answers. Add network egress restrictions where needed.
+- Health/readiness reports process startup, not OpenAI/Cosmos/Blob/Google health. Smoke tests exercise Orchestrator and MCP discovery; add dependency diagnostics as needed.
+- Validate document sizes/durations against ACA ingress limits in staging. Production and multi-replica behavior still need live validation.

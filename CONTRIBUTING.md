@@ -1,10 +1,10 @@
 # Contributing to MyAIAgent
 
-This guide explains how to explore the code, extend an existing service, and verify a change before delivery. Start with the [repository guide](docs/repository-guide.md) and [architecture](docs/architecture.md).
+Extend a service and verify the change. Start with the [repository map](docs/repository-guide.md) and [request flows](docs/architecture.md).
 
 ## Work locally
 
-Use .NET 10 and Node.js 20.6+. Install locked automation dependencies with `npm ci --ignore-scripts`. The [local setup guide](docs/local-development.md) covers Azure resources and Aspire; Azure credentials are not needed for the default automated quality gate.
+Use .NET 10 and Node.js 20.6+; run `npm ci --ignore-scripts`. Follow [local setup](docs/local-development.md) for Aspire/providers. The default quality gate needs no Azure credentials.
 
 For a feature, follow the existing service boundaries:
 
@@ -15,7 +15,7 @@ For a feature, follow the existing service boundaries:
 5. Keep Presentation endpoints thin and map inputs through the application-owned mappings.
 6. Add tests for the behavior, failure cases, cancellation, and ownership boundaries that actually change.
 
-Service projects must not reference sibling service projects. Shared code belongs in Common only when it is genuinely shared. Inspect the current implementation before following an example in a reference document.
+Services communicate over HTTP, not sibling project references. Put code in Common only when shared. Current source takes precedence over reference examples.
 
 ## Checks
 
@@ -29,15 +29,18 @@ npm run quality -- --project Gateway
 npm run quality
 ```
 
-The full gate runs TypeScript checks and automation tests, restores/builds the solution, runs four .NET test projects, and checks formatting of changed C# files without rewriting them. Targeted results do not replace the full gate. Reports and TRX files are ignored under `artifacts/ai/`.
+| Check | Coverage |
+| --- | --- |
+| Full quality | TypeScript/automation, solution build, four .NET suites, changed C# format verification. Targeted runs do not replace it. |
+| Live Cosmos | `COSMOS_TEST_ENDPOINT`, Azure CLI identity, preprovisioned `myaiagent-test` containers. Skips when unset; never grant production access for tests. |
+| CI infrastructure checks | Bicep/workflow validation using pinned `.github/actions/` tools; run for deployment/config changes. |
+| `npm run security:scan` | Available Git history and nonignored files; see [security](docs/security.md) for download/network requirements. |
 
-Live Cosmos tests use `COSMOS_TEST_ENDPOINT`, Azure CLI identity, and preprovisioned `myaiagent-test` containers. They are visibly skipped when unconfigured. Never grant production access to make a test pass. See [local setup](docs/local-development.md) and [security](docs/security.md).
-
-CI additionally compiles Bicep and validates workflow syntax using pinned tools in `.github/actions/`. Changes to deployment/configuration should receive those checks too. `npm run security:scan` scans available Git history and current nonignored files; its tool download and network requirements are described in [security](docs/security.md).
+Quality reports/TRX stay in ignored `artifacts/ai/`.
 
 ## Documentation and comments
 
-- Write code, comments, docs, and commit messages in English.
+- Write in English. Keep guides concise: short introductions, task-focused steps, and tables for settings; link to details instead of repeating them.
 - Give maintained source files a short purpose header describing their specific role. Test headers explain what behavior they cover; preserve Arrange / Act / Assert comments.
 - For C#, TypeScript, and Bicep, use a `/** ... */` block with a `MyAIAgent | <component>` signature, a blank line, and the file's purpose. The signature identifies the project and area, not an author or license.
 - Use native comment syntax and preserve shebangs, parser directives, XML declarations, and Markdown frontmatter.
@@ -57,8 +60,6 @@ Example file header:
 
 ## Review and delivery
 
-Follow [AGENTS.md](AGENTS.md) and the shared [Plan → Build/test → Verify → Commit workflow](.agents/docs/workflow.md). The two Verify reviewers run concurrently on the same tested candidate. A passing build alone does not replace those reviews. Commit, push, and PR creation each require the delivery scope selected by the maintainer.
+Follow [AGENTS.md](AGENTS.md) and [Plan → Build/test → Verify → Commit](.agents/docs/workflow.md). Both read-only reviewers run concurrently on the tested candidate. Commit/push/PR require the maintainer's selected scope.
 
-For optional AI tooling, use the [Codex/Claude setup guide](.agents/docs/setup.md). It documents native model/mode selection, the four `ai-*` skills, and evidence checks. These are assistant workflow controls, not application runtime dependencies.
-
-Report security concerns through [SECURITY.md](SECURITY.md), rather than posting credentials or exploit details in a public issue.
+Optional assistant controls: [Codex/Claude setup](.agents/docs/setup.md). Report vulnerabilities privately through [SECURITY.md](SECURITY.md); never post secrets or exploit details in public issues.
