@@ -83,7 +83,8 @@ public sealed class OrchestratorModelThroughputTests
             .Where(entityType => !entityType.IsOwned())
             .ToDictionary(
                 entityType => entityType.GetContainer()!,
-                entityType => string.Join("/", entityType.GetPartitionKeyPropertyNames()));
+                entityType => string.Join("/", entityType.GetPartitionKeyPropertyNames()
+                    .Select(propertyName => entityType.FindProperty(propertyName)!.GetJsonPropertyName())));
 
         // Assert
         keys.Should().Equal(new Dictionary<string, string>

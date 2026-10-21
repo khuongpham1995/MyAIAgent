@@ -15,6 +15,8 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
     public void Configure(EntityTypeBuilder<AgentDefinition> builder)
     {
         builder.ToContainer("AgentDefinitions").HasPartitionKey(agent => agent.Id);
+        // Preserve the existing /Id partition path alongside Cosmos's required lowercase id field.
+        builder.HasShadowId();
 
         builder.OwnsMany(agent => agent.AgentTools);
     }
