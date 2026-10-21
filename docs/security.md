@@ -7,13 +7,13 @@ Protect credentials and service access in this public repository. Treat Git hist
 | Data | Store and access |
 | --- | --- |
 | Nonsecret settings | AAC, one store per environment. Labels/prefixes select values; they do not isolate access. |
-| Deployed secrets | Key Vault; Container Apps resolves secret references. Never duplicate plaintext secrets in AAC. |
+| Central/deployed secrets | Key Vault; AAC can hold references and Container Apps can inject secrets. Never duplicate plaintext secrets in AAC. |
 | Local secrets | Per-project user-secrets, outside Git but unencrypted. No production credentials. |
 | AAC/Cosmos credentials | Entra identity: Azure CLI in Development; explicitly assigned managed identity elsewhere. No key/connection-string fallback. |
 
 AAC is optional locally and required elsewhere. Set `AppConfiguration:Endpoint`, `KeyPrefix`, and `Label`. Prefix removal maps `Orchestrator:AiProvider:Type` to `AiProvider:Type`.
 
-Precedence: appsettings → AAC → user-secrets → environment → command line. Deployed Key Vault references and identity/bootstrap settings override AAC. Keep tracked `appsettings*.json` safe to publish.
+Precedence: appsettings → AAC → user-secrets → environment → command line. Environment-injected deployment secrets and identity/bootstrap settings override AAC. AAC Key Vault references resolve using the same selected Azure identity; access failure stops startup. Keep tracked `appsettings*.json` safe to publish.
 
 ## Identity and resource access
 
@@ -24,7 +24,7 @@ Each service has a separate user-assigned managed identity. `infra/access.bicep`
 | Gateway | Active Orchestrator/KernelMemory/MCP keys; optional public JWT signing secret | None |
 | Orchestrator | Azure OpenAI key, its active/rotation service keys, and the active MCP key | ChatSessions and AgentDefinitions in its environment database |
 | KernelMemory | Azure OpenAI, Search and Blob credentials; its active/rotation service keys | DocumentRecords in its environment database |
-| McpServer | Google Search key and its active/rotation service keys | None |
+| McpServer | Tavily API key and its active/rotation service keys | None |
 
 All four identities can pull registry images and read their environment's AAC. Key Vault grants are secret-scoped. Privileged bootstrap owns role assignments; routine CD does not.
 
@@ -47,6 +47,8 @@ KernelMemory's Search/Blob providers still use keys. The shared Search admin key
 
 Deploy callers against the internal HTTPS FQDN. External agent endpoints never receive the first-party key. Discovery authentication failures become safe chat errors, before model use.
 
+Search sends only the tool query and search options to Tavily, using a Bearer key in the header. Do not put secrets or personal data in queries. URLs/titles/excerpts are bounded and untrusted; citation guidance does not guarantee correctness or prevent every prompt injection. Provider errors return safe messages without response bodies or keys.
+
 Shared keys do not identify callers or grant per-tool permissions. Restrict agent administration and treat approved tool descriptions/results as untrusted.
 
 ## Outbound destination policy
@@ -58,7 +60,7 @@ Agent endpoints must use the configured first-party MCP service or `McpServer:Al
 | Allowlist entry | HTTPS scheme, host, effective port; nonstandard ports supported. No credentials, wildcard, non-root path, query, or fragment. |
 | Approved external endpoint | Paths/protocol queries allowed; no user information/fragments. Must resolve only to public addresses. |
 | First-party endpoint | Configured origin and protocol routes only. RFC1918/IPv6 unique-local allowed; Development loopback only when that origin is loopback. |
-| Page fetching | Public HTTP/HTTPS, default ports, validated redirects, no HTTPS downgrade, five redirects, 1 MiB limit. Policy denials are not retried; transient retries remain bounded. |
+| Tavily search | Fixed `https://api.tavily.com/search`; public DNS/address checks, no redirects/proxy/cookies, 20-second deadline, 1 MiB response limit, no retries. Source pages are never fetched. |
 
 First-party and external traffic use separate factory-managed clients; external is anonymous, including legacy SSE message requests. Every SDK request is checked. Proxies, redirects, cookies, and default credentials are disabled. HTTP/1.1 routes connections through the checked TCP callback.
 

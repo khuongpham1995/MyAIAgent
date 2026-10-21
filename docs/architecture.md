@@ -9,7 +9,7 @@ Follow chat and document requests through the four services. For setup, see [loc
 | Gateway | Client-facing APIs, authentication, request mapping, and downstream forwarding | Orchestrator, KernelMemory upload, MCP discovery; optional JWT/JWKS settings |
 | Orchestrator | Chat turns, agent selection, MCP invocation, and conversation management | Cosmos sessions/agents; Azure OpenAI or OpenAI; agent-configured MCP endpoint |
 | KernelMemory | Document ingestion, vector search, and semantic question answering | Azure OpenAI, Azure AI Search, document storage; a separate Cosmos document-record model is registered |
-| McpServer | Web search/page retrieval and UTC date/time tools | Google Custom Search for web search; public web pages |
+| McpServer | Web evidence and UTC date/time tools | Tavily basic search; no result-page fetching |
 
 Each service follows the same layers:
 
@@ -78,6 +78,28 @@ sequenceDiagram
 - **SSE:** `session`, `delta`, `title`, `done`, `error`. Gateway emits an error when downstream ends without a terminal event. See the [public API](public-chat-api.md).
 
 Read Gateway's `Program.cs` and chat clients, then Orchestrator's `ChatHandler`, `StreamChatHandler`, `ChatSessionHistory`, and `ChatOrchestratorService`.
+
+### Automatic web search
+
+```mermaid
+---
+config:
+  look: handDrawn
+---
+flowchart LR
+    Q[User question] --> M[Model with approved tools]
+    M -->|Needs current or missing evidence| W[MCP web_search]
+    W -->|Focused query only| T[Tavily basic search]
+    T --> E[Ranked URLs, titles and excerpts]
+    E --> M
+    M --> A[Answer with source links]
+```
+
+Search is model-selected, not called on every turn. Only agents exposing `web_search` receive search/date/citation guidance. Existing tool allowlists still apply; no stored agent is changed automatically.
+
+`web_search(query, top=3)` returns a JSON array with `Url`, `Content`, `Title`, `RetrievedAtUtc`, and `Truncated`. Input: nonblank query ≤500 characters and top 1–10. Output: provider order, unique valid HTTP(S) URLs, excerpts ≤3,000 characters each and ≤20,000 combined. Retrieval time is not a source publication date. Search can be stale or wrong; excerpts remain untrusted evidence.
+
+The typed HTTP client uses the fixed Tavily `/search` endpoint, basic/general search, no automatic tuning, generated answers, raw pages, or images. It has a 20-second deadline including the body, a 1 MiB response limit, and no retries. Successful no-results returns `[]`; configuration, credentials, quota, timeout, and malformed responses return safe MCP tool errors.
 
 ## Document ingestion and RAG
 

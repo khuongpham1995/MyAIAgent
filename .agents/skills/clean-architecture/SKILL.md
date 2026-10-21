@@ -31,7 +31,7 @@ Layer and cross-service boundary rules → `.agents/rules/dotnet/architecture.md
 |---|---|---|
 | Domain | Entities, domain value objects, constants. No application contracts. | `BaseEntity<TKey>` descendants, `*Constant` |
 | Application | Business logic and ports for external dependencies. References Domain + Common.Application. | `IRequest<ResponseModel<T>>`, `IRequestHandler<,>`, `AbstractValidator<T>`, `interface I*Service` |
-| Infrastructure | Adapts external systems to domain interfaces. | `*Service : I*Service, IScoped`, `PageFetcher`, `DbContext` |
+| Infrastructure | Adapts external systems to domain interfaces. | `*Service : I*Service, IScoped`, `TavilySearchClient`, `DbContext` |
 | Presentation | Composition root + HTTP surface. | `Program.cs`, `McpTools/`, `Filters/` |
 
 ## Common Layer Contents

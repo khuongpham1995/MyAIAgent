@@ -25,7 +25,7 @@ Use a development subscription/resource group. Review costs first: budget alerts
 | Azure AI Search | Service endpoint and admin key for KernelMemory index operations. |
 | Azure Blob Storage | Account connection string and a development container for persistent documents in the configuration below. |
 | Azure App Configuration | Optional locally. Endpoint plus App Configuration Data Reader access when enabled. |
-| Google Custom Search | API key and search engine ID to exercise `web_search`; date/time and service startup do not require Google calls. |
+| Tavily | Free-tier API key for `web_search`; startup, discovery, and the clock work without it. Keep paid billing disabled if you want a free-only account. |
 
 Provision Cosmos/Search with Bicep or equivalent settings; OpenAI deployments and Blob Storage are separate. Grant developer data access to **test containers only**. Subscription management rights do not grant Cosmos/AAC data access.
 
@@ -133,13 +133,12 @@ dotnet user-secrets set --project src/MyAIAgent.McpServer.Presentation <<'JSON'
   "ServiceAuthorization:Enabled": "true",
   "ServiceAuthorization:AccessKey1": "<mcp-active-key>",
   "ServiceAuthorization:AccessKey2": "<mcp-rotation-key>",
-  "GoogleSearch:ApiKey": "<google-search-key>",
-  "GoogleSearch:SearchEngineId": "<search-engine-id>"
+  "Tavily:ApiKey": "<tavily-api-key>"
 }
 JSON
 ```
 
-- Google settings are needed for web search only, not discovery or the clock.
+- Tavily credentials are needed for web search only, not discovery or the clock.
 - Keep header `Authorization`. Disabling MCP authorization is allowed only in Development.
 - Match `McpServer:BaseUrl` in both callers. Keys are sent only to that origin's `/`, `/mcp`, or `/mcp/`, with no query/fragment or redirects. Production requires HTTPS; Development permits loopback HTTP.
 
@@ -163,6 +162,18 @@ Prefixes (`Gateway:`, `Orchestrator:`, `KernelMemory:`, `McpServer:`) are remove
 
 Use a per-service `Sentinel` for refresh. AAC holds nonsecret settings; user-secrets/environment/command-line overrides win. Restart AppHost after changes because clients may capture startup values.
 
+### Central Tavily key through AAC
+
+| Location | Setting |
+| --- | --- |
+| Key Vault | Secret `tavily-api-key` |
+| AAC | Key `McpServer:Tavily:ApiKey`, label `Development`, type **Key Vault reference** |
+| Reference | `https://<development-vault>.vault.azure.net/secrets/tavily-api-key` (versionless) |
+
+The app resolves the reference with the same Azure CLI credential used for AAC. Grant that developer identity **Key Vault Secrets User** on this development secret. Production uses its explicitly assigned managed identity and needs its own grant; never reuse developer credentials there.
+
+Configure the reference only after running the updated AAC loader. Resolution failure stops startup, even if a higher-priority local secret is present. Once verified, remove the McpServer `Tavily:ApiKey` user-secret to use AAC as the source. Restart AppHost after key rotation or configuration changes; immediate secret refresh is not promised. Keep plaintext keys out of AAC and Git.
+
 ## 4. Start Aspire and verify routing
 
 Select `MyAIAgent.All` as the IDE startup project, or run:
@@ -182,7 +193,7 @@ dotnet run --project src/MyAIAgent.All --launch-profile https
 | KernelMemory | `http://localhost:5227` | `https://localhost:7074` |
 | MCP | `http://localhost:5255` | `https://localhost:7117` |
 
-Use dashboard endpoints when local ports differ. Verify without model or Google calls:
+Use dashboard endpoints when local ports differ. Verify without model or search calls:
 
 | Request | Checks |
 | --- | --- |
@@ -194,6 +205,25 @@ Use dashboard endpoints when local ports differ. Verify without model or Google 
 **Keep Development routes private.** To try a paid model call, send Gateway `POST /chat` with `{"sessionId":null,"userMessage":"Hello","agentId":null}`.
 
 With no default agent, chat has no tools. Create one through `/admin/agents` with `name`, `instructions`, `mcpServerEndpoint` (e.g. `http://localhost:5255/mcp`), `isDefault`, and optional `enabledTools`. A missing/empty tool list exposes all discovered tools; name tools explicitly to restrict them.
+
+### Enable automatic web search
+
+1. Store `Tavily:ApiKey` in McpServer user-secrets (above), or use the [Key Vault reference](#central-tavily-key-through-aac) below.
+2. Create or update an agent through Gateway `/admin/agents` with these fields, retaining the agent ID returned by the API:
+
+   ```json
+   {
+     "name": "Web assistant",
+     "instructions": "Answer clearly, check current facts when needed, and cite sources.",
+     "mcpServerEndpoint": "http://localhost:5255/mcp",
+     "isDefault": true,
+     "enabledTools": ["web_search"]
+   }
+   ```
+
+3. Restart AppHost after configuration changes, then send a chat question needing current information. The model can call search and use the evidence automatically. Model and search usage are separate; no lookup is guaranteed on a particular prompt.
+
+Basic search uses one Tavily credit per request; the client never retries automatically. Check your [Tavily plan and usage](https://docs.tavily.com/documentation/api-credits); quotas can change. Treat results as evidence to verify, not guaranteed facts. Do not include private information in search questions. No key or exhausted quota produces a tool error instead of an empty success.
 
 Next: [document routes](architecture.md#document-ingestion-and-rag) or [public visitor API](public-chat-api.md).
 
@@ -207,7 +237,7 @@ Next: [document routes](architecture.md#document-ingestion-and-rag) or [public v
 | Downstream 401/403 | Each caller's active service key must match a target active/rotation key. For MCP check both Gateway and Orchestrator user-secrets and the exact trusted origin. |
 | KernelMemory configuration error | Both provider endpoints/keys, deployment compatibility, distinct service keys, and `DocumentStorageType`. |
 | Port already in use | Stop the previous AppHost/debug session; remove stale `Urls` overrides. |
-| Healthy processes but requests fail | Liveness does not check provider credentials, model quota, Cosmos access, or Google configuration. |
+| Healthy processes but requests fail | Liveness does not check provider credentials, model quota, Cosmos access, or Tavily configuration. |
 
 ### Playwright HTTPS certificate trust
 

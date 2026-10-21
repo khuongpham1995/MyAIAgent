@@ -21,7 +21,7 @@ CI/CD installs the same locked tools. Deployment writes the validated Gateway ho
 | Smoke/deployment check | Bound |
 | --- | --- |
 | HTTPS readiness and authorization | 30 attempts per phase, 10-second delays; 10/30-second request timeouts |
-| Authenticated requests | `/admin/agents` and `/admin/tools`; `isSuccess: true`, JSON ≤ 1 MiB; no model/Google call |
+| Authenticated requests | `/admin/agents` and `/admin/tools`; `isSuccess: true`, JSON ≤ 1 MiB; no model/search call |
 | Redirects | Rejected to prevent token forwarding |
 | Azure deployment / token retrieval | 30 minutes / 30 seconds |
 
@@ -43,7 +43,7 @@ Use a privileged bootstrap identity for resources/role assignments. Routine CD m
    | `orchestrator-rotation-key` | Orchestrator |
    | `kernel-memory-key` | Gateway, KernelMemory |
    | `kernel-memory-rotation-key` | KernelMemory |
-   | `google-search-key` | McpServer |
+   | `tavily-api-key` | McpServer |
    | `mcp-key` | Gateway, Orchestrator, McpServer |
    | `mcp-rotation-key` | McpServer |
 
@@ -52,6 +52,8 @@ Use a privileged bootstrap identity for resources/role assignments. Routine CD m
 7. **Developers:** grant only test-container Cosmos data access with `infra/modules/cosmos-access.bicep`, `databaseName=myaiagent-test`, principal ID, and container names. Use `az login` / `CosmosDb:Endpoint`; never grant production access for local tests.
 8. **Gateway Entra API:** single tenant, `api.requestedAccessTokenVersion=2`, exposed URI `api://<application-client-id>`, bare client GUID for `ENTRA_AUDIENCE`. Define/assign `Chat.Access` and `Agent.Admin`; deployment identities need `Agent.Admin` for smoke tests. Owners derive from validated `tid`/`oid`.
 9. **GitHub Environments:** create `staging` / `production` with separate federated identities bound to `repo:<owner>/<repo>:environment:<stage>`. Staging needs deployment + `AcrPush`; production deployment only. Keep these separate from runtime identities. Set `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` per environment. Apply [repository protections](security.md#repository-controls).
+
+**Search migration:** before deploying this version, create `tavily-api-key` and rerun the privileged `access.bicep` bootstrap to grant McpServer access. Apps inject it as `Tavily__ApiKey`. The old `google-search-key` and `GOOGLE_SEARCH_ENGINE_ID` are no longer used. After old revisions stop, explicitly remove the McpServer identity’s role assignment scoped to `google-search-key`, then retire the old secret. Incremental Bicep deployment does not remove that obsolete grant. No live Azure resources are changed by the code update.
 
 ### Migrating the previous shared identity/key setup
 
@@ -74,7 +76,6 @@ Set the following GitHub Environment variables in both environments:
 | `ENTRA_TENANT_ID`, `ENTRA_AUDIENCE` | Gateway tenant GUID and bare API client ID GUID |
 | `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT` | Chat provider settings |
 | `AZURE_EMBEDDING_DEPLOYMENT`, `AZURE_TEXT_DEPLOYMENT` | KernelMemory provider settings |
-| `GOOGLE_SEARCH_ENGINE_ID` | MCP search engine identifier |
 
 Optional [public-chat settings](public-chat-api.md) override AAC when nonempty. Empty values are omitted: remove AAC settings to disable an AAC-configured feature. Public chat stays off when neither source configures it. Signing secrets stay in Key Vault.
 
@@ -109,6 +110,6 @@ Renamed apps get new FQDNs; repoint clients before manually deleting old apps. P
 - Only Gateway has external ingress. Keep Orchestrator, KernelMemory, and MCP internal; shared keys are required outside Development. Provision keys/grants before rollout. See [security](security.md#mcp-service-access) for scope and rotation.
 - Both MCP callers use `https://myaiagent-<stage>-mcpserver.internal.<environment-default-domain>`, without redirects. Update stored localhost agent endpoints to this configured origin, optionally `/mcp`.
 - External MCP is blocked unless approved in `McpServer:AllowedExternalOrigins`. Use AAC entries such as `Orchestrator:McpServer:AllowedExternalOrigins:0` with the environment label, or `McpServer__AllowedExternalOrigins__0`. Restart Orchestrator. Existing agents are not rewritten; see [outbound policy](security.md#outbound-destination-policy).
-- First-party MCP permits internal addresses. External MCP/pages reject private, metadata, special-purpose, and mixed DNS answers. Add network egress restrictions where needed.
-- Health/readiness reports process startup, not OpenAI/Cosmos/Blob/Google health. Smoke tests exercise Orchestrator and MCP discovery; add dependency diagnostics as needed.
+- First-party MCP permits internal addresses. External MCP and Tavily connections reject private, metadata, special-purpose, and mixed DNS answers. Add network egress restrictions where needed.
+- Health/readiness reports process startup, not OpenAI/Cosmos/Blob/Tavily health. Smoke tests exercise Orchestrator and MCP discovery; add dependency diagnostics as needed.
 - Validate document sizes/durations against ACA ingress limits in staging. Production and multi-replica behavior still need live validation.

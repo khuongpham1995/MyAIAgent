@@ -16,7 +16,7 @@ function configuration(): NodeJS.ProcessEnv {
   return Object.fromEntries(['RESOURCE_GROUP', 'ACR_NAME', 'ACR_RESOURCE_GROUP', 'APP_ENVIRONMENT_NAME', 'KEY_VAULT_NAME',
     'GATEWAY_IDENTITY_NAME', 'ORCHESTRATOR_IDENTITY_NAME', 'KERNEL_MEMORY_IDENTITY_NAME', 'MCP_IDENTITY_NAME',
     'APP_CONFIG_ENDPOINT', 'COSMOS_ENDPOINT', 'ENTRA_TENANT_ID', 'ENTRA_AUDIENCE', 'AZURE_OPENAI_ENDPOINT',
-    'AZURE_OPENAI_DEPLOYMENT', 'AZURE_EMBEDDING_DEPLOYMENT', 'AZURE_TEXT_DEPLOYMENT', 'GOOGLE_SEARCH_ENGINE_ID', 'SEARCH_ENDPOINT']
+    'AZURE_OPENAI_DEPLOYMENT', 'AZURE_EMBEDDING_DEPLOYMENT', 'AZURE_TEXT_DEPLOYMENT', 'SEARCH_ENDPOINT']
     .map(name => [name, 'example']));
 }
 
@@ -58,6 +58,7 @@ console.log('example.test');
     gateway: env.GATEWAY_IDENTITY_NAME, orchestrator: env.ORCHESTRATOR_IDENTITY_NAME,
     kernelmemory: env.KERNEL_MEMORY_IDENTITY_NAME, mcpserver: env.MCP_IDENTITY_NAME,
   } });
+  assert.equal(Object.hasOwn(parameters, 'googleSearchEngineId'), false);
   assert.deepEqual(parameters.stage, { value: 'staging' });
   assert.deepEqual(parameters.imageGateway, { value: 'gateway' });
   assert.deepEqual(parameters.publicChatIssuer, { value: '' });

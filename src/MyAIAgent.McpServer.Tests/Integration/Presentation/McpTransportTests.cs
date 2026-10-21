@@ -6,6 +6,11 @@
 
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using Moq;
+using MyAIAgent.McpServer.Application;
+using MyAIAgent.McpServer.Application.Common.Interfaces;
+using MyAIAgent.McpServer.Application.Search;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -47,7 +52,7 @@ public sealed class McpTransportTests
         var result = await client.CallToolAsync(McpServerConstant.GetCurrentDateTimeToolName, cancellationToken: CancellationToken.None);
 
         // Assert
-        tools.Should().ContainSingle(tool => tool.Name == McpServerConstant.GetCurrentDateTimeToolName);
+        tools.Should().Contain(tool => tool.Name == McpServerConstant.GetCurrentDateTimeToolName);
         result.IsError.Should().NotBeTrue();
         DateTimeOffset.TryParse(result.Content.OfType<TextContentBlock>().Single().Text, out _).Should().BeTrue();
     }
@@ -149,6 +154,51 @@ public sealed class McpTransportTests
         clock.Reads.Should().Be(0);
     }
 
+    [Theory]
+    [InlineData("success")]
+    [InlineData("empty")]
+    [InlineData("failure")]
+    [InlineData("invalid")]
+    public async Task Search_WhenInvokedOverHttp_ShouldReturnEvidenceOrExplicitToolError(string outcome)
+    {
+        // Arrange
+        var search = new Mock<ISearchProvider>();
+        search.Setup(p => p.SearchAsync("focused query", 3, It.IsAny<CancellationToken>())).ReturnsAsync(outcome == "failure"
+            ? ResponseModel<IReadOnlyList<SearchEntry>>.Fail(message: "Web search quota or rate limit was reached.")
+            : ResponseModel<IReadOnlyList<SearchEntry>>.Succeed(outcome == "empty" ? [] : [new("https://example.com/", "Title", "Excerpt")]));
+        await using var app = await StartServerAsync(search: search.Object);
+        using var http = app.GetTestClient();
+        await using var transport = new HttpClientTransport(new HttpClientTransportOptions
+        {
+            Endpoint = new Uri("http://localhost/mcp"),
+            AdditionalHeaders = new Dictionary<string, string> { ["Authorization"] = "test-primary-key" }
+        }, http);
+        await using var client = await McpClient.CreateAsync(transport);
+        var tools = await client.ListToolsAsync();
+
+        // Act
+        var result = await client.CallToolAsync(McpServerConstant.WebSearchToolName,
+            new Dictionary<string, object?> { ["query"] = outcome == "invalid" ? "" : "focused query" });
+
+        // Assert
+        tools.Should().Contain(t => t.Name == "web_search");
+        var text = result.Content.OfType<TextContentBlock>().Single().Text;
+        if (outcome is "failure" or "invalid")
+        {
+            result.IsError.Should().BeTrue();
+            text.Should().Contain(outcome == "failure" ? "quota" : "500");
+        }
+        else
+        {
+            result.IsError.Should().NotBeTrue();
+            using var json = JsonDocument.Parse(text);
+            json.RootElement.GetArrayLength().Should().Be(outcome == "empty" ? 0 : 1);
+            if (outcome == "success") json.RootElement[0].GetProperty("Content").GetString().Should().Be("Excerpt");
+        }
+        search.Verify(p => p.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            outcome == "invalid" ? Times.Never : Times.Once);
+    }
+
     private sealed class CountingClock : TimeProvider
     {
         public int Reads { get; private set; }
@@ -159,7 +209,7 @@ public sealed class McpTransportTests
         }
     }
 
-    private static async Task<WebApplication> StartServerAsync(TimeProvider? clock = null)
+    private static async Task<WebApplication> StartServerAsync(TimeProvider? clock = null, ISearchProvider? search = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
@@ -172,7 +222,9 @@ public sealed class McpTransportTests
             AccessKey2 = "test-rotation-key"
         }));
         builder.Services.AddSingleton<HttpAuthEndpointFilter>();
-        builder.Services.AddMcpServer().WithHttpTransport().WithTools<DateTimeTool>();
+        builder.Services.AddApplication();
+        builder.Services.AddSingleton(search ?? new Mock<ISearchProvider>().Object);
+        builder.Services.AddMcpServer().WithHttpTransport().WithTools<DateTimeTool>().WithTools<WebSearchTool>();
         var app = builder.Build();
         app.MapMcpServiceEndpoints();
         await app.StartAsync();

@@ -19,23 +19,61 @@ namespace MyAIAgent.McpServer.Tests.Unit.Infrastructure;
 public sealed class IoCExtensionTests
 {
     [Fact]
-    public async Task GetContentAsync_WhenDnsPolicyRejects_ShouldNotRetry()
+    public async Task SearchAsync_WhenDnsPolicyRejects_ShouldNotRetry()
     {
         // Arrange
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddInfrastructure(new ConfigurationBuilder().Build(), isDevelopment: true);
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Tavily:ApiKey"] = "test-key" }).Build();
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddInfrastructure(configuration, isDevelopment: true);
         using var handler = new DeniedHandler();
-        services.AddHttpClient<IPageFetcher, PageFetcher>().ConfigurePrimaryHttpMessageHandler(() => handler);
+        services.AddHttpClient<ISearchProvider, TavilySearchClient>().ConfigurePrimaryHttpMessageHandler(() => handler);
         using var provider = services.BuildServiceProvider();
 
         // Act
-        var result = await provider.GetRequiredService<IPageFetcher>().GetContentAsync("https://public.example/page");
+        var result = await provider.GetRequiredService<ISearchProvider>().SearchAsync("query", 3);
 
         // Assert
-        result.Success.Should().BeFalse();
+        result.IsSuccess.Should().BeFalse();
         handler.Requests.Should().Be(1);
-        result.Error.Should().Be("Failed to retrieve page content.");
+        result.Message.Should().Be("Web search is temporarily unavailable.");
+    }
+
+    [Theory]
+    [InlineData(429)]
+    [InlineData(500)]
+    [InlineData(302)]
+    public async Task SearchAsync_WhenRegisteredClientReceivesFailure_ShouldNotRetryOrFollowRedirect(int status)
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddLogging();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Tavily:ApiKey"] = "test-key" }).Build();
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddInfrastructure(configuration, isDevelopment: true);
+        using var handler = new StatusHandler(status);
+        services.AddHttpClient<ISearchProvider, TavilySearchClient>().ConfigurePrimaryHttpMessageHandler(() => handler);
+        using var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = await provider.GetRequiredService<ISearchProvider>().SearchAsync("query", 3);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        handler.Requests.Should().Be(1);
+    }
+
+    private sealed class StatusHandler(int status) : HttpMessageHandler
+    {
+        public int Requests { get; private set; }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests++;
+            var response = new HttpResponseMessage((System.Net.HttpStatusCode)status);
+            response.Headers.Location = new Uri("https://untrusted.example/");
+            return Task.FromResult(response);
+        }
     }
 
     private sealed class DeniedHandler : HttpMessageHandler

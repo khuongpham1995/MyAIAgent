@@ -1,9 +1,11 @@
 /**
  * MyAIAgent | Common · Infrastructure
  *
- * Loads service-prefixed AAC settings with Azure identity while preserving local configuration overrides.
+ * Loads service-prefixed AAC settings and Key Vault references with Azure identity, preserving local overrides.
  */
 
+using Azure.Core;
+using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
@@ -27,15 +29,27 @@ public static class AzureAppConfigurationExtension
         var label = builder.Configuration["AppConfiguration:Label"] ?? builder.Environment.EnvironmentName;
 
         var remote = new ConfigurationBuilder().AddAzureAppConfiguration(options =>
-            options.Connect(endpoint, credential)
-                .Select(prefix + "*", label)
-                .TrimKeyPrefix(prefix)
-                .ConfigureRefresh(refresh => refresh.Register(prefix + "Sentinel", label, refreshAll: true)
-                    .SetRefreshInterval(TimeSpan.FromSeconds(30))));
+            ConfigureRemoteSettings(options, endpoint, credential, prefix, label));
 
         InsertBeforeLocalOverrides(builder.Configuration, remote.Sources.Single());
         builder.Services.AddAzureAppConfiguration();
         return builder;
+    }
+
+    internal static void ConfigureRemoteSettings(
+        AzureAppConfigurationOptions options, Uri endpoint, TokenCredential credential, string prefix, string label,
+        Action<AzureAppConfigurationKeyVaultOptions>? configureKeyVault = null)
+    {
+        options.Connect(endpoint, credential)
+            .Select(prefix + "*", label)
+            .TrimKeyPrefix(prefix)
+            .ConfigureKeyVault(vault =>
+            {
+                vault.SetCredential(credential);
+                configureKeyVault?.Invoke(vault);
+            })
+            .ConfigureRefresh(refresh => refresh.Register(prefix + "Sentinel", label, refreshAll: true)
+                .SetRefreshInterval(TimeSpan.FromSeconds(30)));
     }
 
     internal static void InsertBeforeLocalOverrides(IConfigurationManager configuration, IConfigurationSource remote)

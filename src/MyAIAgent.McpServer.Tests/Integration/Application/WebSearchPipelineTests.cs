@@ -1,64 +1,53 @@
 /**
  * MyAIAgent | McpServer · Tests
  *
- * Exercises MediatR web-search validation and handler dispatch with substituted external providers.
+ * Exercises real search validation and dispatch without contacting an external search provider.
  */
 
 using FluentAssertions;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using MyAIAgent.Common.Application.Behaviors;
-using MyAIAgent.Common.Tests;
-using MyAIAgent.McpServer.Application.Search.Queries.WebSearch;
+using MyAIAgent.Common.Domain.Models;
+using MyAIAgent.McpServer.Application;
 using MyAIAgent.McpServer.Application.Common.Interfaces;
 using MyAIAgent.McpServer.Application.Search;
+using MyAIAgent.McpServer.Application.Search.Queries.WebSearch;
 
 namespace MyAIAgent.McpServer.Tests.Integration.Application;
 
 public sealed class WebSearchPipelineTests
 {
-    [Fact]
-    public async Task Handle_WhenValidQueryDispatchedThroughFullPipeline_ShouldReturnNonEmptyJsonString()
+    [Theory]
+    [InlineData("query", 1, true)]
+    [InlineData("", 1, false)]
+    [InlineData("query", 11, false)]
+    public async Task Send_WhenInputIsValidated_ShouldDispatchOnlyValidQueries(string query, int top, bool valid)
     {
         // Arrange
-        var mockSearchProvider = new Mock<ISearchProvider>();
-        var mockPageFetcher = new Mock<IPageFetcher>();
-
-        mockSearchProvider
-            .Setup(s => s.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .Returns(AsyncEnumerableHelper.ToAsyncEnumerable([
-                new SearchEntry("https://example.com/result1", "Result snippet one")
-            ]));
-
-        mockPageFetcher
-            .Setup(w => w.GetContentAsync("https://example.com/result1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new FetchResult(true, "Full page content", "text/html"));
-
+        var search = new Mock<ISearchProvider>();
+        search.Setup(s => s.SearchAsync(query, top, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ResponseModel<IReadOnlyList<SearchEntry>>.Succeed([new("https://example.com/", "Title", "Excerpt")]));
         var services = new ServiceCollection();
-        services.AddMediatR(cfg =>
-            cfg.RegisterServicesFromAssembly(typeof(WebSearchHandler).Assembly));
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
-        services.AddValidatorsFromAssembly(typeof(WebSearchHandler).Assembly, includeInternalTypes: true);
-        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
-
-        services.AddSingleton(mockSearchProvider.Object);
-        services.AddSingleton(mockPageFetcher.Object);
-
-        var provider = services.BuildServiceProvider();
+        services.AddLogging();
+        services.AddApplication();
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton(search.Object);
+        using var provider = services.BuildServiceProvider();
         var sender = provider.GetRequiredService<ISender>();
 
-        var query = new WebSearchQuery("integration test query", Top: 1);
-
         // Act
-        var result = await sender.Send(query, CancellationToken.None);
+        var action = () => sender.Send(new WebSearchQuery(query, top));
 
         // Assert
-        result.Should().NotBeNullOrWhiteSpace();
-        result.Should().NotBe("[]");
-        result.Should().Contain("https://example.com/result1");
+        if (valid)
+        {
+            var result = await action();
+            result.IsSuccess.Should().BeTrue();
+            result.Data!.Single().Content.Should().Be("Excerpt");
+        }
+        else await action.Should().ThrowAsync<ValidationException>();
+        search.Verify(s => s.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), valid ? Times.Once : Times.Never);
     }
 }

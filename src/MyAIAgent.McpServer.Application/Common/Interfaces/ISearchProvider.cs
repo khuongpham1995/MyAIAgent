@@ -1,14 +1,15 @@
 /**
  * MyAIAgent | McpServer · Application
  *
- * Defines the asynchronous search-results port used before web-search page retrieval.
+ * Provides ranked search excerpts or an explicit provider failure.
  */
 
+using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.McpServer.Application.Search;
 
 namespace MyAIAgent.McpServer.Application.Common.Interfaces;
 
 public interface ISearchProvider
 {
-    IAsyncEnumerable<SearchEntry> SearchAsync(string query, int top, CancellationToken cancellationToken = default);
+    Task<ResponseModel<IReadOnlyList<SearchEntry>>> SearchAsync(string query, int top, CancellationToken cancellationToken = default);
 }

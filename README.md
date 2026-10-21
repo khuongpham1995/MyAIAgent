@@ -69,7 +69,7 @@ flowchart TB
     style services fill:transparent,stroke:#94a3b8,stroke-width:1px
 ```
 
-Orchestrator uses Azure OpenAI or OpenAI and stores sessions, messages, and agents in Cosmos DB. The MCP web-search tool uses Google Custom Search and fetches public pages.
+Orchestrator uses Azure OpenAI or OpenAI and stores sessions, messages, and agents in Cosmos DB. The MCP web-search tool uses Tavily basic search for linked excerpts. Agents with `web_search` can look up current or missing information during chat; see [setup](docs/local-development.md#enable-automatic-web-search).
 
 The diagram shows the first-party MCP server. Agents can also use explicitly approved external HTTPS MCP origins through a separate anonymous client. Service keys stay scoped to the configured first-party origin and protocol routes.
 

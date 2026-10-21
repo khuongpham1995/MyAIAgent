@@ -8,14 +8,15 @@ description: HTTP client registration, Polly retry behavior and cancellation in 
 Use typed clients registered with `AddHttpClient<TInterface, TImplementation>` in
 `src/MyAIAgent.<Service>.Infrastructure/IoCExtension.cs`. Infrastructure
 implementations receive `HttpClient`; handlers depend on the service's interfaces.
-For concrete examples inspect `ISearchProvider`/`GoogleSearchClient`,
-`IPageFetcher`/`PageFetcher`, and Gateway clients. Do not invent a generic
+For concrete examples inspect `ISearchProvider`/`TavilySearchClient` and Gateway clients. Do not invent a generic
 `IApiClient` abstraction absent from the current source.
 
 The shared extension is `AddHttpRetryPolicy()` in
 `src/MyAIAgent.Common.Infrastructure/Extensions/RetryExtension.cs`. Its current
 retry options are three attempts, a one-second base delay, exponential backoff and
 jitter. Check source before changing or describing these settings.
+
+Tavily uses a fixed endpoint and no retries to avoid duplicate credit consumption; its deadline covers headers and body.
 
 Set appropriate timeouts and configuration-based service URLs. Before applying
 retries to writes/uploads/tool calls, assess replay safety and idempotency; do not

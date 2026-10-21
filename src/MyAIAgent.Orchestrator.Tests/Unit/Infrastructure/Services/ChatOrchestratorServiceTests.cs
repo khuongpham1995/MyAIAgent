@@ -103,7 +103,7 @@ public sealed class ChatOrchestratorServiceTests
             (chatClient ?? new Mock<IChatClient>()).Object,
             (agentRepo ?? new Mock<IAgentRepository>()).Object,
             (agentBuilder ?? new Mock<IAgentHelper>()).Object,
-            NullLogger<ChatOrchestratorService>.Instance);
+            NullLogger<ChatOrchestratorService>.Instance, TimeProvider.System);
     }
 
     [Fact]

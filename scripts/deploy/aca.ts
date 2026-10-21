@@ -16,7 +16,7 @@ const requiredSettings = {
   vaultName: 'KEY_VAULT_NAME', appConfigurationEndpoint: 'APP_CONFIG_ENDPOINT', cosmosEndpoint: 'COSMOS_ENDPOINT',
   tenantId: 'ENTRA_TENANT_ID', audience: 'ENTRA_AUDIENCE', azureOpenAiEndpoint: 'AZURE_OPENAI_ENDPOINT',
   azureOpenAiDeployment: 'AZURE_OPENAI_DEPLOYMENT', azureEmbeddingDeployment: 'AZURE_EMBEDDING_DEPLOYMENT',
-  azureTextDeployment: 'AZURE_TEXT_DEPLOYMENT', googleSearchEngineId: 'GOOGLE_SEARCH_ENGINE_ID', searchEndpoint: 'SEARCH_ENDPOINT',
+  azureTextDeployment: 'AZURE_TEXT_DEPLOYMENT', searchEndpoint: 'SEARCH_ENDPOINT',
 } as const;
 const optionalSettings = {
   publicChatIssuer: 'PUBLIC_CHAT_ISSUER', publicChatAudience: 'PUBLIC_CHAT_AUDIENCE', publicChatJwksUri: 'PUBLIC_CHAT_JWKS_URI',

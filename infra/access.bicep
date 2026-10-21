@@ -23,7 +23,7 @@ var services = [
   { identityName: identityNames.gateway, secrets: concat(['orchestrator-key', 'kernel-memory-key', 'mcp-key'], empty(publicChatJwtVaultEntry) ? [] : [publicChatJwtVaultEntry]) }
   { identityName: identityNames.orchestrator, secrets: ['azure-openai-key', 'orchestrator-key', 'orchestrator-rotation-key', 'mcp-key'] }
   { identityName: identityNames.kernelmemory, secrets: ['azure-openai-key', 'blob-connection', 'search-admin-key', 'kernel-memory-key', 'kernel-memory-rotation-key'] }
-  { identityName: identityNames.mcpserver, secrets: ['google-search-key', 'mcp-key', 'mcp-rotation-key'] }
+  { identityName: identityNames.mcpserver, secrets: ['tavily-api-key', 'mcp-key', 'mcp-rotation-key'] }
 ]
 resource identities 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = [for service in services: { name: service.identityName }]
 var secretGrants = flatten(map(range(0, length(services)), index => map(services[index].secrets, secret => { index: index, secret: secret })))

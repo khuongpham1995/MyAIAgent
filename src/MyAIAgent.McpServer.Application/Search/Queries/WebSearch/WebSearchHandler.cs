@@ -1,55 +1,52 @@
 /**
  * MyAIAgent | McpServer · Application
  *
- * Aggregates provider search results, fetches successful pages, and serializes tool output.
+ * Bounds and deduplicates ranked search evidence without retrieving source pages.
  */
 
-using System.Text.Json;
-using FluentValidation;
 using MediatR;
-using Microsoft.Extensions.Logging;
+using MyAIAgent.Common.Domain.Models;
 using MyAIAgent.McpServer.Application.Common.Interfaces;
 
 namespace MyAIAgent.McpServer.Application.Search.Queries.WebSearch;
 
-public sealed class WebSearchHandler(
-    ISearchProvider searchProvider,
-    IPageFetcher pageFetcher,
-    ILogger<WebSearchHandler> logger)
-    : IRequestHandler<WebSearchQuery, string>
+public sealed class WebSearchHandler(ISearchProvider searchProvider, TimeProvider timeProvider)
+    : IRequestHandler<WebSearchQuery, ResponseModel<IReadOnlyList<PageContent>>>
 {
-    public async Task<string> Handle(WebSearchQuery request, CancellationToken cancellationToken)
+    public async Task<ResponseModel<IReadOnlyList<PageContent>>> Handle(WebSearchQuery request, CancellationToken cancellationToken)
     {
-        var entries = new List<SearchEntry>();
-        await foreach (var item in searchProvider.SearchAsync(request.Query, request.Top, cancellationToken))
-            entries.Add(item);
+        var response = await searchProvider.SearchAsync(request.Query, request.Top, cancellationToken);
+        if (!response.IsSuccess)
+            return ResponseModel<IReadOnlyList<PageContent>>.Fail(message: response.Message);
 
-        var fetchTasks = entries
-            .Where(e => !string.IsNullOrEmpty(e.Link))
-            .Select(async e =>
-            {
-                try
-                {
-                    var page = await pageFetcher.GetContentAsync(e.Link!, cancellationToken);
-                    if (!page.Success) return null;
-                    return new PageContent(e.Link!, page.Content ?? string.Empty);
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (HttpRequestException ex)
-                {
-                    logger.LogWarning(ex, "Failed to fetch {Url} — skipping", e.Link);
-                    return null;
-                }
-            });
+        var results = new List<PageContent>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var remaining = 20_000;
+        var retrievedAt = timeProvider.GetUtcNow();
+        foreach (var entry in response.Data ?? [])
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (results.Count >= request.Top || remaining == 0) break;
+            if (entry.Url is null || entry.Url.Length > 2048
+                || !Uri.TryCreate(entry.Url, UriKind.Absolute, out var uri)
+                || uri.Scheme is not ("http" or "https") || !uri.IsDefaultPort
+                || !string.IsNullOrEmpty(uri.UserInfo) || string.IsNullOrEmpty(uri.Host)
+                || !seen.Add(uri.AbsoluteUri)) continue;
 
-        var results = (await Task.WhenAll(fetchTasks))
-            .Where(r => r is not null)
-            .Cast<PageContent>()
-            .ToList();
+            var content = Limit(entry.Content ?? string.Empty, Math.Min(3000, remaining));
+            var title = Limit(entry.Title ?? string.Empty, 256);
+            remaining -= content.Length;
+            results.Add(new PageContent(uri.AbsoluteUri, content, title, retrievedAt,
+                content.Length < (entry.Content?.Length ?? 0) || title.Length < (entry.Title?.Length ?? 0)));
+        }
+        return ResponseModel<IReadOnlyList<PageContent>>.Succeed(results);
+    }
 
-        return JsonSerializer.Serialize(results);
+    private static string Limit(string value, int maximum)
+    {
+        if (value.Length <= maximum) return value;
+        // Keep Unicode surrogate pairs intact at the boundary.
+        if (maximum > 0 && char.IsHighSurrogate(value[maximum - 1])) maximum--;
+        return value[..maximum];
     }
 }

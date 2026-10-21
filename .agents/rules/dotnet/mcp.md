@@ -12,7 +12,7 @@ description: >
 | Layer | Responsibility |
 |---|---|
 | Domain | Tool name/description constants in `McpServerConstant.cs` |
-| Application | Request, handler, and validator for application operations; web search currently uses `IRequest<string>` |
+| Application | Request, handler, and validator for application operations; web search uses a typed `ResponseModel` result, serialized by the tool |
 | Presentation | `[McpServerTool]` methods dispatch application operations via `ISender`; the clock-only tool reads `TimeProvider` directly |
 
 ## Constants

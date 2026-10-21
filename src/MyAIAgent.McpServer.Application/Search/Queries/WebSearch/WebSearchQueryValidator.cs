@@ -1,7 +1,7 @@
 /**
  * MyAIAgent | McpServer · Application
  *
- * Validates Query, Top before web search and page retrieval reaches the McpServer handler.
+ * Validates Query, Top before web search reaches the McpServer handler.
  */
 
 using FluentValidation;
@@ -14,7 +14,9 @@ public sealed class WebSearchQueryValidator : AbstractValidator<WebSearchQuery>
     {
         RuleFor(x => x.Query)
             .NotEmpty()
-            .WithMessage("Query is required.");
+            .WithMessage("Query is required.")
+            .MaximumLength(500)
+            .WithMessage("Query must be at most 500 characters.");
 
         RuleFor(x => x.Top)
             .InclusiveBetween(1, 10)

@@ -25,7 +25,6 @@ param azureOpenAiEndpoint string
 param azureOpenAiDeployment string
 param azureEmbeddingDeployment string
 param azureTextDeployment string
-param googleSearchEngineId string
 // Nonempty values override AAC; otherwise public chat can be configured through AAC.
 param publicChatIssuer string = ''
 param publicChatAudience string = ''
@@ -177,14 +176,13 @@ var services = [
     memory: '1Gi'
     maxReplicas: 2
     secrets: [
-      { name: 'google-search-key', vaultSecret: 'google-search-key' }
+      { name: 'tavily-api-key', vaultSecret: 'tavily-api-key' }
       { name: 'mcp-key', vaultSecret: 'mcp-key' }
       { name: 'mcp-rotation-key', vaultSecret: 'mcp-rotation-key' }
     ]
     env: [
       { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
-      { name: 'GoogleSearch__ApiKey', secretRef: 'google-search-key' }
-      { name: 'GoogleSearch__SearchEngineId', value: googleSearchEngineId }
+      { name: 'Tavily__ApiKey', secretRef: 'tavily-api-key' }
       { name: 'ServiceAuthorization__Enabled', value: 'true' }
       { name: 'ServiceAuthorization__AccessKey1', secretRef: 'mcp-key' }
       { name: 'ServiceAuthorization__AccessKey2', secretRef: 'mcp-rotation-key' }

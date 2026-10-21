@@ -8,7 +8,7 @@ Find code, configuration, and shared instructions. Source headers use `/** ... *
 2. Open `MyAIAgent.All/AppHost.cs`, then Gateway `Program.cs` under `src/`.
 3. Trace a Gateway handler/client into Orchestrator. Read `ChatSessionHistory` for context/persistence and `ChatOrchestratorService` for model/tools.
 4. For documents, read KernelMemory `Program.cs` and `KernelMemoryProviderExtension`.
-5. For search, follow `WebSearchTool` → `WebSearchHandler` → `GoogleSearchClient` / `PageFetcher`.
+5. For search, follow `WebSearchTool` → `WebSearchHandler` → `TavilySearchClient`.
 6. Check the matching tests and [contributor guide](../CONTRIBUTING.md).
 
 ## Directory map
