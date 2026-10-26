@@ -4,6 +4,8 @@ This is the shared policy for Codex and Claude. Provider adapters select models
 and tools; they do not duplicate this policy. See [setup.md](setup.md) for native
 controls. Instructions cannot themselves change a host's native mode.
 
+For an optional source-based security audit, use the separate [ai-audit workflow](audit.md). It tracks coverage and independently verified findings; it does not replace any delivery stage below.
+
 | Stage | Claude | Codex | Exit condition |
 | --- | --- | --- | --- |
 | Plan | Opus, native Plan mode | Astra, native Plan mode | Concrete scope, files, acceptance criteria, tests and risks |

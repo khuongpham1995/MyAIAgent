@@ -31,7 +31,8 @@ resolve to the same files; do not delete them merely to hide that visual repetit
 Reviewer adapters retain each client's required format and model/tool settings;
 their instructions point to the single contract in [review.md](review.md).
 
-The four commands are `ai-plan`, `ai-build`, `ai-verify`, and `ai-commit`.
+The four delivery commands are `ai-plan`, `ai-build`, `ai-verify`, and `ai-commit`.
+The separate `ai-audit` skill runs an on-demand source audit; see [audit.md](audit.md).
 The prefix avoids shadowing native `/plan` and bundled `/verify`. Old unprefixed
 stage skills were removed. Stage policy stays in [workflow.md](workflow.md).
 Claude reads the skill's `model` and `disable-model-invocation` frontmatter;
@@ -49,6 +50,7 @@ wait for confirmation rather than claiming the requested routing ran.
 | --- | --- | --- |
 | Plan | Native Plan mode, Opus (`opusplan`) | Native Plan mode, `gpt-6-astra` |
 | Build / Verify / Commit | Outside Plan mode, Sonnet | Default mode, `gpt-6-sol` |
+| Source audit | Outside Plan mode, Sonnet | Default mode, `gpt-6-sol` |
 
 Mode changes must use the host's controls. Claude's `EnterPlanMode` tool can enter
 Plan mode; call it before planning when available and Plan mode is not already active. Accepting/exiting

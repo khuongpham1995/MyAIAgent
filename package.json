@@ -17,6 +17,7 @@
     "quality": "node --import tsx scripts/ai/quality.ts",
     "candidate:check": "node --import tsx scripts/ai/candidate.ts check",
     "deploy:aca": "node --import tsx scripts/deploy/aca.ts",
-    "deploy:smoke": "node --import tsx scripts/deploy/smoke.ts"
+    "deploy:smoke": "node --import tsx scripts/deploy/smoke.ts",
+    "security:audit": "node --import tsx scripts/security/audit.ts"
   }
 }

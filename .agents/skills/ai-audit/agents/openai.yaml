@@ -1,0 +1,6 @@
+# Provides Codex picker metadata for the source-based audit workflow.
+
+interface:
+  display_name: "AI Audit"
+  short_description: "Audit source with independent finding verification"
+  default_prompt: "Use $ai-audit for a bounded source-only audit of MyAIAgent."

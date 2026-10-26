@@ -86,6 +86,21 @@ test('the commit skill cannot run without the user naming it', () => {
   assert.ok(/^policy:\r?\n\s+allow_implicit_invocation: false\s*$/m.test(policy), 'ai-commit/agents/openai.yaml');
 });
 
+test('the separate audit skill has native picker metadata and a canonical Claude link', () => {
+  // Arrange
+  const directory = join(sharedSkills, 'ai-audit');
+  const skill = readFileSync(join(directory, 'SKILL.md'), 'utf8');
+  const picker = readFileSync(join(directory, 'agents/openai.yaml'), 'utf8');
+
+  // Act & Assert
+  assert.equal(frontmatter(join(directory, 'SKILL.md')).name, 'ai-audit');
+  assert.match(picker, /display_name: "AI Audit"/);
+  assert.match(picker, /\$ai-audit/);
+  assert.match(skill, /source-only/);
+  assert.equal(realpathSync(join(repoRoot, '.claude/skills/ai-audit')), realpathSync(directory));
+  assert.ok(!stageSkills.includes('ai-audit'));
+});
+
 test('Claude rule discovery points to the canonical shared rules without copies', () => {
   // Arrange
   const adapter = join(repoRoot, '.claude/rules');

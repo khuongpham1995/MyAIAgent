@@ -13,6 +13,7 @@ These working agreements define how contributors and coding assistants plan, imp
 - At Verify, explicitly spawn the code-reviewer and security-reviewer concurrently.
   Both are read-only. Wait for both; never run a build fixer alongside reviewers.
 - Report Summary / Changes / Risks with actual test evidence and unresolved limitations.
+- For an on-demand source audit, use `ai-audit` and `.agents/docs/audit.md`; keep its evidence local and its coverage claims separate from change verification.
 
 Codex setup and model/mode selection: `.agents/docs/setup.md`.
 Shared skills, rules and workflow docs live in `.agents/skills/`, `.agents/rules/` and `.agents/docs/`.

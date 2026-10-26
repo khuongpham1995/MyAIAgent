@@ -63,3 +63,5 @@ Example file header:
 Follow [AGENTS.md](AGENTS.md) and [Plan → Build/test → Verify → Commit](.agents/docs/workflow.md). Both read-only reviewers run concurrently on the tested candidate. Commit/push/PR require the maintainer's selected scope.
 
 Optional assistant controls: [Codex/Claude setup](.agents/docs/setup.md). Report vulnerabilities privately through [SECURITY.md](SECURITY.md); never post secrets or exploit details in public issues.
+
+For a bounded source audit, use `ai-audit`; see the [audit workflow](.agents/docs/audit.md). It tracks coverage and independent finding verification in ignored `artifacts/security-audit/`. `npm run security:audit -- init|check|report` manages evidence; it does not call models or replace normal quality/change reviews. The quick source-only profile does not execute the application or query live services.

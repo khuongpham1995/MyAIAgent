@@ -1,5 +1,11 @@
 # Repository guide
 
+The optional `ai-audit` workflow lives in `.agents/skills/ai-audit/` and `.agents/docs/audit.md`. Its TypeScript control-plane helper is `scripts/security/audit.ts`. `.claude/skills/ai-audit` links to the canonical skill. `.agents/vendor/security-audit/` contains unchanged MIT-licensed upstream material; its `source.json` records the revision and checksums, and `report-schema.json` defines finding records. Vendor files retain upstream formatting and notices. Generated audit JSON and Markdown remain ignored under `artifacts/security-audit/`.
+
+The executable validator ports and their tests are TypeScript: `scripts/security/validate-findings.ts`, `validate-coverage-ledger.ts`, and matching `.test.ts` files. `scripts/security/audit-validators.LICENSE` retains Cloudflare's MIT notice. The upstream JavaScript files remain an untouched reference; use the TypeScript commands in the [audit guide](../.agents/docs/audit.md).
+
+Within ignored audit runs, `critic-input.json` retains the finalized evidence snapshot supplied to the coverage critic. Metadata binds its digest to the critic response and binds rendered reports to all input evidence. Critic reconciliation is applied by the helper; later findings do not alter the reviewed ledger.
+
 Find code, configuration, and shared instructions. Source headers use `/** ... */` with a `MyAIAgent | <component>` signature and a short purpose. Other formats use native comments or the entries below.
 
 ## Suggested reading order
