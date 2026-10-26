@@ -86,7 +86,11 @@ public sealed class IoCExtensionTests
         var helper = provider.GetRequiredService<IAgentHelper>();
 
         // Act
-        await using var tools = await helper.GetAgentToolsAsync(new AgentDefinition { McpServerEndpoint = endpoint }, CancellationToken.None);
+        await using var tools = await helper.GetAgentToolsAsync(new AgentDefinition
+        {
+            McpServerEndpoint = endpoint,
+            AgentTools = [new AgentTool { Name = "test_tool", IsEnabled = true }]
+        }, CancellationToken.None);
         var tool = tools.Tools.Should().ContainSingle().Which.Should().BeAssignableTo<AIFunction>().Which;
         await tool.InvokeAsync(new AIFunctionArguments(), CancellationToken.None);
 

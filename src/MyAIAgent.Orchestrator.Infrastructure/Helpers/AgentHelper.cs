@@ -24,6 +24,7 @@ public sealed class AgentToolSet(IReadOnlyList<AITool> tools, params IAsyncDispo
     public static AgentToolSet Empty { get; } = new([]);
 
     public IReadOnlyList<AITool> Tools { get; } = tools;
+    public WebResearchSources? ResearchSources { get; init; }
 
     public async ValueTask DisposeAsync()
     {
@@ -69,13 +70,15 @@ public sealed class AgentHelper(HttpClient httpClient, ILogger<AgentHelper> logg
                 .Select(t => t.Name)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var filtered = enabledNames.Count == 0
-                ? mcpTools
-                : mcpTools.Where(t => enabledNames.Contains(t.Name));
+            var sources = isTrusted ? new WebResearchSources() : null;
+            var filtered = mcpTools.Where(tool => enabledNames.Contains(tool.Name))
+                .Select(tool => sources is not null && WebResearchSources.IsWebTool(tool.Name)
+                    ? (AITool)new WebResearchFunction(tool, sources)
+                    : tool).ToArray();
 
             return externalClient is null
-                ? new AgentToolSet([.. filtered.Cast<AITool>()], transport, mcpClient)
-                : new AgentToolSet([.. filtered.Cast<AITool>()], new AsyncClientOwner(externalClient), transport, mcpClient);
+                ? new AgentToolSet(filtered, transport, mcpClient) { ResearchSources = sources }
+                : new AgentToolSet(filtered, new AsyncClientOwner(externalClient), transport, mcpClient);
         }
         catch (OperationCanceledException)
         {

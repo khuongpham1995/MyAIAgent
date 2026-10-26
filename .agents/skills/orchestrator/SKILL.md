@@ -74,7 +74,9 @@ Conversation list/get/rename/delete handlers check that the session belongs to t
 
 `Program.cs` wires: `AddAzureAppConfiguration` → `AddApplication` → `AddInfrastructure(isDevelopment)` → `AddGlobalExceptionHandling` → `AddSingleton(TimeProvider.System)` → `UseExceptionHandler` → endpoints via `MapGroup("").AddEndpointFilter(HttpAuthEndpointFilter)`.
 
-`TimeProvider` is injected for testable timestamps — never use `DateTimeOffset.UtcNow` directly.
+`TimeProvider` is injected for testable timestamps and current UTC context each chat turn — never use `DateTimeOffset.UtcNow` directly.
+
+Agents expose only explicitly named, enabled tools. Empty/fully disabled lists grant none. `AgentHelper` wraps first-party `web_search` and `read_webpage` functions with a three-invocation budget per turn and source collection. Successful nonempty replies append a bounded Retrieved sources footer; streaming emits it as the final text delta before persistence. Error, cancellation, and empty output receive no footer. External tools with matching names do not establish sources.
 
 ## External Connections
 

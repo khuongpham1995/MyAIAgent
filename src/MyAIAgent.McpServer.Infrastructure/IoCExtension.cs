@@ -49,5 +49,17 @@ public static class IoCExtension
             ConnectCallback = (context, cancellationToken) => new OutboundConnectionPolicy()
                 .ConnectAsync(context.DnsEndPoint, OutboundAddressPolicy.IsPublicAddress, cancellationToken)
         }).AddHttpMessageHandler(() => new OutboundRequestHandler(uri => uri == TavilySearchClient.Endpoint));
+
+        services.AddHttpClient<IWebPageReader, TavilyWebPageClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(20);
+        }).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            AllowAutoRedirect = false,
+            UseProxy = false,
+            UseCookies = false,
+            ConnectCallback = (context, cancellationToken) => new OutboundConnectionPolicy()
+                .ConnectAsync(context.DnsEndPoint, OutboundAddressPolicy.IsPublicAddress, cancellationToken)
+        }).AddHttpMessageHandler(() => new OutboundRequestHandler(uri => uri == TavilyWebPageClient.Endpoint));
     }
 }

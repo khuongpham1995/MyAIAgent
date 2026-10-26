@@ -20,6 +20,29 @@ namespace MyAIAgent.Orchestrator.Tests.Unit.Infrastructure.Helpers;
 public sealed class AgentHelperTests
 {
     [Theory]
+    [InlineData(null, false, 0)]
+    [InlineData("test_tool", false, 0)]
+    [InlineData("unknown", true, 0)]
+    [InlineData("get_current_datetime", true, 0)]
+    [InlineData("test_tool", true, 1)]
+    [InlineData("TEST_TOOL", true, 1)]
+    public async Task GetAgentToolsAsync_WhenToolsAreSelected_ShouldExposeOnlyNamedEnabledTools(string? name, bool enabled, int count)
+    {
+        // Arrange
+        using var handler = new McpTestHttpMessageHandler();
+        using var client = new HttpClient(handler);
+        var helper = new AgentHelper(client, NullLogger<AgentHelper>.Instance, Settings(), Mock.Of<IHttpClientFactory>());
+        var agent = new AgentDefinition { McpServerEndpoint = "https://mcp.example/mcp" };
+        if (name is not null) agent.AgentTools.Add(new AgentTool { Name = name, IsEnabled = enabled });
+
+        // Act
+        await using var tools = await helper.GetAgentToolsAsync(agent, CancellationToken.None);
+
+        // Assert
+        tools.Tools.Should().HaveCount(count);
+    }
+
+    [Theory]
     [InlineData("http://169.254.169.254/latest/meta-data/")]
     [InlineData("https://unapproved.example/mcp")]
     [InlineData("https://mcp.example/admin")]
@@ -140,7 +163,7 @@ public sealed class AgentHelperTests
         using var httpClient = new HttpClient(handler);
         var logger = new Mock<ILogger<AgentHelper>>();
         var helper = new AgentHelper(httpClient, logger.Object, Settings(), Mock.Of<IHttpClientFactory>());
-        var agent = new AgentDefinition { McpServerEndpoint = "https://mcp.example/mcp" };
+        var agent = new AgentDefinition { McpServerEndpoint = "https://mcp.example/mcp", AgentTools = [new AgentTool { Name = "test_tool", IsEnabled = true }] };
 
         // Act
         await using var tools = await helper.GetAgentToolsAsync(agent, CancellationToken.None);

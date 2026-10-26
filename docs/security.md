@@ -47,7 +47,9 @@ KernelMemory's Search/Blob providers still use keys. The shared Search admin key
 
 Deploy callers against the internal HTTPS FQDN. External agent endpoints never receive the first-party key. Discovery authentication failures become safe chat errors, before model use.
 
-Search sends only the tool query and search options to Tavily, using a Bearer key in the header. Do not put secrets or personal data in queries. URLs/titles/excerpts are bounded and untrusted; citation guidance does not guarantee correctness or prevent every prompt injection. Provider errors return safe messages without response bodies or keys.
+Search sends the focused query and options to Tavily. Webpage reading sends one normalized public HTTPS URL to Tavily's extraction endpoint. Both use the existing Bearer key in the header. Do not put secrets or personal data in queries or URLs. The reader rejects credentials, query strings, IP literals, nonstandard ports, local names, and nonpublic DNS answers before contacting Tavily; fragments are removed.
+
+Only explicitly named, enabled agent tools are exposed; empty or fully disabled lists grant none. First-party web tools share a three-invocation limit per turn, including failures. Successful results can establish bounded source links; external tools with matching names cannot populate that list. Automatic links omit query-bearing URLs to avoid copying query tokens into the footer; model-written links are not filtered. Links are safely formatted without provider titles, and the footer is added only after successful, nonempty generation. Retrieved sources do not certify claims, remove model-invented links, or prevent every prompt injection. All retrieved text remains untrusted. Provider failures return safe messages without response bodies or keys.
 
 Shared keys do not identify callers or grant per-tool permissions. Restrict agent administration and treat approved tool descriptions/results as untrusted.
 
@@ -60,7 +62,7 @@ Agent endpoints must use the configured first-party MCP service or `McpServer:Al
 | Allowlist entry | HTTPS scheme, host, effective port; nonstandard ports supported. No credentials, wildcard, non-root path, query, or fragment. |
 | Approved external endpoint | Paths/protocol queries allowed; no user information/fragments. Must resolve only to public addresses. |
 | First-party endpoint | Configured origin and protocol routes only. RFC1918/IPv6 unique-local allowed; Development loopback only when that origin is loopback. |
-| Tavily search | Fixed `https://api.tavily.com/search`; public DNS/address checks, no redirects/proxy/cookies, 20-second deadline, 1 MiB response limit, no retries. Source pages are never fetched. |
+| Tavily research | Fixed `https://api.tavily.com/search` and `/extract`; public DNS/address checks, no redirects/proxy/cookies, 20-second deadlines, 1 MiB response limits, no retries. Reader target DNS is checked inside its deadline. Our service never connects to source pages; Tavily performs extraction, including any remote redirects and its own DNS resolution. Local prechecks do not control Tavily's subsequent retrieval. |
 
 First-party and external traffic use separate factory-managed clients; external is anonymous, including legacy SSE message requests. Every SDK request is checked. Proxies, redirects, cookies, and default credentials are disabled. HTTP/1.1 routes connections through the checked TCP callback.
 

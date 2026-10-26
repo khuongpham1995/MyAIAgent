@@ -61,7 +61,7 @@ public sealed class AutomaticWebSearchTests
         answer.Should().Contain("https://example.com/source");
         calls.Should().Equal("current release");
         turns.Should().Be(2);
-        var guidance = initialMessages!.First(m => m.Role == ChatRole.System).Text;
+        var guidance = string.Join(" ", initialMessages!.Where(m => m.Role == ChatRole.System).Select(m => m.Text));
         guidance.Should().Contain("2026-10-21").And.Contain("untrusted").And.Contain("Cite").And.Contain("If search fails");
     }
 
@@ -104,6 +104,7 @@ public sealed class AutomaticWebSearchTests
 
         // Assert
         captured.Should().NotContain(m => m.Text.Contains("web_search"));
+        captured.Should().Contain(m => m.Role == ChatRole.System && m.Text.Contains("Current UTC date/time: 2026-10-21T00:00:00.0000000+00:00"));
     }
 
     private static ChatOrchestratorService Service(IChatClient client, IReadOnlyList<AITool> tools)

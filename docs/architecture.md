@@ -9,7 +9,7 @@ Follow chat and document requests through the four services. For setup, see [loc
 | Gateway | Client-facing APIs, authentication, request mapping, and downstream forwarding | Orchestrator, KernelMemory upload, MCP discovery; optional JWT/JWKS settings |
 | Orchestrator | Chat turns, agent selection, MCP invocation, and conversation management | Cosmos sessions/agents; Azure OpenAI or OpenAI; agent-configured MCP endpoint |
 | KernelMemory | Document ingestion, vector search, and semantic question answering | Azure OpenAI, Azure AI Search, document storage; a separate Cosmos document-record model is registered |
-| McpServer | Web evidence and UTC date/time tools | Tavily basic search; no result-page fetching |
+| McpServer | Web search and webpage reading | Tavily basic search and extraction; no direct connections to source pages |
 
 Each service follows the same layers:
 
@@ -92,14 +92,25 @@ flowchart LR
     W -->|Focused query only| T[Tavily basic search]
     T --> E[Ranked URLs, titles and excerpts]
     E --> M
-    M --> A[Answer with source links]
+    M -->|Supplied URL or more detail needed| R[MCP read_webpage]
+    R --> X[Tavily basic extraction]
+    X -->|Bounded Markdown| M
+    E --> S[Per-turn source collector]
+    X --> S
+    M --> A[Model answer]
+    A --> F[Append retrieved sources]
+    S --> F
 ```
 
-Search is model-selected, not called on every turn. Only agents exposing `web_search` receive search/date/citation guidance. Existing tool allowlists still apply; no stored agent is changed automatically.
+Tools are model-selected and must be explicitly enabled. Empty, fully disabled, and unknown tool selections expose nothing. Orchestrator supplies current UTC time each turn and adds research guidance when either web tool is exposed. No stored agent is changed automatically.
 
 `web_search(query, top=3)` returns a JSON array with `Url`, `Content`, `Title`, `RetrievedAtUtc`, and `Truncated`. Input: nonblank query ≤500 characters and top 1–10. Output: provider order, unique valid HTTP(S) URLs, excerpts ≤3,000 characters each and ≤20,000 combined. Retrieval time is not a source publication date. Search can be stale or wrong; excerpts remain untrusted evidence.
 
 The typed HTTP client uses the fixed Tavily `/search` endpoint, basic/general search, no automatic tuning, generated answers, raw pages, or images. It has a 20-second deadline including the body, a 1 MiB response limit, and no retries. Successful no-results returns `[]`; configuration, credentials, quota, timeout, and malformed responses return safe MCP tool errors.
+
+`read_webpage(url)` returns one JSON object with `Url`, `Content`, `RetrievedAtUtc`, and `Truncated`. It accepts public HTTPS URLs up to 2,048 characters, without credentials, queries, IP literals, local names, or nonstandard ports; fragments are removed. DNS must resolve only to public addresses. A separate typed client submits one URL to Tavily `/extract` with basic depth, Markdown, and no images. Its 20-second deadline covers DNS, headers, and body; responses are capped at 1 MiB and content at 8,000 characters. HTTP 200 with failed extraction is an error. Tavily fetches pages; there is no direct-fetch fallback.
+
+`AgentHelper` wraps only first-party web tools with a per-turn collector and a shared three-invocation limit, including failures. Successful results establish up to ten validated, unique links. A completed nonempty answer receives an application-generated **Retrieved sources** footer, capped at 8,000 characters. Streaming emits it as the final text delta, so the delivered reply and persisted message match. Failure, cancellation, or empty generation produces no footer. External tools with matching names cannot populate the collector. This list identifies retrieved evidence; model-written claims and links still require scrutiny.
 
 ## Document ingestion and RAG
 

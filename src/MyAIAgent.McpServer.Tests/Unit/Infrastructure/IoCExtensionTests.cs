@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Moq;
 using MyAIAgent.McpServer.Infrastructure;
 using MyAIAgent.McpServer.Application.Common.Interfaces;
 using MyAIAgent.McpServer.Infrastructure.Services;
@@ -18,6 +19,33 @@ namespace MyAIAgent.McpServer.Tests.Unit.Infrastructure;
 
 public sealed class IoCExtensionTests
 {
+    [Theory]
+    [InlineData(302)]
+    [InlineData(429)]
+    [InlineData(500)]
+    public async Task ReadAsync_WhenRegisteredClientReceivesFailure_ShouldNotRetryOrFollowRedirect(int status)
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddLogging();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Tavily:ApiKey"] = "test-key" }).Build();
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddInfrastructure(configuration, isDevelopment: true);
+        using var handler = new StatusHandler(status);
+        var policy = new Mock<IPublicWebPageHostPolicy>();
+        policy.Setup(policy => policy.IsAllowedAsync("example.com", It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        services.AddSingleton(policy.Object);
+        services.AddHttpClient<IWebPageReader, TavilyWebPageClient>().ConfigurePrimaryHttpMessageHandler(() => handler);
+        using var provider = services.BuildServiceProvider();
+
+        // Act
+        var result = await provider.GetRequiredService<IWebPageReader>().ReadAsync(new Uri("https://example.com/article"), CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        handler.Requests.Should().Be(1);
+    }
+
     [Fact]
     public async Task SearchAsync_WhenDnsPolicyRejects_ShouldNotRetry()
     {

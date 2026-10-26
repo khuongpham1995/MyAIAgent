@@ -8,7 +8,7 @@ flat under `src/`; folders in `src/MyAIAgent.slnx` are solution groupings only.
 | Gateway | `src/MyAIAgent.Gateway.*` | API gateway, chat forwarding, public streaming chat, admin agents/tools, document upload |
 | Orchestrator | `src/MyAIAgent.Orchestrator.*` | IChatClient model calls, MCP dispatch, chat/session and agent persistence |
 | KernelMemory | `src/MyAIAgent.KernelMemory.*` | RAG daemon, document ingestion, document records and retrieval |
-| McpServer | `src/MyAIAgent.McpServer.*` | MCP tools, Tavily web-search evidence |
+| McpServer | `src/MyAIAgent.McpServer.*` | MCP tools, Tavily web search and webpage extraction |
 | Common | `src/MyAIAgent.Common.*` | Response models, validation, DI, auth filters, errors, resilience, storage |
 | Aspire | `src/MyAIAgent.All/` | Multi-service composition and service configuration |
 

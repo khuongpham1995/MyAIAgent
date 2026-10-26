@@ -38,7 +38,10 @@ public sealed class McpTransportTests
     public async Task Mcp_WhenAuthenticated_ShouldDiscoverAndInvokeToolOverHttp(string endpoint, string key)
     {
         // Arrange
-        await using var app = await StartServerAsync();
+        var search = new Mock<ISearchProvider>();
+        search.Setup(provider => provider.SearchAsync("focused query", 3, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ResponseModel<IReadOnlyList<SearchEntry>>.Succeed([new("https://example.com/", "Title", "Excerpt")]));
+        await using var app = await StartServerAsync(search: search.Object);
         using var httpClient = app.GetTestClient();
         await using var transport = new HttpClientTransport(new HttpClientTransportOptions
         {
@@ -49,12 +52,13 @@ public sealed class McpTransportTests
 
         // Act
         var tools = await client.ListToolsAsync(cancellationToken: CancellationToken.None);
-        var result = await client.CallToolAsync(McpServerConstant.GetCurrentDateTimeToolName, cancellationToken: CancellationToken.None);
+        var result = await client.CallToolAsync(McpServerConstant.WebSearchToolName,
+            new Dictionary<string, object?> { ["query"] = "focused query" }, cancellationToken: CancellationToken.None);
 
         // Assert
-        tools.Should().Contain(tool => tool.Name == McpServerConstant.GetCurrentDateTimeToolName);
+        tools.Select(tool => tool.Name).Should().BeEquivalentTo("web_search", "read_webpage");
         result.IsError.Should().NotBeTrue();
-        DateTimeOffset.TryParse(result.Content.OfType<TextContentBlock>().Single().Text, out _).Should().BeTrue();
+        result.Content.OfType<TextContentBlock>().Single().Text.Should().Contain("Excerpt");
     }
 
     [Theory]
@@ -134,8 +138,8 @@ public sealed class McpTransportTests
     public async Task Mcp_WhenToolCallIsUnauthorized_ShouldNotExecuteTheTool(string endpoint, string? key)
     {
         // Arrange
-        var clock = new CountingClock();
-        await using var app = await StartServerAsync(clock);
+        var search = new Mock<ISearchProvider>();
+        await using var app = await StartServerAsync(search: search.Object);
         using var client = app.GetTestClient();
         client.DefaultRequestHeaders.Add("Accept", "application/json, text/event-stream");
         if (key is not null) client.DefaultRequestHeaders.Add("Authorization", key);
@@ -146,12 +150,12 @@ public sealed class McpTransportTests
             jsonrpc = "2.0",
             id = 1,
             method = "tools/call",
-            @params = new { name = McpServerConstant.GetCurrentDateTimeToolName, arguments = new { } }
+            @params = new { name = McpServerConstant.WebSearchToolName, arguments = new { query = "focused query" } }
         });
 
         // Assert
         response.StatusCode.Should().Be(key is null ? HttpStatusCode.Unauthorized : HttpStatusCode.Forbidden);
-        clock.Reads.Should().Be(0);
+        search.Verify(provider => provider.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Theory]
@@ -199,21 +203,65 @@ public sealed class McpTransportTests
             outcome == "invalid" ? Times.Never : Times.Once);
     }
 
-    private sealed class CountingClock : TimeProvider
+    [Theory]
+    [InlineData("https://example.com/article#section", true)]
+    [InlineData("https://example.com/article?token=private", false)]
+    public async Task ReadWebPage_WhenInvokedOverHttp_ShouldValidateAndReturnMarkdown(string url, bool valid)
     {
-        public int Reads { get; private set; }
-        public override DateTimeOffset GetUtcNow()
+        // Arrange
+        var reader = new Mock<IWebPageReader>();
+        reader.Setup(provider => provider.ReadAsync(new Uri("https://example.com/article"), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ResponseModel<string>.Succeed("# Article\nEvidence"));
+        await using var app = await StartServerAsync(reader: reader.Object);
+        using var http = app.GetTestClient();
+        await using var transport = new HttpClientTransport(new HttpClientTransportOptions
         {
-            Reads++;
-            return DateTimeOffset.UnixEpoch;
+            Endpoint = new Uri("http://localhost/mcp"),
+            AdditionalHeaders = new Dictionary<string, string> { ["Authorization"] = "test-primary-key" }
+        }, http);
+        await using var client = await McpClient.CreateAsync(transport);
+
+        // Act
+        var result = await client.CallToolAsync("read_webpage", new Dictionary<string, object?> { ["url"] = url });
+
+        // Assert
+        result.IsError.Should().Be(valid ? null : true);
+        var text = result.Content.OfType<TextContentBlock>().Single().Text;
+        if (valid)
+        {
+            using var json = JsonDocument.Parse(text);
+            json.RootElement.GetProperty("Content").GetString().Should().Be("# Article\nEvidence");
+            json.RootElement.GetProperty("Url").GetString().Should().Be("https://example.com/article");
         }
+        else text.Should().Contain("public HTTPS URL").And.NotContain("private");
+        reader.Verify(provider => provider.ReadAsync(It.IsAny<Uri>(), It.IsAny<CancellationToken>()), valid ? Times.Once : Times.Never);
     }
 
-    private static async Task<WebApplication> StartServerAsync(TimeProvider? clock = null, ISearchProvider? search = null)
+    [Fact]
+    public async Task Mcp_WhenRemovedClockIsInvoked_ShouldRejectIt()
+    {
+        // Arrange
+        await using var app = await StartServerAsync();
+        using var http = app.GetTestClient();
+        await using var transport = new HttpClientTransport(new HttpClientTransportOptions
+        {
+            Endpoint = new Uri("http://localhost/mcp"),
+            AdditionalHeaders = new Dictionary<string, string> { ["Authorization"] = "test-primary-key" }
+        }, http);
+        await using var client = await McpClient.CreateAsync(transport);
+
+        // Act
+        var action = async () => await client.CallToolAsync("get_current_datetime");
+
+        // Assert
+        await action.Should().ThrowAsync<ModelContextProtocol.McpException>();
+    }
+
+    private static async Task<WebApplication> StartServerAsync(ISearchProvider? search = null, IWebPageReader? reader = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
-        builder.Services.AddSingleton(clock ?? TimeProvider.System);
+        builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton(Options.Create(new ServiceAuthorizationModel
         {
             Enabled = true,
@@ -224,7 +272,8 @@ public sealed class McpTransportTests
         builder.Services.AddSingleton<HttpAuthEndpointFilter>();
         builder.Services.AddApplication();
         builder.Services.AddSingleton(search ?? new Mock<ISearchProvider>().Object);
-        builder.Services.AddMcpServer().WithHttpTransport().WithTools<DateTimeTool>().WithTools<WebSearchTool>();
+        builder.Services.AddSingleton(reader ?? new Mock<IWebPageReader>().Object);
+        builder.Services.AddMcpServer().WithHttpTransport().WithTools<ReadWebPageTool>().WithTools<WebSearchTool>();
         var app = builder.Build();
         app.MapMcpServiceEndpoints();
         await app.StartAsync();

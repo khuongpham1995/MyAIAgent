@@ -22,7 +22,7 @@ A backend application foundation and learning repository, with explicit service 
 | **Chat that streams** | JSON replies and Server-Sent Events, with session, text, title, completion, and error events. |
 | **Conversations that persist** | Cosmos DB history, owner-scoped list/get/rename/delete operations, and optimistic concurrency. |
 | **Agents with tools** | Configurable instructions, MCP endpoints, and tool selection through `Microsoft.Extensions.AI.IChatClient`. |
-| **A small MCP server** | `web_search` and `get_current_datetime` over Streamable HTTP. |
+| **Web research through MCP** | `web_search` and `read_webpage` over Streamable HTTP, with explicit tool selection and retrieved source links. |
 | **Document knowledge** | A separate KernelMemory service for ingestion, embeddings, search, and question answering. Gateway forwards document uploads. |
 | **Browser integration** | An optional public API with visitor JWT validation, origin checks, rate limits, streaming, and conversation routes. |
 | **Local and Azure delivery** | Four services launched by Aspire; Bicep and GitHub Actions for Azure Container Apps delivery. |
@@ -46,7 +46,7 @@ flowchart TB
     subgraph services["Aspire · local services"]
         gateway["Gateway<br/>HTTP APIs"]
         orchestrator["Orchestrator<br/>Chat · agents · context"]
-        mcp["MCP server<br/>Web search · UTC clock"]
+        mcp["MCP server<br/>Search · read webpages"]
         memory["KernelMemory<br/>Document APIs"]
     end
 
@@ -69,7 +69,14 @@ flowchart TB
     style services fill:transparent,stroke:#94a3b8,stroke-width:1px
 ```
 
-Orchestrator uses Azure OpenAI or OpenAI and stores sessions, messages, and agents in Cosmos DB. The MCP web-search tool uses Tavily basic search for linked excerpts. Agents with `web_search` can look up current or missing information during chat; see [setup](docs/local-development.md#enable-automatic-web-search).
+Orchestrator uses Azure OpenAI or OpenAI and stores sessions, messages, and agents in Cosmos DB. Explicitly enabled MCP tools use Tavily to find sources and read public webpages. Completed replies include a **Retrieved sources** list built by the application; see [setup](docs/local-development.md#enable-automatic-web-search).
+
+| Ask the application to… | Tools it can use |
+| --- | --- |
+| Check the latest .NET release | Search, then read a source if needed. |
+| Summarize a supplied article URL | Read the public webpage. |
+| Compare two documentation pages | Read both pages and include source links. |
+| Explain a familiar concept | Answer directly when more evidence is unnecessary. |
 
 The diagram shows the first-party MCP server. Agents can also use explicitly approved external HTTPS MCP origins through a separate anonymous client. Service keys stay scoped to the configured first-party origin and protocol routes.
 

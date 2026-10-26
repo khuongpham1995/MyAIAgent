@@ -25,7 +25,7 @@ Use a development subscription/resource group. Review costs first: budget alerts
 | Azure AI Search | Service endpoint and admin key for KernelMemory index operations. |
 | Azure Blob Storage | Account connection string and a development container for persistent documents in the configuration below. |
 | Azure App Configuration | Optional locally. Endpoint plus App Configuration Data Reader access when enabled. |
-| Tavily | Free-tier API key for `web_search`; startup, discovery, and the clock work without it. Keep paid billing disabled if you want a free-only account. |
+| Tavily | API key for `web_search` and `read_webpage`; startup and discovery work without it. Keep paid billing disabled if you want a free-only account. |
 
 Provision Cosmos/Search with Bicep or equivalent settings; OpenAI deployments and Blob Storage are separate. Grant developer data access to **test containers only**. Subscription management rights do not grant Cosmos/AAC data access.
 
@@ -138,7 +138,7 @@ dotnet user-secrets set --project src/MyAIAgent.McpServer.Presentation <<'JSON'
 JSON
 ```
 
-- Tavily credentials are needed for web search only, not discovery or the clock.
+- The same Tavily credentials serve search and webpage reading; discovery needs no provider key.
 - Keep header `Authorization`. Disabling MCP authorization is allowed only in Development.
 - Match `McpServer:BaseUrl` in both callers. Keys are sent only to that origin's `/`, `/mcp`, or `/mcp/`, with no query/fragment or redirects. Production requires HTTPS; Development permits loopback HTTP.
 
@@ -204,7 +204,9 @@ Use dashboard endpoints when local ports differ. Verify without model or search 
 
 **Keep Development routes private.** To try a paid model call, send Gateway `POST /chat` with `{"sessionId":null,"userMessage":"Hello","agentId":null}`.
 
-With no default agent, chat has no tools. Create one through `/admin/agents` with `name`, `instructions`, `mcpServerEndpoint` (e.g. `http://localhost:5255/mcp`), `isDefault`, and optional `enabledTools`. A missing/empty tool list exposes all discovered tools; name tools explicitly to restrict them.
+With no default agent, chat has no tools. Create one through `/admin/agents` with `name`, `instructions`, `mcpServerEndpoint` (e.g. `http://localhost:5255/mcp`), `isDefault`, and `enabledTools`. Only explicitly named, enabled tools are exposed. Missing/empty lists, fully disabled entries, and unknown names grant no tools.
+
+**Compatibility change:** empty lists previously enabled every discovered tool. Existing agents with those lists must be reconfigured explicitly; stored agents are not updated automatically. The clock tool was removed; Orchestrator supplies current UTC time in each chat turn. Agent administration currently supports create/list/delete, so replace an affected agent deliberately and use its new ID for new conversations. Existing conversations can select a replacement through their chat request's `agentId`.
 
 ### Enable automatic web search
 
@@ -217,13 +219,19 @@ With no default agent, chat has no tools. Create one through `/admin/agents` wit
      "instructions": "Answer clearly, check current facts when needed, and cite sources.",
      "mcpServerEndpoint": "http://localhost:5255/mcp",
      "isDefault": true,
-     "enabledTools": ["web_search"]
+     "enabledTools": ["web_search", "read_webpage"]
    }
    ```
 
 3. Restart AppHost after configuration changes, then send a chat question needing current information. The model can call search and use the evidence automatically. Model and search usage are separate; no lookup is guaranteed on a particular prompt.
 
-Basic search uses one Tavily credit per request; the client never retries automatically. Check your [Tavily plan and usage](https://docs.tavily.com/documentation/api-credits); quotas can change. Treat results as evidence to verify, not guaranteed facts. Do not include private information in search questions. No key or exhausted quota produces a tool error instead of an empty success.
+Try “What changed in the latest .NET release?”, “Summarize this article: https://example.com/article”, or “Compare these two documentation pages: URL1 and URL2”. General questions can be answered without a tool call.
+
+`read_webpage` accepts one public HTTPS URL without credentials, query strings, IP literals, or a nonstandard port; fragments are removed. Local names and hosts with nonpublic DNS answers are rejected. Tavily retrieves the page; authenticated pages, OCR, and site crawling are unsupported. Extracted Markdown is limited to 8,000 characters and includes a truncation flag.
+
+The first-party tools share a three-invocation limit per chat turn, including failed calls. Clients never retry automatically. Completed replies append up to ten safe, unique links under **Retrieved sources**, even if the model omits citations. Streaming delivers this as a final text delta; the same reply is persisted. The list identifies retrieved evidence and does not certify claims or remove unsupported links written by the model.
+
+Basic search uses one Tavily credit per request; basic extraction uses one credit per five successful URLs. Check your [Tavily plan and usage](https://docs.tavily.com/documentation/api-credits); quotas can change. Calls and model tokens may incur charges; per-turn limits do not enforce a monthly budget. Do not include private information in queries or submitted URLs. Missing credentials, unreadable pages, or exhausted quotas produce safe tool errors.
 
 Next: [document routes](architecture.md#document-ingestion-and-rag) or [public visitor API](public-chat-api.md).
 
