@@ -38,15 +38,15 @@ public sealed class OrchestratorEndpointTests
         if (key is not null) client.DefaultRequestHeaders.Add("Authorization", key);
         (string Method, string Path, string? Body)[] requests =
         [
-            ("POST", "/chat", """{"userId":"owner","userMessage":"Hello"}"""),
-            ("POST", "/chat/stream", """{"userId":"owner","userMessage":"Hello"}"""),
-            ("GET", "/conversations?userId=owner", null),
-            ("GET", "/conversations/s-1?userId=owner", null),
-            ("PUT", "/conversations/s-1/title", """{"userId":"owner","title":"Renamed"}"""),
-            ("DELETE", "/conversations/s-1?userId=owner", null),
-            ("GET", "/agents", null),
-            ("POST", "/agents", """{"name":"Test","instructions":"Answer clearly","enabledTools":[]}"""),
-            ("DELETE", "/agents/a-1", null),
+            ("POST", "/api/chat", """{"userId":"owner","userMessage":"Hello"}"""),
+            ("POST", "/sse/chat", """{"userId":"owner","userMessage":"Hello"}"""),
+            ("GET", "/api/conversations?userId=owner", null),
+            ("GET", "/api/conversations/s-1?userId=owner", null),
+            ("PUT", "/api/conversations/s-1/title", """{"userId":"owner","title":"Renamed"}"""),
+            ("DELETE", "/api/conversations/s-1?userId=owner", null),
+            ("GET", "/api/agents", null),
+            ("POST", "/api/agents", """{"name":"Test","instructions":"Answer clearly","enabledTools":[]}"""),
+            ("DELETE", "/api/agents/a-1", null),
         ];
 
         // Act / Assert
@@ -73,7 +73,7 @@ public sealed class OrchestratorEndpointTests
         client.DefaultRequestHeaders.Add("Authorization", key);
 
         // Act
-        using var response = await client.GetAsync("/agents");
+        using var response = await client.GetAsync("/api/agents");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -93,6 +93,26 @@ public sealed class OrchestratorEndpointTests
         {
             using var response = await client.GetAsync(path);
             response.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+        repository.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Modules_WhenOldUrlsRequested_ShouldReturnNotFoundWithoutRedirecting()
+    {
+        // Arrange
+        var repository = new Mock<IAgentRepository>();
+        await using var app = await StartAsync(repository.Object);
+        using var client = CreateClient(app);
+        client.DefaultRequestHeaders.Add("Authorization", "test-primary-key");
+
+        // Act / Assert
+        foreach (var (method, path) in new[] { ("POST", "/chat"), ("POST", "/chat/stream"), ("GET", "/agents"), ("GET", "/conversations") })
+        {
+            using var request = new HttpRequestMessage(new HttpMethod(method), path);
+            using var response = await client.SendAsync(request);
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            response.Headers.Location.Should().BeNull();
         }
         repository.VerifyNoOtherCalls();
     }

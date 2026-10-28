@@ -34,6 +34,13 @@ files for current versions; do not copy package versions from examples.
 
 ## Architecture and implementation
 
+- Gateway and Orchestrator application REST routes use `/api`; chat streams use `/sse`
+  (`POST /sse/chat`, or Gateway visitor `POST /sse/public/chat`). Visitor REST routes use
+  `/api/public` and administration uses `/api/admin`. Health, documentation, MCP `/mcp` and
+  its root compatibility endpoint, and KernelMemory SDK routes retain their existing paths.
+- Compose JSON and streaming modules under separate prefixes with the same required
+  authorization. Keep visitor authentication, CORS, rate-limit classification and OpenAPI
+  security metadata aligned across both public prefixes. Service base URLs remain roots.
 - `Directory.Build.props` owns shared .NET target/compiler defaults; `Directory.Packages.props`
   pins NuGet versions centrally. Keep project-specific properties and package references in each project.
 - Common.Domain owns entity bases and lifetime markers. Common.Application owns `ResponseModel<T>`,

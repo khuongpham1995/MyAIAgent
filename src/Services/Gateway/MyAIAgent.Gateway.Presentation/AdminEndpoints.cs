@@ -47,7 +47,7 @@ public static class AdminEndpoints
         {
             var result = await sender.Send(mapper.Map<CreateAgentCommand>(request), cancellationToken);
             return result.IsSuccess
-                ? Results.Created($"/admin/agents/{result.Data}", result)
+                ? Results.Created($"/api/admin/agents/{result.Data}", result)
                 : Results.BadRequest(result.ToErrorResponse(StatusCodes.Status400BadRequest));
         }).WithName("CreateAgent")
             .Produces<ResponseModel<string>>(StatusCodes.Status201Created)

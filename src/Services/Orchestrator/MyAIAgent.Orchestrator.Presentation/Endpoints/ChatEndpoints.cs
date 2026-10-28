@@ -23,7 +23,12 @@ public static class ChatEndpoints
             return result.IsSuccess ? Results.Ok(result) : Results.BadRequest(result);
         });
 
-        endpoints.MapPost("/chat/stream", async (ChatRequestDto request, ISender sender, IMapper mapper, CancellationToken cancellationToken) =>
+        return endpoints;
+    }
+
+    public static IEndpointRouteBuilder MapChatStreamingEndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapPost("/chat", async (ChatRequestDto request, ISender sender, IMapper mapper, CancellationToken cancellationToken) =>
         {
             var events = sender.CreateStream(mapper.Map<StreamChatCommand>(request), cancellationToken);
             return await events.ToServerSentEventsAsync(chatEvent => chatEvent.Type, cancellationToken);

@@ -43,7 +43,7 @@ test('smoke checks readiness, anonymous rejection and authenticated success with
   assert.equal(context.calls[0].url, 'https://gateway.example.test/health/ready');
   assert.equal(context.calls[2].options.headers, undefined);
   assert.deepEqual(context.calls[3].options.headers, { Authorization: `Bearer ${context.token}` });
-  assert.equal(context.calls.at(-1)?.url, 'https://gateway.example.test/admin/tools');
+  assert.equal(context.calls.at(-1)?.url, 'https://gateway.example.test/api/admin/tools');
   assert.deepEqual(context.calls.at(-1)?.options.headers, { Authorization: `Bearer ${context.token}` });
   assert.ok(context.calls.every(call => call.options.redirect === 'error' && call.options.signal instanceof AbortSignal));
 });
@@ -54,7 +54,7 @@ test('MCP discovery must succeed even after authenticated agent listing passes',
     ...Array.from({ length: 30 }, () => ({ status: 200, body: '{"isSuccess":false}' }))]);
 
   // Act & Assert
-  await assert.rejects(smokeTest(['gateway.example.test', 'audience'], context), /failed for \/admin\/tools/);
+  await assert.rejects(smokeTest(['gateway.example.test', 'audience'], context), /failed for \/api\/admin\/tools/);
   assert.equal(context.calls.length, 33);
   assert.equal(context.delays.length, 29);
 });

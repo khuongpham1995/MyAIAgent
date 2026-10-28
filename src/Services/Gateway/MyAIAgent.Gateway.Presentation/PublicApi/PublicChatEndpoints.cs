@@ -18,11 +18,11 @@ public static class PublicChatEndpoints
 {
     public static IEndpointRouteBuilder MapPublicChatEndpoints(this IEndpointRouteBuilder endpoints, PublicChatSettings settings)
     {
-        var group = endpoints.MapGroup("/public")
+        var group = endpoints.MapGroup(string.Empty)
             .RequireCors(GatewayConstant.PublicChat.CorsPolicy)
             .RequireAuthorization(GatewayConstant.PublicChat.Policy);
 
-        group.MapPost("/chat/stream", async (
+        group.MapGroup("/sse/public").MapPost("/chat", async (
             PublicChatRequestDto request,
             HttpContext context,
             ISender sender,
@@ -35,11 +35,11 @@ public static class PublicChatEndpoints
                 settings.AgentId);
             var events = sender.CreateStream(mapper.Map<StreamChatGatewayCommand>(source), cancellationToken);
             return await events.ToServerSentEventsAsync(chatEvent => chatEvent.Type, cancellationToken);
-        }).WithName("PublicStreamChat")
+        }).WithName(PublicChatExtensions.StreamEndpointName)
             .Produces<ChatStreamEvent>(StatusCodes.Status200OK, "text/event-stream")
             .Produces<ResponseModel<ErrorResponseDto>>(StatusCodes.Status400BadRequest);
 
-        group.MapConversationEndpoints(PublicChatExtensions.GetVisitorUserId, "Public");
+        group.MapGroup("/api/public").MapConversationEndpoints(PublicChatExtensions.GetVisitorUserId, "Public");
 
         return endpoints;
     }

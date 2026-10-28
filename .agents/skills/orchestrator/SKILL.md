@@ -4,7 +4,7 @@ description: >
   Orchestrator service patterns for MyAIAgent. Covers the Microsoft Agents
   Framework (Microsoft.Agents.AI), IChatOrchestratorService abstraction,
   ChatOrchestratorService implementation, MCP client integration, and the
-  POST /chat endpoint. Load when: working on the Orchestrator service,
+  POST /api/chat endpoint. Load when: working on the Orchestrator service,
   Microsoft Agents Framework, chat pipeline, AI provider configuration, or
   MCP tool dispatch from the Orchestrator.
 ---
@@ -44,7 +44,7 @@ MyAIAgent.Orchestrator.Presentation/
 
 ## Chat Flow
 
-1. `POST /chat` receives `ChatRequestDto` with session, message, user identity, and optional agent selection
+1. `POST /api/chat` receives `ChatRequestDto` with session, message, user identity, and optional agent selection
 2. The injected Mapster mapper maps the request to `ChatCommand`
 3. `ChatHandler` looks up the session by `SessionId` and `UserId` (or creates a new owned session), builds history, calls `IChatOrchestratorService.ChatAsync`
 4. Appends user + assistant messages to session, persists via `IChatSessionRepository`
@@ -60,7 +60,7 @@ See `Application/Chat/Commands/Chat/ChatHandler.cs` for the current implementati
 
 ## Streaming Chat
 
-`POST /chat/stream` returns Server-Sent Events built from `StreamChatCommand : IStreamRequest<ChatStreamEvent>`
+`POST /sse/chat` returns Server-Sent Events built from `StreamChatCommand : IStreamRequest<ChatStreamEvent>`
 (`session`, `delta`, `title`, `done`, `error`). MediatR does not run `IPipelineBehavior` for stream requests,
 so `StreamValidationBehavior` (Common.Application) validates them and is registered beside `ValidationBehavior`.
 `ToServerSentEventsAsync` pulls the first event before returning so start-up failures such as validation still

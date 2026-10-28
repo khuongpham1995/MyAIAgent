@@ -7,6 +7,7 @@
 using Microsoft.OpenApi;
 using System.Text.Json.Nodes;
 using MyAIAgent.Common.Application.Models;
+using MyAIAgent.Gateway.Presentation.PublicApi;
 
 namespace MyAIAgent.Gateway.Presentation;
 
@@ -67,14 +68,14 @@ public static class GatewayOpenApiExtensions
                     Type = SecuritySchemeType.Http,
                     Scheme = "bearer",
                     BearerFormat = "JWT",
-                    Description = "Entra access token required outside Development. Chat/conversations require Chat.Access or Agent.Admin; /admin requires Agent.Admin. Development uses the shared local identity.",
+                    Description = "Entra access token required outside Development. Chat/conversations require Chat.Access or Agent.Admin; /api/admin requires Agent.Admin. Development uses the shared local identity.",
                 };
                 document.Components.SecuritySchemes["VisitorBearer"] = new OpenApiSecurityScheme
                 {
                     Type = SecuritySchemeType.Http,
                     Scheme = "bearer",
                     BearerFormat = "JWT",
-                    Description = "Visitor JWT required on /public routes, including Development. Tokens must match the configured visitor issuer and audience; they are not Entra tokens.",
+                    Description = "Visitor JWT required on /api/public and /sse/public routes, including Development. Tokens must match the configured visitor issuer and audience; they are not Entra tokens.",
                 };
                 foreach (var (path, item) in document.Paths)
                     foreach (var operation in item.Operations?.Values.AsEnumerable() ?? [])
@@ -84,7 +85,7 @@ public static class GatewayOpenApiExtensions
                             operation.Security = [];
                             continue;
                         }
-                        var scheme = path.StartsWith("/public/", StringComparison.Ordinal) ? "VisitorBearer" : "EntraBearer";
+                        var scheme = PublicChatExtensions.IsPublicPath(path) ? "VisitorBearer" : "EntraBearer";
                         operation.Security = [new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference(scheme, document)] = [] }];
                     }
                 return Task.CompletedTask;

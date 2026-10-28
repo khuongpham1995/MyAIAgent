@@ -86,7 +86,7 @@ public sealed class OrchestratorStreamClient(
         string? agentId,
         CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/chat/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/sse/chat")
         {
             Content = JsonContent.Create(new { sessionId, userMessage, userId, agentId }),
         };

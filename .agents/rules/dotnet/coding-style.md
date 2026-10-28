@@ -37,6 +37,9 @@ description: >
 
 ## Minimal API Modules
 
+- Gateway/Orchestrator application routes use `/api` for REST and `/sse` for chat streaming.
+  Map each prefix through its own authorized group; do not change HTTP verbs or SSE events.
+  Health, documentation, MCP protocol and KernelMemory SDK routes are explicit exceptions.
 - Group maintained routes by module in endpoint extension classes.
 - Use `IEndpointRouteBuilder Map[Module]Endpoints(this IEndpointRouteBuilder endpoints, ...)`
   and return the incoming builder for chaining. Add explicit parameters only for required settings or owner resolution.

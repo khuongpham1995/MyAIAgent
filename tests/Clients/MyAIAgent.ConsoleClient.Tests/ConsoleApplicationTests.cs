@@ -29,7 +29,7 @@ public sealed class ConsoleApplicationTests
         await app.RunAsync();
 
         // Assert
-        var chats = fixture.Requests.Where(request => request.Path == "/chat/stream").ToArray();
+        var chats = fixture.Requests.Where(request => request.Path == "/sse/chat").ToArray();
         chats.Should().HaveCount(2);
         using var first = JsonDocument.Parse(chats[0].Body!);
         using var second = JsonDocument.Parse(chats[1].Body!);
@@ -51,7 +51,7 @@ public sealed class ConsoleApplicationTests
         await app.RunAsync();
 
         // Assert
-        var chat = fixture.Requests.Single(request => request.Path == "/chat/stream");
+        var chat = fixture.Requests.Single(request => request.Path == "/sse/chat");
         using var body = JsonDocument.Parse(chat.Body!);
         body.RootElement.GetProperty("sessionId").GetString().Should().Be("s-1");
         body.RootElement.GetProperty("agentId").ValueKind.Should().Be(JsonValueKind.Null);
@@ -71,7 +71,7 @@ public sealed class ConsoleApplicationTests
         await app.RunAsync();
 
         // Assert
-        fixture.Requests.Select(request => request.Path).Should().Equal("/conversations?page=1&pageSize=20", "/conversations?page=2&pageSize=20", "/conversations?page=1&pageSize=20");
+        fixture.Requests.Select(request => request.Path).Should().Equal("/api/conversations?page=1&pageSize=20", "/api/conversations?page=2&pageSize=20", "/api/conversations?page=1&pageSize=20");
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public sealed class ConsoleApplicationTests
         await app.RunAsync();
 
         // Assert
-        using var body = JsonDocument.Parse(fixture.Requests.Single(request => request.Path == "/chat/stream").Body!);
+        using var body = JsonDocument.Parse(fixture.Requests.Single(request => request.Path == "/sse/chat").Body!);
         body.RootElement.GetProperty("sessionId").ValueKind.Should().Be(JsonValueKind.Null);
         body.RootElement.GetProperty("agentId").GetString().Should().Be("a-1");
     }
@@ -103,7 +103,7 @@ public sealed class ConsoleApplicationTests
         await app.RunAsync();
 
         // Assert
-        fixture.Requests.Should().ContainSingle().Which.Path.Should().Be("/chat");
+        fixture.Requests.Should().ContainSingle().Which.Path.Should().Be("/api/chat");
         output.ToString().Should().Contain("Mode: JSON").And.Contain("JSON reply");
     }
 
@@ -298,14 +298,14 @@ public sealed class ConsoleApplicationTests
 
     private static GatewayFixture StandardFixture(ClientOptions? options = null) => new(request => request.RequestUri!.AbsolutePath switch
     {
-        "/admin/agents" when request.Method == HttpMethod.Post => GatewayFixture.Json("""{"isSuccess":true,"data":"a-new"}""", HttpStatusCode.Created),
-        "/admin/agents" => GatewayFixture.Json(Agents),
-        "/admin/tools" => GatewayFixture.Json(Tools),
-        "/conversations" => GatewayFixture.Json(Conversations),
-        "/conversations/s-1" when request.Method == HttpMethod.Get => GatewayFixture.Json(Detail),
-        "/conversations/s-1" or "/conversations/s-1/title" => new HttpResponseMessage(HttpStatusCode.NoContent),
-        "/chat" => GatewayFixture.Json("""{"isSuccess":true,"data":{"reply":"JSON reply","sessionId":"s-1"}}"""),
-        "/chat/stream" => GatewayFixture.Stream(GatewayClientTests.Session + GatewayClientTests.Delta + GatewayClientTests.Done),
+        "/api/admin/agents" when request.Method == HttpMethod.Post => GatewayFixture.Json("""{"isSuccess":true,"data":"a-new"}""", HttpStatusCode.Created),
+        "/api/admin/agents" => GatewayFixture.Json(Agents),
+        "/api/admin/tools" => GatewayFixture.Json(Tools),
+        "/api/conversations" => GatewayFixture.Json(Conversations),
+        "/api/conversations/s-1" when request.Method == HttpMethod.Get => GatewayFixture.Json(Detail),
+        "/api/conversations/s-1" or "/api/conversations/s-1/title" => new HttpResponseMessage(HttpStatusCode.NoContent),
+        "/api/chat" => GatewayFixture.Json("""{"isSuccess":true,"data":{"reply":"JSON reply","sessionId":"s-1"}}"""),
+        "/sse/chat" => GatewayFixture.Stream(GatewayClientTests.Session + GatewayClientTests.Delta + GatewayClientTests.Done),
         _ => new HttpResponseMessage(HttpStatusCode.NotFound),
     }, options);
 }

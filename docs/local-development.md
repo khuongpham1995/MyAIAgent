@@ -203,20 +203,20 @@ Use dashboard endpoints when local ports differ. Verify without model or search 
 | Request | Checks |
 | --- | --- |
 | `/health/live` on each service | Process availability |
-| Gateway `GET /admin/agents` | Orchestrator forwarding/key and Cosmos; expect `isSuccess: true` |
-| Gateway `GET /admin/tools` | MCP authorization/discovery; expect `isSuccess: true` |
+| Gateway `GET /api/admin/agents` | Orchestrator forwarding/key and Cosmos; expect `isSuccess: true` |
+| Gateway `GET /api/admin/tools` | MCP authorization/discovery; expect `isSuccess: true` |
 | Gateway `/scalar/` | Interactive API reference; default document `kyle-ai-agent` |
 
-**Keep Development routes private.** To try a paid model call, send Gateway `POST /chat` with `{"sessionId":null,"userMessage":"Hello","agentId":null}`.
+**Keep Development routes private.** To try a paid model call, send Gateway `POST /api/chat` with `{"sessionId":null,"userMessage":"Hello","agentId":null}`.
 
-With no default agent, chat has no tools. Create one through `/admin/agents` with `name`, `instructions`, `mcpServerEndpoint` (e.g. `http://localhost:5255/mcp`), `isDefault`, and `enabledTools`. Only explicitly named, enabled tools are exposed. Missing/empty lists, fully disabled entries, and unknown names grant no tools.
+With no default agent, chat has no tools. Create one through `/api/admin/agents` with `name`, `instructions`, `mcpServerEndpoint` (e.g. `http://localhost:5255/mcp`), `isDefault`, and `enabledTools`. Only explicitly named, enabled tools are exposed. Missing/empty lists, fully disabled entries, and unknown names grant no tools.
 
 **Compatibility change:** empty lists previously enabled every discovered tool. Existing agents with those lists must be reconfigured explicitly; stored agents are not updated automatically. The clock tool was removed; Orchestrator supplies current UTC time in each chat turn. Agent administration currently supports create/list/delete, so replace an affected agent deliberately and use its new ID for new conversations. Existing conversations can select a replacement through their chat request's `agentId`.
 
 ### Enable automatic web search
 
 1. Store `Tavily:ApiKey` in McpServer user-secrets (above), or use the [Key Vault reference](#central-tavily-key-through-aac) below.
-2. Create or update an agent through Gateway `/admin/agents` with these fields, retaining the agent ID returned by the API:
+2. Create or update an agent through Gateway `/api/admin/agents` with these fields, retaining the agent ID returned by the API:
 
    ```json
    {
@@ -277,7 +277,7 @@ Only HTTP(S) loopback service roots are accepted. TLS validation stays enabled. 
 | **New chat / Continue chat** | Type messages and see streamed replies; follow-up messages retain the session |
 | **Conversations** | Page through history, read messages, open a saved chat, rename, or confirm deletion |
 | **Tools** | Discover available tools without invoking Tavily |
-| **Mode** | Switch between streaming `/chat/stream` and JSON `/chat` replies |
+| **Mode** | Switch between streaming `/sse/chat` and JSON `/api/chat` replies |
 
 For a research agent, enable `web_search,read_webpage` and accept the local MCP endpoint when it matches your configuration. Then try an ordinary question, a current-facts search, and a public article summary. Chat can incur model usage; research can also consume Tavily credits.
 

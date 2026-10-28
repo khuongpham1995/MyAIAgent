@@ -53,7 +53,7 @@ public sealed class GatewayConsumerClientTests
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().BeEmpty();
         captured!.RequestUri!.Host.Should().Be("gateway.example.test");
-        captured.RequestUri.PathAndQuery.Should().Be("/public/conversations?page=1&pageSize=20");
+        captured.RequestUri.PathAndQuery.Should().Be("/api/public/conversations?page=1&pageSize=20");
         captured.Headers.Authorization!.Scheme.Should().Be("Bearer");
     }
 
@@ -77,7 +77,7 @@ public sealed class GatewayConsumerClientTests
 
         // Assert
         mediaType.Should().Be("multipart/form-data");
-        path.Should().Be("/admin/documents?documentId=doc-1");
+        path.Should().Be("/api/admin/documents?documentId=doc-1");
         result.Data.Should().NotBeNull();
         result.Data!.DocumentId.Should().Be("doc-1");
     }
@@ -118,7 +118,7 @@ public sealed class GatewayConsumerClientTests
         await provider.GetRequiredService<GatewayApiClient>().DeleteAgentAsync("a-1", CancellationToken.None);
 
         // Assert
-        path.Should().Be("/admin/agents/a-1");
+        path.Should().Be("/api/admin/agents/a-1");
     }
 
     private static ServiceProvider ConsumerProvider(Func<HttpRequestMessage, HttpResponseMessage> respond)

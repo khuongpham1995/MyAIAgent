@@ -19,9 +19,8 @@ namespace MyAIAgent.Gateway.Presentation.PublicApi;
 public static class PublicChatExtensions
 {
     public const string SubjectClaim = "sub";
+    internal const string StreamEndpointName = "PublicStreamChat";
     private const int MaxSubjectLength = 128;
-    private const string PublicPathPrefix = "/public";
-    private const string StreamPath = "/public/chat/stream";
 
     private static readonly string[] AsymmetricAlgorithms =
         ["RS256", "RS384", "RS512", "ES256", "ES384", "ES512"];
@@ -110,7 +109,7 @@ public static class PublicChatExtensions
         // UseAuthentication only runs the default (Entra) scheme, so visitor tokens are resolved here
         // before the rate limiter needs the visitor identity.
         app.UseWhen(
-            context => context.Request.Path.StartsWithSegments(PublicPathPrefix),
+            context => IsPublicPath(context.Request.Path),
             branch => branch.Use(async (context, next) =>
             {
                 var result = await context.AuthenticateAsync(GatewayConstant.PublicChat.Scheme);
@@ -213,12 +212,16 @@ public static class PublicChatExtensions
         return PartitionedRateLimiter.CreateChained(perIp, perVisitor, concurrentPerVisitor, concurrentStreams);
     }
 
+    internal static bool IsPublicPath(PathString path) =>
+        path.StartsWithSegments("/api/public") || path.StartsWithSegments("/sse/public");
+
     private static bool IsPublicRequest(HttpContext context) =>
-        context.Request.Path.StartsWithSegments(PublicPathPrefix)
+        IsPublicPath(context.Request.Path)
         && !HttpMethods.IsOptions(context.Request.Method);
 
     private static bool IsStreamRequest(HttpContext context) =>
-        context.Request.Path.Equals(StreamPath, StringComparison.OrdinalIgnoreCase)
+        // Routing accepts equivalent paths, so admission follows the selected endpoint.
+        context.GetEndpoint()?.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == StreamEndpointName
         && HttpMethods.IsPost(context.Request.Method);
 
     private static string ClientAddress(HttpContext context) => GetRateLimitKey(context.Connection.RemoteIpAddress);

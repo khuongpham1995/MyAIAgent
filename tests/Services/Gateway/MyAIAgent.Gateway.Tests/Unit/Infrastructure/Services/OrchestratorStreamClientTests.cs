@@ -65,7 +65,7 @@ public sealed class OrchestratorStreamClientTests
         // Assert
         var request = handler.Requests.Should().ContainSingle().Subject;
         request.Method.Should().Be(HttpMethod.Post);
-        request.RequestUri!.AbsolutePath.Should().Be("/chat/stream");
+        request.RequestUri!.AbsolutePath.Should().Be("/sse/chat");
     }
 
     [Fact]

@@ -79,7 +79,7 @@ sequenceDiagram
     participant DB as Cosmos DB
     participant M as Model / IChatClient
     participant T as MCP tools
-    C->>G: POST /chat or /chat/stream
+    C->>G: POST /api/chat or /sse/chat
     G->>G: Resolve caller identity and validate input
     G->>O: Forward request with service key
     O->>DB: Load caller-owned session and selected agent
@@ -149,7 +149,7 @@ config:
   fontFamily: 'Comic Sans MS, Comic Sans, cursive'
 ---
 flowchart TB
-    Admin[Admin client] -->|POST /admin/documents| G[Gateway]
+    Admin[Admin client] -->|POST /api/admin/documents| G[Gateway]
     G -->|POST /upload| KM[KernelMemory]
     Direct[Authorized direct client] -->|upload-status / search / ask| KM
     KM --> Extract[Extract and partition]

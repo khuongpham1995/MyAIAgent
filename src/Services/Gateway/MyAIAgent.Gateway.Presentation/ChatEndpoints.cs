@@ -29,7 +29,12 @@ public static class ChatEndpoints
             .Produces<ResponseModel<ChatGatewayResponse>>()
             .Produces<ResponseModel<ErrorResponseDto>>(StatusCodes.Status400BadRequest);
 
-        endpoints.MapPost("/chat/stream", async (ChatGatewayRequestDto request, HttpContext context, ISender sender, IMapper mapper, CancellationToken cancellationToken) =>
+        return endpoints;
+    }
+
+    public static IEndpointRouteBuilder MapChatStreamingEndpoints(this IEndpointRouteBuilder endpoints, Func<ClaimsPrincipal, string> resolveUserId)
+    {
+        endpoints.MapPost("/chat", async (ChatGatewayRequestDto request, HttpContext context, ISender sender, IMapper mapper, CancellationToken cancellationToken) =>
         {
             var source = new AuthenticatedChatGatewayRequest(request, resolveUserId(context.User));
             var events = sender.CreateStream(mapper.Map<StreamChatGatewayCommand>(source), cancellationToken);

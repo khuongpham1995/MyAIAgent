@@ -33,6 +33,25 @@ public sealed class PublicChatEndpointsTests
             }));
 
     [Fact]
+    public async Task Routes_WhenOldOrSimilarPublicPathsRequested_ShouldNotMatchOrConsumePublicBudget()
+    {
+        // Arrange
+        await using var app = await PublicChatTestApp.StartAsync(new PublicChatRateLimits(IpPermitLimit: 1));
+        SetupStream(app);
+
+        // Act / Assert
+        foreach (var (method, path) in new[] { ("POST", "/public/chat/stream"), ("GET", "/public/conversations"), ("GET", "/api/publicity/conversations"), ("POST", "/sse/publicity/chat") })
+        {
+            using var request = new HttpRequestMessage(new HttpMethod(method), path);
+            using var response = await app.Client.SendAsync(request);
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            response.Headers.Location.Should().BeNull();
+        }
+        using var valid = await app.Client.SendAsync(PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken()));
+        valid.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task ChatStream_WhenTokenIsValid_ShouldStreamEventsAsServerSentEvents()
     {
         // Arrange
@@ -173,8 +192,11 @@ public sealed class PublicChatEndpointsTests
         last!.Headers.Contains("Retry-After").Should().BeTrue();
     }
 
-    [Fact]
-    public async Task ChatStream_WhenVisitorExceedsBurst_ShouldReturnTooManyRequests()
+    [Theory]
+    [InlineData("/sse/public/chat")]
+    [InlineData("/sse/public/chat/")]
+    [InlineData("/SSE/PUBLIC/CHAT/")]
+    public async Task ChatStream_WhenVisitorExceedsBurst_ShouldReturnTooManyRequests(string path)
     {
         // Arrange
         await using var app = await PublicChatTestApp.StartAsync(
@@ -187,45 +209,127 @@ public sealed class PublicChatEndpointsTests
         // Act
         for (var attempt = 0; attempt < 3; attempt++)
         {
-            var response = await app.Client.SendAsync(PublicChatTestApp.ChatRequest(token));
+            using var response = await app.Client.SendAsync(
+                PublicChatTestApp.ChatRequest(token, path: attempt == 0 ? "/sse/public/chat" : path));
             await response.Content.ReadAsStringAsync();
             statuses.Add(response.StatusCode);
         }
 
         // Assert
         statuses.Should().Equal(HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.TooManyRequests);
+        app.StreamClient.Verify(
+            c => c.StreamChatAsync(
+                It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
     }
 
-    [Fact]
-    public async Task ChatStream_WhenVisitorHoldsAllTheirStreamSlots_ShouldRejectTheNextStreamOnly()
+    [Theory]
+    [InlineData("/sse/public/chat")]
+    [InlineData("/sse/public/chat/")]
+    [InlineData("/SSE/PUBLIC/CHAT/")]
+    public async Task ChatStream_WhenVisitorHoldsAllTheirStreamSlots_ShouldRejectTheNextStreamOnly(string path)
     {
         // Arrange
         await using var app = await PublicChatTestApp.StartAsync(
             new PublicChatRateLimits(IpPermitLimit: 100, MaxConcurrentStreamsPerVisitor: 1));
         var release = new TaskCompletionSource();
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         app.StreamClient
             .Setup(c => c.StreamChatAsync(
                 It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .Returns(() => HoldOpenAsync(release.Task));
 
+        try
+        {
+            // Act
+            using var first = await app.Client.SendAsync(
+                PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken("visitor-a")),
+                HttpCompletionOption.ResponseHeadersRead, deadline.Token);
+            using var secondSameVisitor = await app.Client.SendAsync(
+                PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken("visitor-a"), path: path),
+                HttpCompletionOption.ResponseHeadersRead, deadline.Token);
+            using var otherVisitor = await app.Client.SendAsync(
+                PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken("visitor-b")),
+                HttpCompletionOption.ResponseHeadersRead, deadline.Token);
+            release.TrySetResult();
+            await first.Content.ReadAsStringAsync(deadline.Token);
+            await otherVisitor.Content.ReadAsStringAsync(deadline.Token);
+
+            // Assert
+            first.StatusCode.Should().Be(HttpStatusCode.OK);
+            secondSameVisitor.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+            otherVisitor.StatusCode.Should().Be(HttpStatusCode.OK);
+            app.StreamClient.Verify(
+                c => c.StreamChatAsync(
+                    It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+                Times.Exactly(2));
+        }
+        finally
+        {
+            release.TrySetResult();
+        }
+    }
+
+    [Theory]
+    [InlineData("/sse/public/chat")]
+    [InlineData("/sse/public/chat/")]
+    [InlineData("/SSE/PUBLIC/CHAT/")]
+    public async Task ChatStream_WhenGlobalStreamSlotsAreFull_ShouldRejectAnotherVisitor(string path)
+    {
+        // Arrange
+        await using var app = await PublicChatTestApp.StartAsync(
+            new PublicChatRateLimits(IpPermitLimit: 100, MaxConcurrentStreams: 1));
+        var release = new TaskCompletionSource();
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        app.StreamClient
+            .Setup(c => c.StreamChatAsync(
+                It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Returns(() => HoldOpenAsync(release.Task));
+
+        try
+        {
+            // Act
+            using var first = await app.Client.SendAsync(
+                PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken("visitor-a")),
+                HttpCompletionOption.ResponseHeadersRead, deadline.Token);
+            using var second = await app.Client.SendAsync(
+                PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken("visitor-b"), path: path),
+                HttpCompletionOption.ResponseHeadersRead, deadline.Token);
+            release.TrySetResult();
+            await first.Content.ReadAsStringAsync(deadline.Token);
+
+            // Assert
+            first.StatusCode.Should().Be(HttpStatusCode.OK);
+            second.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+            app.StreamClient.Verify(
+                c => c.StreamChatAsync(
+                    It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+        finally
+        {
+            release.TrySetResult();
+        }
+    }
+
+    [Theory]
+    [InlineData("/sse/public/chat/")]
+    [InlineData("/SSE/PUBLIC/CHAT/")]
+    public async Task ChatStream_WhenEquivalentPathHasNoToken_ShouldRejectBeforeDownstreamCall(string path)
+    {
+        // Arrange
+        await using var app = await PublicChatTestApp.StartAsync();
+        SetupStream(app);
+
         // Act
-        var first = await app.Client.SendAsync(
-            PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken("visitor-a")),
-            HttpCompletionOption.ResponseHeadersRead);
-        var secondSameVisitor = await app.Client.SendAsync(
-            PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken("visitor-a")));
-        var otherVisitor = await app.Client.SendAsync(
-            PublicChatTestApp.ChatRequest(PublicChatTestApp.CreateToken("visitor-b")),
-            HttpCompletionOption.ResponseHeadersRead);
+        using var response = await app.Client.SendAsync(PublicChatTestApp.ChatRequest(null, path: path));
 
         // Assert
-        first.StatusCode.Should().Be(HttpStatusCode.OK);
-        secondSameVisitor.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
-        otherVisitor.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        release.SetResult();
-        await first.Content.ReadAsStringAsync();
-        await otherVisitor.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        app.StreamClient.Verify(
+            c => c.StreamChatAsync(
+                It.IsAny<string?>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     private static async IAsyncEnumerable<ChatStreamEvent> HoldOpenAsync(Task release)
@@ -262,7 +366,7 @@ public sealed class PublicChatEndpointsTests
             .Setup(c => c.ListConversationsAsync("visitor:visitor-a", 1, 20, It.IsAny<CancellationToken>()))
             .ReturnsAsync(ResponseModel<IReadOnlyList<ConversationSummary>>.Succeed(
                 [new ConversationSummary("s-1", "Title", DateTimeOffset.UtcNow)]));
-        var request = new HttpRequestMessage(HttpMethod.Get, "/public/conversations?userId=visitor:other");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/public/conversations?userId=visitor:other");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PublicChatTestApp.CreateToken("visitor-a"));
 
         // Act
@@ -284,7 +388,7 @@ public sealed class PublicChatEndpointsTests
         app.OrchestratorClient
             .Setup(c => c.GetConversationAsync("s-404", "visitor:visitor-a", It.IsAny<CancellationToken>()))
             .ReturnsAsync(ResponseModel<ConversationDetail>.Fail(message: "Conversation not found."));
-        var request = new HttpRequestMessage(HttpMethod.Get, "/public/conversations/s-404");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/public/conversations/s-404");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PublicChatTestApp.CreateToken("visitor-a"));
 
         // Act
@@ -302,7 +406,7 @@ public sealed class PublicChatEndpointsTests
         app.OrchestratorClient
             .Setup(client => client.DeleteConversationAsync("s-404", "visitor:visitor-a", It.IsAny<CancellationToken>()))
             .ReturnsAsync(ResponseModel<bool>.Fail(message: "Conversation not found."));
-        using var request = new HttpRequestMessage(HttpMethod.Delete, "/public/conversations/s-404");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, "/api/public/conversations/s-404");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PublicChatTestApp.CreateToken("visitor-a"));
 
         // Act
@@ -325,7 +429,7 @@ public sealed class PublicChatEndpointsTests
         app.OrchestratorClient
             .Setup(c => c.RenameConversationAsync("s-1", "visitor:visitor-a", "New title", It.IsAny<CancellationToken>()))
             .ReturnsAsync(ResponseModel<bool>.Succeed(true));
-        var request = new HttpRequestMessage(HttpMethod.Put, "/public/conversations/s-1/title")
+        var request = new HttpRequestMessage(HttpMethod.Put, "/api/public/conversations/s-1/title")
         {
             Content = new StringContent("{\"title\":\"New title\"}", Encoding.UTF8, "application/json"),
         };
@@ -340,7 +444,7 @@ public sealed class PublicChatEndpointsTests
 
     private static HttpRequestMessage PreflightRequest(string origin)
     {
-        var request = new HttpRequestMessage(HttpMethod.Options, "/public/chat/stream");
+        var request = new HttpRequestMessage(HttpMethod.Options, "/sse/public/chat");
         request.Headers.Add("Origin", origin);
         request.Headers.Add("Access-Control-Request-Method", "POST");
         request.Headers.Add("Access-Control-Request-Headers", "authorization,content-type");

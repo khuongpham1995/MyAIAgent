@@ -24,13 +24,14 @@ public static class GatewayEndpoints
         var chat = endpoints.MapGroup(string.Empty);
         if (!environment.IsDevelopment())
             chat.RequireAuthorization(GatewaySecurityExtensions.ChatPolicy);
-        chat.MapChatEndpoints(ResolveEntraUserId)
+        chat.MapGroup("/api").MapChatEndpoints(ResolveEntraUserId)
             .MapConversationEndpoints(ResolveEntraUserId);
+        chat.MapGroup("/sse").MapChatStreamingEndpoints(ResolveEntraUserId);
 
         if (publicChat is not null)
             endpoints.MapPublicChatEndpoints(publicChat);
 
-        var admin = endpoints.MapGroup("/admin");
+        var admin = endpoints.MapGroup("/api/admin");
         if (!environment.IsDevelopment())
             admin.RequireAuthorization(GatewaySecurityExtensions.AdminPolicy);
         admin.MapAdminEndpoints();

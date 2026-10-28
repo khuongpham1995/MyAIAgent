@@ -30,7 +30,7 @@ public sealed class OrchestratorClient(
         try
         {
             var response = await httpClient.PostAsJsonAsync(
-                "/chat",
+                "/api/chat",
                 new { sessionId, userMessage, userId, agentId },
                 cancellationToken);
 
@@ -57,7 +57,7 @@ public sealed class OrchestratorClient(
         try
         {
             var response = await httpClient.GetFromJsonAsync<OrchestratorAgentListResult>(
-                "/agents", cancellationToken);
+                "/api/agents", cancellationToken);
 
             IReadOnlyList<AgentSummary> agents = response?.Data
                 ?.Select(a => new AgentSummary(
@@ -89,7 +89,7 @@ public sealed class OrchestratorClient(
         try
         {
             var response = await httpClient.PostAsJsonAsync(
-                "/agents",
+                "/api/agents",
                 new { name, instructions, mcpServerEndpoint, isDefault, enabledTools },
                 cancellationToken);
 
@@ -111,7 +111,7 @@ public sealed class OrchestratorClient(
     {
         try
         {
-            var response = await httpClient.DeleteAsync($"/agents/{agentId}", cancellationToken);
+            var response = await httpClient.DeleteAsync($"/api/agents/{agentId}", cancellationToken);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 return ResponseModel<bool>.Fail(message: "Agent not found.");
@@ -131,7 +131,7 @@ public sealed class OrchestratorClient(
     {
         try
         {
-            var url = $"/conversations?userId={Uri.EscapeDataString(userId)}&page={page}&pageSize={pageSize}";
+            var url = $"/api/conversations?userId={Uri.EscapeDataString(userId)}&page={page}&pageSize={pageSize}";
             var response = await httpClient.GetFromJsonAsync<OrchestratorConversationListResult>(url, cancellationToken);
 
             IReadOnlyList<ConversationSummary> conversations = response?.Data ?? [];
@@ -151,7 +151,7 @@ public sealed class OrchestratorClient(
         try
         {
             var response = await httpClient.GetAsync(
-                $"/conversations/{Uri.EscapeDataString(sessionId)}?userId={Uri.EscapeDataString(userId)}",
+                $"/api/conversations/{Uri.EscapeDataString(sessionId)}?userId={Uri.EscapeDataString(userId)}",
                 cancellationToken);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -179,7 +179,7 @@ public sealed class OrchestratorClient(
         try
         {
             var response = await httpClient.PutAsJsonAsync(
-                $"/conversations/{Uri.EscapeDataString(sessionId)}/title",
+                $"/api/conversations/{Uri.EscapeDataString(sessionId)}/title",
                 new { userId, title },
                 cancellationToken);
 
@@ -202,7 +202,7 @@ public sealed class OrchestratorClient(
         try
         {
             var response = await httpClient.DeleteAsync(
-                $"/conversations/{Uri.EscapeDataString(sessionId)}?userId={Uri.EscapeDataString(userId)}",
+                $"/api/conversations/{Uri.EscapeDataString(sessionId)}?userId={Uri.EscapeDataString(userId)}",
                 cancellationToken);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)

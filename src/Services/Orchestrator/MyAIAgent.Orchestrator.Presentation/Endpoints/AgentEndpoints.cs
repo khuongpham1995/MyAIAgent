@@ -27,7 +27,7 @@ public static class AgentEndpoints
         {
             var result = await sender.Send(mapper.Map<CreateAgentCommand>(request), cancellationToken);
             return result.IsSuccess
-                ? Results.Created($"/agents/{result.Data}", result)
+                ? Results.Created($"/api/agents/{result.Data}", result)
                 : Results.BadRequest(result);
         });
 

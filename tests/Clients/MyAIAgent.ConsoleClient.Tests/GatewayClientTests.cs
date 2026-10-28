@@ -35,7 +35,7 @@ public sealed class GatewayClientTests
         events[1].Text.Should().Be("Hello 🌏\nRetrieved sources\nhttps://example.com");
         body.WasDisposed.Should().BeTrue();
         fixture.Requests.Should().ContainSingle().Which.Accept.Should().Be("text/event-stream");
-        fixture.Requests[0].Path.Should().Be("/chat/stream");
+        fixture.Requests[0].Path.Should().Be("/sse/chat");
         using var json = JsonDocument.Parse(fixture.Requests[0].Body!);
         json.RootElement.GetProperty("agentId").GetString().Should().Be("a-1");
         json.RootElement.TryGetProperty("userId", out _).Should().BeFalse();
@@ -165,7 +165,7 @@ public sealed class GatewayClientTests
 
         // Assert
         reply.Should().BeEquivalentTo(new { Reply = "Hello", SessionId = "s-1" });
-        fixture.Requests.Single().Path.Should().Be("/chat");
+        fixture.Requests.Single().Path.Should().Be("/api/chat");
         fixture.Requests.Single().Body.Should().Contain("\"sessionId\":\"s-1\"");
     }
 
@@ -402,7 +402,7 @@ public sealed class GatewayClientTests
 
         // Assert
         fixture.Requests.Select(request => request.Method).Should().Equal("PUT", "DELETE");
-        fixture.Requests.Select(request => request.Path).Should().Equal("/conversations/s-1/title", "/conversations/s-1");
+        fixture.Requests.Select(request => request.Path).Should().Equal("/api/conversations/s-1/title", "/api/conversations/s-1");
         fixture.Requests[0].Body.Should().Be("{\"title\":\"New title\"}");
         fixture.Requests[1].Body.Should().BeNull();
     }

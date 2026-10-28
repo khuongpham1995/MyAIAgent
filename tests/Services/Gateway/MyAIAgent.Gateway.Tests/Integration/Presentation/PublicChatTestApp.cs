@@ -115,9 +115,12 @@ internal sealed class PublicChatTestApp : IAsyncDisposable
         return new JsonWebTokenHandler().CreateToken(descriptor);
     }
 
-    public static HttpRequestMessage ChatRequest(string? token, string body = "{\"userMessage\":\"Hi\"}")
+    public static HttpRequestMessage ChatRequest(
+        string? token,
+        string body = "{\"userMessage\":\"Hi\"}",
+        string path = "/sse/public/chat")
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/public/chat/stream")
+        var request = new HttpRequestMessage(HttpMethod.Post, path)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         };

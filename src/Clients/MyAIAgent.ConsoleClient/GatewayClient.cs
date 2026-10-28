@@ -75,7 +75,7 @@ internal sealed class GatewayClient(HttpClient httpClient, ClientOptions options
     public async IAsyncEnumerable<ChatStreamEvent> StreamChatAsync(ChatGatewayRequestDto chat, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         using var deadline = Deadline(options.ChatTimeout, cancellationToken);
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/chat/stream");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/sse/chat");
         request.Content = JsonContent.Create(chat);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
         using var response = await SendStreamHeadersAsync(request, deadline.Token);

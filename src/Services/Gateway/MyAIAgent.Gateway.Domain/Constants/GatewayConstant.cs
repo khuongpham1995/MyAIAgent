@@ -10,9 +10,9 @@ public static class GatewayConstant
 {
     public static class Routes
     {
-        public const string Chat = "/chat";
-        public const string AdminDocuments = "/admin/documents";
-        public const string AdminTools = "/admin/tools";
+        public const string Chat = "/api/chat";
+        public const string AdminDocuments = "/api/admin/documents";
+        public const string AdminTools = "/api/admin/tools";
     }
 
     public const string SessionIdPattern = "^[A-Za-z0-9-]{1,64}$";

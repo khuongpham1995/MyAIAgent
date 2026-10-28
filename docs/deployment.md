@@ -21,7 +21,7 @@ CI/CD installs the same locked tools. Deployment writes the validated Gateway ho
 | Smoke/deployment check | Bound |
 | --- | --- |
 | HTTPS readiness and authorization | 30 attempts per phase, 10-second delays; 10/30-second request timeouts |
-| Authenticated requests | `/admin/agents` and `/admin/tools`; `isSuccess: true`, JSON ≤ 1 MiB; no model/search call |
+| Authenticated requests | `/api/admin/agents` and `/api/admin/tools`; `isSuccess: true`, JSON ≤ 1 MiB; no model/search call |
 | Redirects | Rejected to prevent token forwarding |
 | Azure deployment / token retrieval | 30 minutes / 30 seconds |
 

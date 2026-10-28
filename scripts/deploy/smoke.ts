@@ -62,14 +62,14 @@ export async function smokeTest(args: string[], { run = runProcess, request = fe
     if (attempt < 29) await delay(10_000);
   }
   if (!ready) throw new Error(`Gateway readiness failed: HTTP ${status}`);
-  ({ status } = await probe('/admin/agents'));
+  ({ status } = await probe('/api/admin/agents'));
   if (status !== 401) throw new Error(`Anonymous admin access was not rejected: HTTP ${status}`);
 
   const result = run('az', ['account', 'get-access-token', '--resource', `api://${audience}`,
     '--query', 'accessToken', '--output', 'tsv'], { encoding: 'utf8', shell: false, timeout: 30_000, maxBuffer: 1024 * 1024 });
   const token = result.stdout?.toString().trim();
   if (result.status !== 0 || result.error || result.signal || !token) throw new Error('Could not obtain the smoke-test access token.');
-  for (const path of ['/admin/agents', '/admin/tools']) {
+  for (const path of ['/api/admin/agents', '/api/admin/tools']) {
     let succeeded = false;
     for (let attempt = 0; attempt < 30; attempt++) {
       const response = await probe(path, token);

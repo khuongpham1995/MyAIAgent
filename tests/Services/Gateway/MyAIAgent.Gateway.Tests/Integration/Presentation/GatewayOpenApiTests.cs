@@ -5,6 +5,8 @@
  */
 
 using System.Text.Json.Nodes;
+using System.Net.Http.Json;
+using MyAIAgent.Common.Application.Models;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -33,7 +35,7 @@ public sealed class GatewayOpenApiTests
 
         // Assert
         document["openapi"]!.GetValue<string>().Should().Be("3.0.4");
-        document["paths"]!["/admin/agents"]!["get"]!["responses"]!["200"]!["content"]!["application/json"].Should().NotBeNull();
+        document["paths"]!["/api/admin/agents"]!["get"]!["responses"]!["200"]!["content"]!["application/json"].Should().NotBeNull();
         var directory = Path.Combine(RepositoryRoot(), "artifacts", "openapi");
         Directory.CreateDirectory(directory);
         await File.WriteAllTextAsync(Path.Combine(directory, "gateway.json"), document.ToJsonString(new() { WriteIndented = true }) + "\n");
@@ -69,7 +71,7 @@ public sealed class GatewayOpenApiTests
                     (security is null || security.AsArray().Count == 0).Should().BeTrue();
                 else
                 {
-                    var scheme = path.StartsWith("/public/", StringComparison.Ordinal) ? "VisitorBearer" : "EntraBearer";
+                    var scheme = (path.StartsWith("/api/public/", StringComparison.Ordinal) || path.StartsWith("/sse/public/", StringComparison.Ordinal)) ? "VisitorBearer" : "EntraBearer";
                     security!.AsArray().Single()![scheme].Should().NotBeNull();
                 }
             }
@@ -104,13 +106,45 @@ public sealed class GatewayOpenApiTests
             var path = endpoint.RoutePattern.RawText!;
             var policies = endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>().Select(data => data.Policy);
             if (path.StartsWith("/health/", StringComparison.Ordinal)) policies.Should().BeEmpty();
-            else policies.Should().Contain(path.StartsWith("/admin/", StringComparison.Ordinal)
+            else policies.Should().Contain(path.StartsWith("/api/admin/", StringComparison.Ordinal)
                 ? GatewaySecurityExtensions.AdminPolicy : GatewaySecurityExtensions.ChatPolicy);
         }
         var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
         using var client = new HttpClient { BaseAddress = new Uri(address) };
-        (await client.GetAsync("/admin/agents")).StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
+        (await client.GetAsync("/api/admin/agents")).StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
         await app.StopAsync();
+    }
+
+    [Fact]
+    public async Task Routes_WhenMigrated_ShouldRemoveOldUrlsAndUpdateCreatedLocation()
+    {
+        // Arrange
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
+        builder.Configuration.Sources.Clear();
+        builder.Configuration.AddInMemoryCollection();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        RegisterApplication(builder);
+        await using var app = builder.Build();
+        app.MapGatewayEndpoints();
+        await app.StartAsync();
+        var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
+        using var client = new HttpClient { BaseAddress = new Uri(address) };
+        Mock.Get(app.Services.GetRequiredService<IOrchestratorClient>())
+            .Setup(value => value.CreateAgentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(),
+                It.IsAny<bool>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ResponseModel<string>.Succeed("a-1"));
+
+        // Act / Assert
+        foreach (var (method, path) in new[] { ("POST", "/chat"), ("POST", "/chat/stream"), ("GET", "/admin/agents"), ("GET", "/conversations") })
+        {
+            using var request = new HttpRequestMessage(new HttpMethod(method), path);
+            using var response = await client.SendAsync(request);
+            response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+            response.Headers.Location.Should().BeNull();
+        }
+        using var created = await client.PostAsJsonAsync("/api/admin/agents", new { name = "Test", instructions = "Answer" });
+        created.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
+        created.Headers.Location!.OriginalString.Should().Be("/api/admin/agents/a-1");
     }
 
     private static async Task<JsonNode> GenerateAsync()

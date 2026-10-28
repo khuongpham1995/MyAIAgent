@@ -101,7 +101,7 @@ config:
   fontFamily: 'Comic Sans MS, Comic Sans, cursive'
 ---
 flowchart LR
-    upload["Upload via Gateway<br/>/admin/documents"]
+    upload["Upload via Gateway<br/>/api/admin/documents"]
     query["Authorized direct query<br/>/search · /ask"]
     memory["KernelMemory<br/>Ingest · retrieve · answer"]
     index[("Azure AI Search<br/>Embeddings + source chunks")]
@@ -155,7 +155,7 @@ dotnet run --project src/Aspire/MyAIAgent.All --launch-profile https
 
 Open the dashboard URL printed by AppHost. Gateway's default API reference is **[https://localhost:7200/scalar/](https://localhost:7200/scalar/)**. Use the dashboard's displayed endpoints if your local configuration differs.
 
-Start with `/health/live` on each service, then Gateway's `/admin/agents` and `/admin/tools` to verify connectivity without a model call. These local Development routes must remain private. Chat and document operations can consume paid provider usage.
+Start with `/health/live` on each service, then Gateway's `/api/admin/agents` and `/api/admin/tools` to verify connectivity without a model call. These local Development routes must remain private. Chat and document operations can consume paid provider usage.
 
 ### 4. Chat from a terminal
 
@@ -170,6 +170,10 @@ Select or create an agent, start a streaming chat, and revisit saved conversatio
 ConsoleClient consumes the reusable `MyAIAgent.Gateway.Client` SDK. Paste OpenAPI JSON into the SDK input and build to regenerate its methods and models. See [API consumers](docs/api-clients.md); no console-specific generation script is needed.
 
 ## Engineering decisions
+
+Gateway and Orchestrator use `/api/*` for REST and `/sse/*` for POST-based chat streams.
+MCP keeps `/mcp`; health, documentation and KernelMemory SDK routes retain their standard paths.
+See the [URL migration table](docs/public-chat-api.md) when updating an existing client.
 
 | Decision | Why it is here |
 | --- | --- |

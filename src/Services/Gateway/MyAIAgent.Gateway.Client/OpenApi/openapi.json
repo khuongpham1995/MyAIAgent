@@ -33,7 +33,7 @@
         "security": []
       }
     },
-    "/chat": {
+    "/api/chat": {
       "post": {
         "tags": [
           "MyAIAgent.Gateway.Presentation"
@@ -78,53 +78,7 @@
         ]
       }
     },
-    "/chat/stream": {
-      "post": {
-        "tags": [
-          "MyAIAgent.Gateway.Presentation"
-        ],
-        "operationId": "StreamChat",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChatGatewayRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "SSE stream of JSON ChatStreamEvent messages; consume until done or error.",
-            "content": {
-              "text/event-stream": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseModelOfErrorResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "EntraBearer": []
-          }
-        ]
-      }
-    },
-    "/conversations": {
+    "/api/conversations": {
       "get": {
         "tags": [
           "MyAIAgent.Gateway.Presentation"
@@ -179,7 +133,7 @@
         ]
       }
     },
-    "/conversations/{id}": {
+    "/api/conversations/{id}": {
       "get": {
         "tags": [
           "MyAIAgent.Gateway.Presentation"
@@ -280,7 +234,7 @@
         ]
       }
     },
-    "/conversations/{id}/title": {
+    "/api/conversations/{id}/title": {
       "put": {
         "tags": [
           "MyAIAgent.Gateway.Presentation"
@@ -338,7 +292,53 @@
         ]
       }
     },
-    "/public/chat/stream": {
+    "/sse/chat": {
+      "post": {
+        "tags": [
+          "MyAIAgent.Gateway.Presentation"
+        ],
+        "operationId": "StreamChat",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatGatewayRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "SSE stream of JSON ChatStreamEvent messages; consume until done or error.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseModelOfErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "EntraBearer": []
+          }
+        ]
+      }
+    },
+    "/sse/public/chat": {
       "post": {
         "tags": [
           "MyAIAgent.Gateway.Presentation"
@@ -384,7 +384,7 @@
         ]
       }
     },
-    "/public/conversations": {
+    "/api/public/conversations": {
       "get": {
         "tags": [
           "MyAIAgent.Gateway.Presentation"
@@ -439,7 +439,7 @@
         ]
       }
     },
-    "/public/conversations/{id}": {
+    "/api/public/conversations/{id}": {
       "get": {
         "tags": [
           "MyAIAgent.Gateway.Presentation"
@@ -540,7 +540,7 @@
         ]
       }
     },
-    "/public/conversations/{id}/title": {
+    "/api/public/conversations/{id}/title": {
       "put": {
         "tags": [
           "MyAIAgent.Gateway.Presentation"
@@ -598,7 +598,7 @@
         ]
       }
     },
-    "/admin/documents": {
+    "/api/admin/documents": {
       "post": {
         "tags": [
           "MyAIAgent.Gateway.Presentation"
@@ -661,7 +661,7 @@
         ]
       }
     },
-    "/admin/tools": {
+    "/api/admin/tools": {
       "get": {
         "tags": [
           "MyAIAgent.Gateway.Presentation"
@@ -686,7 +686,7 @@
         ]
       }
     },
-    "/admin/agents": {
+    "/api/admin/agents": {
       "get": {
         "tags": [
           "MyAIAgent.Gateway.Presentation"
@@ -754,7 +754,7 @@
         ]
       }
     },
-    "/admin/agents/{id}": {
+    "/api/admin/agents/{id}": {
       "delete": {
         "tags": [
           "MyAIAgent.Gateway.Presentation"
@@ -1288,13 +1288,13 @@
     "securitySchemes": {
       "EntraBearer": {
         "type": "http",
-        "description": "Entra access token required outside Development. Chat/conversations require Chat.Access or Agent.Admin; /admin requires Agent.Admin. Development uses the shared local identity.",
+        "description": "Entra access token required outside Development. Chat/conversations require Chat.Access or Agent.Admin; /api/admin requires Agent.Admin. Development uses the shared local identity.",
         "scheme": "bearer",
         "bearerFormat": "JWT"
       },
       "VisitorBearer": {
         "type": "http",
-        "description": "Visitor JWT required on /public routes, including Development. Tokens must match the configured visitor issuer and audience; they are not Entra tokens.",
+        "description": "Visitor JWT required on /api/public and /sse/public routes, including Development. Tokens must match the configured visitor issuer and audience; they are not Entra tokens.",
         "scheme": "bearer",
         "bearerFormat": "JWT"
       }

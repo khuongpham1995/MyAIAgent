@@ -1,6 +1,22 @@
 # Public streaming chat API
 
-Connect a browser widget to Gateway's `/public` API using JWTs and POST-based SSE. Your backend issues tokens; Gateway validates them. Start with [local setup](local-development.md). Chat uses the [Orchestrator flow](architecture.md#a-chat-turn), without document retrieval.
+Application routes now use `/api` for REST and `/sse` for POST-based chat streams.
+This is a breaking URL migration with no aliases or redirects:
+
+| Previous URL | Replacement |
+| --- | --- |
+| `/chat` | `/api/chat` |
+| `/chat/stream` | `/sse/chat` |
+| `/conversations...` | `/api/conversations...` |
+| `/admin/...` | `/api/admin/...` |
+| `/public/chat/stream` | `/sse/public/chat` |
+| `/public/conversations...` | `/api/public/conversations...` |
+
+Orchestrator follows the same split, including `/api/agents`. Update client URLs or regenerate
+from the new OpenAPI document. HTTP methods, payloads, SSE events and permissions are unchanged.
+Health, OpenAPI/Scalar, MCP `/mcp` and its root compatibility endpoint, and KernelMemory SDK routes retain their URLs.
+
+Connect a browser widget to Gateway's visitor REST endpoints and POST-based SSE stream using JWTs. Your backend issues tokens; Gateway validates them. Start with [local setup](local-development.md). Chat uses the [Orchestrator flow](architecture.md#a-chat-turn), without document retrieval.
 
 ## Enabling it
 
@@ -44,15 +60,15 @@ Invalid claims, signature, expiry, algorithm, or `sub` return `401`. Visitor JWT
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `POST` | `/public/chat/stream` | Send a message and stream the reply |
-| `GET` | `/public/conversations?page=1&pageSize=20` | List the visitor's conversations, newest first (page size at most 50) |
-| `GET` | `/public/conversations/{id}` | Read a conversation with its messages |
-| `PUT` | `/public/conversations/{id}/title` | Rename. Body: `{"title": "..."}` (at most 100 characters) |
-| `DELETE` | `/public/conversations/{id}` | Delete a conversation |
+| `POST` | `/sse/public/chat` | Send a message and stream the reply |
+| `GET` | `/api/public/conversations?page=1&pageSize=20` | List the visitor's conversations, newest first (page size at most 50) |
+| `GET` | `/api/public/conversations/{id}` | Read a conversation with its messages |
+| `PUT` | `/api/public/conversations/{id}/title` | Rename. Body: `{"title": "..."}` (at most 100 characters) |
+| `DELETE` | `/api/public/conversations/{id}` | Delete a conversation |
 
 A conversation that does not exist or belongs to another visitor returns `404`.
 
-### `POST /public/chat/stream`
+### `POST /sse/public/chat`
 
 Request body (at most 2000 characters of message):
 
@@ -89,7 +105,7 @@ Use `fetch`; `EventSource` cannot send POST with an Authorization header. In `on
 
 ```js
 async function streamChat(token, userMessage, sessionId, onEvent) {
-  const response = await fetch("https://<gateway-host>/public/chat/stream", {
+  const response = await fetch("https://<gateway-host>/sse/public/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ sessionId, userMessage }),
@@ -117,5 +133,5 @@ async function streamChat(token, userMessage, sessionId, onEvent) {
 
 - Give public agents low-risk, read-only tools. Visitor-controlled summaries are replayed as user content; recent messages remain verbatim.
 - Keep Orchestrator internal: it trusts forwarded `userId` and requires `ServiceAuthorization` outside Development.
-- Entra callers use `POST /chat/stream` and `/conversations...` under `ChatAccess`.
+- Entra callers use `POST /sse/chat` and `/api/conversations...` under `ChatAccess`.
 - Cosmos `ChatSessions` persists history. Others with direct access to the shared test database can read local test data.
