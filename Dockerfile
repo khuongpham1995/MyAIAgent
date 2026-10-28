@@ -4,7 +4,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG SERVICE
 WORKDIR /source
 COPY . .
-RUN test -n "$SERVICE" && dotnet publish "src/MyAIAgent.${SERVICE}.Presentation/MyAIAgent.${SERVICE}.Presentation.csproj" \
+RUN test -n "$SERVICE" && dotnet publish "src/Services/${SERVICE}/MyAIAgent.${SERVICE}.Presentation/MyAIAgent.${SERVICE}.Presentation.csproj" \
     --configuration Release --output /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0

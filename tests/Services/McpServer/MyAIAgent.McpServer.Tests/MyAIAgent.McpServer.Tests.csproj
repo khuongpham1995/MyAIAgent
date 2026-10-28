@@ -1,0 +1,30 @@
+<!-- Declares the McpServer Tests project's build settings and dependency references. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../../src/Services/McpServer/MyAIAgent.McpServer.Application/MyAIAgent.McpServer.Application.csproj" />
+    <ProjectReference Include="../../../../src/Services/McpServer/MyAIAgent.McpServer.Infrastructure/MyAIAgent.McpServer.Infrastructure.csproj" />
+    <ProjectReference Include="../../../../src/Services/McpServer/MyAIAgent.McpServer.Presentation/MyAIAgent.McpServer.Presentation.csproj" />
+    <ProjectReference Include="../../../Common/MyAIAgent.Common.Tests/MyAIAgent.Common.Tests.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

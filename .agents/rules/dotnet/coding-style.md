@@ -34,3 +34,11 @@ description: >
 - **camelCase** for local variables and parameters
 - **No `_` prefix** on private fields when using primary constructors
 - **No regions. Ever.**
+
+## Minimal API Modules
+
+- Group maintained routes by module in endpoint extension classes.
+- Use `IEndpointRouteBuilder Map[Module]Endpoints(this IEndpointRouteBuilder endpoints, ...)`
+  and return the incoming builder for chaining. Add explicit parameters only for required settings or owner resolution.
+- Keep middleware/hosting in startup helpers. Apply group authorization before mapping protected modules.
+- Preserve paths, verbs, operation names, filters, response metadata, and cancellation when extracting routes.

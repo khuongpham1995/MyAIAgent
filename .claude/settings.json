@@ -7,10 +7,10 @@
       "Bash(npm run quality -- *)",
       "Bash(npm run candidate:check -- *)",
       "Bash(dotnet test src/MyAIAgent.slnx)",
-      "Bash(dotnet test src/MyAIAgent.MainSubSys.Tests/MyAIAgent.MainSubSys.Tests.csproj)",
-      "Bash(dotnet test src/MyAIAgent.Orchestrator.Tests/MyAIAgent.Orchestrator.Tests.csproj)",
-      "Bash(dotnet test src/MyAIAgent.KernelMemory.Tests/MyAIAgent.KernelMemory.Tests.csproj)",
-      "Bash(dotnet test src/MyAIAgent.McpServer.Tests/MyAIAgent.McpServer.Tests.csproj)"
+      "Bash(dotnet test tests/Services/Gateway/MyAIAgent.Gateway.Tests/MyAIAgent.Gateway.Tests.csproj)",
+      "Bash(dotnet test tests/Services/Orchestrator/MyAIAgent.Orchestrator.Tests/MyAIAgent.Orchestrator.Tests.csproj)",
+      "Bash(dotnet test tests/Services/KernelMemory/MyAIAgent.KernelMemory.Tests/MyAIAgent.KernelMemory.Tests.csproj)",
+      "Bash(dotnet test tests/Services/McpServer/MyAIAgent.McpServer.Tests/MyAIAgent.McpServer.Tests.csproj)"
     ],
     "ask": [
       "Bash(git commit *)",

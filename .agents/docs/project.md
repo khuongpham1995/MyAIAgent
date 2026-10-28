@@ -1,28 +1,55 @@
 # Project context
 
 MyAIAgent is a public .NET 10 / C# backend repository with four services. Tracked configuration must contain safe defaults only; credentials belong in Key Vault or local developer secret storage. AAC and Cosmos use Azure identities, and deployed services have separate least-privilege runtime identities. The real directories are
-flat under `src/`; folders in `src/MyAIAgent.slnx` are solution groupings only.
+grouped under `src/Services`, `src/Common`, `src/Clients`, and `src/Aspire`.
+Test and test-helper projects live separately under root `tests/`, mirroring those groups;
+`src/MyAIAgent.slnx` includes both trees.
 
 | Area | Actual path prefix | Responsibility / review focus |
 | --- | --- | --- |
-| Gateway | `src/MyAIAgent.Gateway.*` | API gateway, chat forwarding, public streaming chat, admin agents/tools, document upload |
-| Orchestrator | `src/MyAIAgent.Orchestrator.*` | IChatClient model calls, MCP dispatch, chat/session and agent persistence |
-| KernelMemory | `src/MyAIAgent.KernelMemory.*` | RAG daemon, document ingestion, document records and retrieval |
-| McpServer | `src/MyAIAgent.McpServer.*` | MCP tools, Tavily web search and webpage extraction |
-| Common | `src/MyAIAgent.Common.*` | Response models, validation, DI, auth filters, errors, resilience, storage |
-| Aspire | `src/MyAIAgent.All/` | Multi-service composition and service configuration |
+| Gateway | `src/Services/Gateway/MyAIAgent.Gateway.*` | API gateway, chat forwarding, public streaming chat, admin agents/tools, document upload |
+| Orchestrator | `src/Services/Orchestrator/MyAIAgent.Orchestrator.*` | IChatClient model calls, MCP dispatch, chat/session and agent persistence |
+| KernelMemory | `src/Services/KernelMemory/MyAIAgent.KernelMemory.*` | RAG daemon, document ingestion, document records and retrieval |
+| McpServer | `src/Services/McpServer/MyAIAgent.McpServer.*` | MCP tools, Tavily web search and webpage extraction |
+| Common | `src/Common/MyAIAgent.Common.*` | Response models, validation, DI, auth filters, errors, resilience, storage |
+| Aspire | `src/Aspire/MyAIAgent.All/` | Multi-service composition and service configuration |
+| Consumer SDK | `src/Services/Gateway/MyAIAgent.Gateway.Client/` | Reusable generated Gateway HTTP client and transport models |
+| Console client | `src/Clients/MyAIAgent.ConsoleClient/` | Interactive local testing through Gateway HTTP only; no service project references |
+| Tests | `tests/{Services,Clients,Common}/` | Service and console suites plus shared test-only helpers |
 
-Each service has Domain, Application, Infrastructure, Presentation and Tests
-projects. `MyAIAgent.Common.Tests` contains shared test helpers; the four service
+Gateway.Client is a reusable HTTP SDK with no backend or console project references.
+Its pinned NSwag.MSBuild target generates all methods and models from
+`src/Services/Gateway/MyAIAgent.Gateway.Client/OpenApi/openapi.json` before compilation; output stays in ignored
+`obj/`. Consumers replace the JSON and build normally. ConsoleClient references this SDK and
+keeps UI/loopback/response-limit policies locally. Gateway schema tests verify the complete API
+contract; consumer tests live alongside console tests. No custom generation command is needed.
+ConsoleClient reads its Gateway address from appsettings in the executable directory, then optional
+`DOTNET_ENVIRONMENT` JSON, environment variables, and the `--gateway` override. ClientOptions validates
+the effective address; the SDK itself has no hardcoded host or console configuration dependency.
+
+Each service has Domain, Application, Infrastructure and Presentation projects under `src/`,
+with its Tests project under `tests/Services/<Service>/`. `MyAIAgent.Common.Tests` contains shared test helpers under `tests/Common/`; the four service
 Tests projects run xUnit tests using Moq and FluentAssertions. Inspect `.csproj`
 files for current versions; do not copy package versions from examples.
 
 ## Architecture and implementation
 
+- `Directory.Build.props` owns shared .NET target/compiler defaults; `Directory.Packages.props`
+  pins NuGet versions centrally. Keep project-specific properties and package references in each project.
+- Common.Domain owns entity bases and lifetime markers. Common.Application owns `ResponseModel<T>`,
+  application errors, validation and registration helpers. Common.Infrastructure owns service authorization
+  settings, HTTP filters, Azure configuration and persistence adapters. Shared code must serve multiple services.
 - Dependencies point inward: Domain ← Application ← Infrastructure ← Presentation.
   Common projects must not reference services; sibling services communicate over HTTP.
 - Presentation dispatches through MediatR `ISender`; Application owns commands,
   queries, inbound DTOs, mappers and FluentValidation. Preserve response/error contracts.
+- Shared exception handling and Gateway application-error metadata use `ResponseModel<ErrorResponseDto>`.
+  The DTO lives in `Common.Application/Models`; errors keep `Message`/`Errors` on the envelope
+  and put the HTTP status in `Data.StatusCode`. Gateway converts failed operation results at the HTTP boundary
+  with `ToErrorResponse(statusCode)`.
+- Map Minimal API modules with `IEndpointRouteBuilder Map[Module]Endpoints(this IEndpointRouteBuilder endpoints, ...)`.
+  Return the incoming builder for chaining. Keep host startup/middleware separate and apply authorization
+  to groups before composing feature modules; retain MCP middleware before raw transport dispatch.
 - Keep each command/query, handler and validator in its own request folder under
   `Application/{Feature}/Commands/` or `Application/{Feature}/Queries/`.
 - Keep Mapster `IRegister` mappings in `Application/Common/Mappings/`; scan and
@@ -49,11 +76,11 @@ the agent-configured MCP endpoint; direct KernelMemory retrieval during chat is 
 yet implemented. McpServer does not call KernelMemory. MCP requires service-key authorization outside Development. Gateway and Orchestrator send its key only to the configured trusted MCP origin and protocol paths; never put the key on arbitrary agent-provided endpoints.
 
 Aspire wires project references
-in `src/MyAIAgent.All/`; current HTTP clients still read explicit base-URL settings.
+in `src/Aspire/MyAIAgent.All/`; current HTTP clients still read explicit base-URL settings.
 
 ## Tests that matter
 
-Use the owning `src/MyAIAgent.<Service>.Tests` project. Add regression tests for
+Use the owning `tests/Services/<Service>/MyAIAgent.<Service>.Tests` project. Add regression tests for
 behavior changes, invalid/missing input, dependency failure and cancellation where
 applicable. Test real handlers/validators/mappers; mock external I/O boundaries.
 Integration tests may use a real MediatR pipeline. Repository tests run against the Cosmos
@@ -69,14 +96,15 @@ npm run quality
 
 | Service argument | Test project |
 | --- | --- |
-| `Gateway` | `src/MyAIAgent.Gateway.Tests/MyAIAgent.Gateway.Tests.csproj` |
-| `Orchestrator` | `src/MyAIAgent.Orchestrator.Tests/MyAIAgent.Orchestrator.Tests.csproj` |
-| `KernelMemory` | `src/MyAIAgent.KernelMemory.Tests/MyAIAgent.KernelMemory.Tests.csproj` |
-| `McpServer` | `src/MyAIAgent.McpServer.Tests/MyAIAgent.McpServer.Tests.csproj` |
+| `Gateway` | `tests/Services/Gateway/MyAIAgent.Gateway.Tests/MyAIAgent.Gateway.Tests.csproj` |
+| `Orchestrator` | `tests/Services/Orchestrator/MyAIAgent.Orchestrator.Tests/MyAIAgent.Orchestrator.Tests.csproj` |
+| `KernelMemory` | `tests/Services/KernelMemory/MyAIAgent.KernelMemory.Tests/MyAIAgent.KernelMemory.Tests.csproj` |
+| `McpServer` | `tests/Services/McpServer/MyAIAgent.McpServer.Tests/MyAIAgent.McpServer.Tests.csproj` |
+| `ConsoleClient` | `tests/Clients/MyAIAgent.ConsoleClient.Tests/MyAIAgent.ConsoleClient.Tests.csproj` |
 
-Common changes affect all four suites; `Common.Tests` is a helper, not a runnable
-suite. The full quality command restores/builds `src/MyAIAgent.slnx`, runs all four
-service test projects with separate TRX directories, and verifies formatting of
+Common changes affect the four backend suites; the standalone console client also has a runnable suite.
+`Common.Tests` is a helper, not a runnable suite. The full quality command restores/builds
+`src/MyAIAgent.slnx`, runs all five test projects with separate TRX directories, and verifies formatting of
 added/modified candidate C# files without rewriting source. No C# changes means
 format is NOT_APPLICABLE, not a claim that the whole solution is formatted.
 `--project` restores/builds/tests only that service's test project and dependencies;

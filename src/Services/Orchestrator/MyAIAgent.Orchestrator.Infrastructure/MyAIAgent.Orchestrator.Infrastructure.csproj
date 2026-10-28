@@ -1,0 +1,22 @@
+<!-- Declares the Orchestrator Infrastructure project's build settings and dependency references. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="Azure.AI.OpenAI"/>
+        <PackageReference Include="Azure.Identity"/>
+        <PackageReference Include="Microsoft.Agents.AI"/>
+        <PackageReference Include="Microsoft.Agents.AI.OpenAI"/>
+        <PackageReference Include="Microsoft.Extensions.AI"/>
+        <PackageReference Include="Microsoft.Extensions.AI.OpenAI"/>
+        <PackageReference Include="Microsoft.Extensions.Configuration"/>
+        <PackageReference Include="ModelContextProtocol"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Common/MyAIAgent.Common.Infrastructure/MyAIAgent.Common.Infrastructure.csproj"/>
+        <ProjectReference Include="../MyAIAgent.Orchestrator.Application/MyAIAgent.Orchestrator.Application.csproj"/>
+        <ProjectReference Include="../MyAIAgent.Orchestrator.Domain/MyAIAgent.Orchestrator.Domain.csproj"/>
+    </ItemGroup>
+
+</Project>

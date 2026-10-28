@@ -14,7 +14,7 @@ import type { SpawnSyncOptions } from 'node:child_process';
 import type { ToolResult } from './types.ts';
 
 const quiet = { output() {} };
-test('full gate binds candidate and all four suites, runs task format using safe argv', t => {
+test('full gate binds candidate and all five suites, runs task format using safe argv', t => {
   // Arrange
   const root = fixture(t);
   const calls: { command: string; args: string[]; options: SpawnSyncOptions }[] = [];
@@ -28,12 +28,12 @@ test('full gate binds candidate and all four suites, runs task format using safe
   // Assert
   assert.equal(report.status, 'PASS');
   assert.equal(report.scope, 'full');
-  assert.deepEqual(calls.map(c => c.args[0]), ['run', '--test', 'restore', 'build', 'test', 'test', 'test', 'test', 'format']);
+  assert.deepEqual(calls.map(c => c.args[0]), ['run', '--test', 'restore', 'build', 'test', 'test', 'test', 'test', 'test', 'format']);
   assert.ok(calls[1].args.includes('scripts/security/configure-github.test.ts'));
   assert.ok(calls[1].args.includes('scripts/security/scan-secrets.test.ts'));
   assert.ok(calls[1].args.includes('scripts/deploy/aca.test.ts'));
-  assert.equal(report.tests.total, 12);
-  assert.equal(report.tests.passed, 12);
+  assert.equal(report.tests.total, 15);
+  assert.equal(report.tests.passed, 15);
   assert.deepEqual(report.tests.suites.map(s => s.service), services);
   assert.equal(report.candidate.digest.length, 64);
   assert.deepEqual(calls.at(-1)!.args.slice(-2), ['--include', 'example.cs']);
@@ -48,7 +48,7 @@ test('full gate binds candidate and all four suites, runs task format using safe
   assert.deepEqual(JSON.parse(readFileSync(join(report.directory, 'quality.json'), 'utf8')), report);
 });
 
-for (const failureAt of [0, 1, 2, 3, 4, 5, 6, 7, 8]) {
+for (const failureAt of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]) {
   test(`gate ${failureAt + 1} failure stops subsequent gates and persists failure`, t => {
     // Arrange
     const root = fixture(t);
@@ -122,6 +122,19 @@ test('targeted run uses owning test project and is explicitly partial', t => {
   assert.equal(report.scope, 'targeted');
   assert.equal(report.steps[0].command![2], testProject('Orchestrator'));
   assert.equal(report.tests.suites.length, 1);
+});
+test('console client suite is included in full and targeted quality evidence', t => {
+  // Arrange
+  const root = fixture(t);
+
+  // Act
+  const report = runQuality({ root, project: 'ConsoleClient', ...quiet, run: successfulRun });
+
+  // Assert
+  assert.equal(report.status, 'PASS');
+  assert.equal(report.tests.suites[0].service, 'ConsoleClient');
+  assert.equal(report.steps[0].command![2], 'tests/Clients/MyAIAgent.ConsoleClient.Tests/MyAIAgent.ConsoleClient.Tests.csproj');
+  assert.deepEqual(parseOptions(['--project', 'ConsoleClient']), { project: 'ConsoleClient' });
 });
 test('configuration-only or deleted C# candidate never falls back to full format', t => {
   // Arrange

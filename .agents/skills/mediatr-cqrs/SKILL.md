@@ -40,7 +40,7 @@ and handler in the same Command/Query folder.
 
 ## Validation Pipeline
 
-`ValidationBehavior<TRequest, TResponse>` (in `Common.Application`) runs before every handler. It collects all failures and throws `ValidationException`. The `GlobalExceptionHandler` converts it to `400 ResponseModel<object>`.
+`ValidationBehavior<TRequest, TResponse>` (in `Common.Application`) runs before every handler. It collects all failures and throws `ValidationException`. The `GlobalExceptionHandler` converts it to `400 ResponseModel<ErrorResponseDto>`, with `Data.StatusCode` matching HTTP 400. Details remain in the envelope's `Message` and `Errors`.
 
 **Do not** add `ResponseModel<T>` handling back into `ValidationBehavior` — it always throws.
 
@@ -50,7 +50,8 @@ and handler in the same Command/Query folder.
 
 ## Response Model
 
-All handlers return `ResponseModel<T>` (defined once in `Common.Domain`). Do not create service-level result wrappers.
+Ordinary request handlers return `ResponseModel<T>` (defined once in `Common.Application/Models`).
+Streaming keeps its existing event contract. Do not create service-level result wrappers.
 
 ## Mapper Convention
 

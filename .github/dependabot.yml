@@ -8,7 +8,11 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
   - package-ecosystem: nuget
-    directory: /src
+    # Monitor shared root package settings, the solution, and separate test projects.
+    directories:
+      - /
+      - /src
+      - /tests
     schedule:
       interval: weekly
     open-pull-requests-limit: 5

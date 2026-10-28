@@ -7,7 +7,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { repoRoot } from './quality.ts';
 
@@ -152,9 +152,11 @@ test('quality service map covers every runnable test project in the solution', a
   // Arrange
   const { services, testProject } = await import('./quality.ts');
   const solution = readFileSync(join(repoRoot, 'src/MyAIAgent.slnx'), 'utf8');
-  const projects = [...solution.matchAll(/Path="([^"]+\.csproj)"/g)].map(match => `src/${match[1]}`);
+  const projects = [...solution.matchAll(/Path="([^"]+\.csproj)"/g)]
+    .map(match => relative(repoRoot, resolve(repoRoot, 'src', match[1])).replaceAll('\\', '/'));
   const runnable = projects.filter(path => /PackageReference Include="Microsoft.NET.Test.Sdk"/.test(readFileSync(join(repoRoot, path), 'utf8')));
 
   // Act & Assert
   assert.deepEqual(services.map(testProject).sort(), runnable.sort());
+  assert.ok(runnable.every(path => path.startsWith('tests/')), 'Runnable tests belong outside production src.');
 });

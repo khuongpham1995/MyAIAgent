@@ -8,7 +8,7 @@ A backend application foundation and learning repository, with explicit service 
 
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?style=flat-square)](src/MyAIAgent.slnx)
 [![C#](https://img.shields.io/badge/C%23-14-239120?style=flat-square)](src/)
-[![Aspire](https://img.shields.io/badge/Aspire-local_orchestration-7C3AED?style=flat-square)](src/MyAIAgent.All/)
+[![Aspire](https://img.shields.io/badge/Aspire-local_orchestration-7C3AED?style=flat-square)](src/Aspire/MyAIAgent.All/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-automation-3178C6?style=flat-square)](scripts/)
 
 [Quick start](#quick-start) · [Architecture](#architecture-at-a-glance) · [Engineering decisions](#engineering-decisions) · [Documentation](#documentation)
@@ -27,7 +27,7 @@ A backend application foundation and learning repository, with explicit service 
 | **Browser integration** | An optional public API with visitor JWT validation, origin checks, rate limits, streaming, and conversation routes. |
 | **Local and Azure delivery** | Four services launched by Aspire; Bicep and GitHub Actions for Azure Container Apps delivery. |
 
-> **Backend repository:** there is no frontend application here. Use the HTTP APIs, Gateway's Scalar API reference, or your own client.
+> **Backend repository:** use the [interactive console client](docs/local-development.md#5-test-with-the-console-client), Gateway's Scalar API reference, or your own client. No browser frontend is included.
 
 ## Architecture at a glance
 
@@ -150,12 +150,24 @@ MCP authorization is enabled by default. Configure its active and rotation keys,
 ### 3. Run with Aspire
 
 ```bash
-dotnet run --project src/MyAIAgent.All --launch-profile https
+dotnet run --project src/Aspire/MyAIAgent.All --launch-profile https
 ```
 
 Open the dashboard URL printed by AppHost. Gateway's default API reference is **[https://localhost:7200/scalar/](https://localhost:7200/scalar/)**. Use the dashboard's displayed endpoints if your local configuration differs.
 
 Start with `/health/live` on each service, then Gateway's `/admin/agents` and `/admin/tools` to verify connectivity without a model call. These local Development routes must remain private. Chat and document operations can consume paid provider usage.
+
+### 4. Chat from a terminal
+
+With Aspire running, open another terminal:
+
+```bash
+dotnet run --project src/Clients/MyAIAgent.ConsoleClient
+```
+
+Select or create an agent, start a streaming chat, and revisit saved conversations. The client calls Gateway only; see the [console walkthrough](docs/local-development.md#5-test-with-the-console-client) for commands and limits.
+
+ConsoleClient consumes the reusable `MyAIAgent.Gateway.Client` SDK. Paste OpenAPI JSON into the SDK input and build to regenerate its methods and models. See [API consumers](docs/api-clients.md); no console-specific generation script is needed.
 
 ## Engineering decisions
 
@@ -171,6 +183,11 @@ Start with `/health/live` on each service, then Gateway's `/admin/agents` and `/
 
 The separate services and layers add setup and project structure. They make responsibilities easier to inspect and test; deployment scale and production readiness require further operational evidence.
 
+Projects are grouped physically by service under `src/Services`, with `src/Common`, `src/Clients`,
+and `src/Aspire` for shared code, consumer applications, and local orchestration.
+Test projects live separately in root `tests/`, mirroring the source groups.
+NuGet versions are maintained centrally in `Directory.Packages.props`.
+
 ## Documentation
 
 | Start with… | When you want to… |
@@ -178,6 +195,7 @@ The separate services and layers add setup and project structure. They make resp
 | [Local development](docs/local-development.md) | Configure dependencies, secrets, Aspire profiles, and HTTPS. |
 | [Architecture and request flows](docs/architecture.md) | Follow chat, streaming, tools, persistence, and document ingestion. |
 | [Repository guide](docs/repository-guide.md) | Navigate the solution and understand file responsibilities. |
+| [API consumers and SDK](docs/api-clients.md) | Generate a C# client from JSON or connect another consumer over HTTP. |
 | [Public streaming chat API](docs/public-chat-api.md) | Connect a browser client and handle visitor identity and SSE. |
 | [Configuration security](docs/security.md) | Understand authorization, credentials, outbound policy, and rotation. |
 | [Deployment](docs/deployment.md) | Work with Bicep, Container Apps, and environment promotion. |

@@ -1,0 +1,15 @@
+<!-- Tests the console client through scripted terminal input and mocked HTTP, without live providers. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <ProjectReference Include="../../../src/Clients/MyAIAgent.ConsoleClient/MyAIAgent.ConsoleClient.csproj" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

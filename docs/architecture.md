@@ -40,7 +40,34 @@ flowchart RL
     I --> CI[Common.Infrastructure]
 ```
 
-Project directories are flat under `src/`; `MyAIAgent.slnx` supplies visual groupings.
+Physical directories and solution folders use the same grouping:
+
+```text
+src/
+  Aspire/MyAIAgent.All/
+  Clients/MyAIAgent.ConsoleClient/
+  Common/MyAIAgent.Common.{Domain,Application,Infrastructure}/
+  Services/
+    Gateway/MyAIAgent.Gateway.{Domain,Application,Infrastructure,Presentation,Client}/
+    Orchestrator/MyAIAgent.Orchestrator.*/
+    McpServer/MyAIAgent.McpServer.*/
+    KernelMemory/MyAIAgent.KernelMemory.*/
+  MyAIAgent.slnx
+tests/
+  Clients/MyAIAgent.ConsoleClient.Tests/
+  Common/MyAIAgent.Common.Tests/
+  Services/<Service>/MyAIAgent.<Service>.Tests/
+```
+
+`Directory.Build.props` defines shared compiler defaults; `Directory.Packages.props` pins
+NuGet versions. Each project retains its own package references and specialized settings.
+Common.Domain contains entity bases and lifetime markers, Common.Application owns operation
+results and validation, and Common.Infrastructure owns service-key settings and external adapters.
+Production projects cannot reference test projects. The root build files apply to both source and tests.
+
+The separate processes support MCP clients and standalone KernelMemory use. Smaller Domain projects
+currently hold constants; retain them while these layer boundaries are useful, and add abstractions only
+for implemented responsibilities. Shared projects must not contain service-specific business logic.
 
 ## A chat turn
 

@@ -37,13 +37,14 @@ Layer and cross-service boundary rules → `.agents/rules/dotnet/architecture.md
 ## Common Layer Contents
 
 ### `MyAIAgent.Common.Domain`
-`Abstractions/BaseEntity<TKey>`, `Abstractions/AuditableEntity<TKey>`, `Abstractions/FullAuditableEntity<TKey>`, `ResponseModel<T>`, `ITransient`, `IScoped`, `ISingleton`
+`Abstractions/BaseEntity<TKey>`, `Abstractions/AuditableEntity<TKey>`, `Abstractions/FullAuditableEntity<TKey>`, `ITransient`, `IScoped`, `ISingleton`. Keep application results and infrastructure configuration out of Domain.
 
 ### `MyAIAgent.Common.Application`
-`ValidationBehavior<TRequest, TResponse>` — always throws `ValidationException`. See `Common.Application/Behaviors/ValidationBehavior.cs`.
+`Models/ResponseModel<T>`, `Models/ErrorResponseDto`, `Models/ErrorResponseExtensions`, and
+`ValidationBehavior<TRequest, TResponse>` — validation failures throw `ValidationException`.
 
 ### `MyAIAgent.Common.Infrastructure`
-`RetryExtension` (Polly), `GlobalExceptionHandler` (`IExceptionHandler`), `ExceptionHandlingExtension`, `CosmosDbExtension`, `AzureAppConfigurationExtension`
+`Configuration/ServiceAuthorizationModel`, `RetryExtension` (Polly), `GlobalExceptionHandler` (`IExceptionHandler`), `ExceptionHandlingExtension`, `CosmosDbExtension`, `AzureAppConfigurationExtension`
 
 Do not duplicate any of these in service projects.
 

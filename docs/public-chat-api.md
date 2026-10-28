@@ -20,10 +20,10 @@ Public chat stays off until JWT configuration begins. Partial/ambiguous settings
 Locally, set the key with user-secrets (never commit it):
 
 ```bash
-dotnet user-secrets --project src/MyAIAgent.Gateway.Presentation set "PublicChat:Jwt:Issuer" "http://localhost"
-dotnet user-secrets --project src/MyAIAgent.Gateway.Presentation set "PublicChat:Jwt:Audience" "chat-api"
-dotnet user-secrets --project src/MyAIAgent.Gateway.Presentation set "PublicChat:Jwt:SigningKey" "<private-random-signing-key-at-least-32-bytes>"
-dotnet user-secrets --project src/MyAIAgent.Gateway.Presentation set "PublicChat:AllowedOrigins:0" "http://localhost:3000"
+dotnet user-secrets --project src/Services/Gateway/MyAIAgent.Gateway.Presentation set "PublicChat:Jwt:Issuer" "http://localhost"
+dotnet user-secrets --project src/Services/Gateway/MyAIAgent.Gateway.Presentation set "PublicChat:Jwt:Audience" "chat-api"
+dotnet user-secrets --project src/Services/Gateway/MyAIAgent.Gateway.Presentation set "PublicChat:Jwt:SigningKey" "<private-random-signing-key-at-least-32-bytes>"
+dotnet user-secrets --project src/Services/Gateway/MyAIAgent.Gateway.Presentation set "PublicChat:AllowedOrigins:0" "http://localhost:3000"
 ```
 
 Replace the signing key with a private cryptographically random value and match your browser's origin. Set `PublicChat:AgentId` to an existing agent; required outside Development.

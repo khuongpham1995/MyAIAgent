@@ -5,7 +5,9 @@
 /infra/ @khuongpham1995
 /scripts/deploy/ @khuongpham1995
 /scripts/security/ @khuongpham1995
-/src/MyAIAgent.Common.Infrastructure/Extensions/ @khuongpham1995
+/src/Common/MyAIAgent.Common.Infrastructure/Extensions/ @khuongpham1995
+/Directory.Build.props @khuongpham1995
+/Directory.Packages.props @khuongpham1995
 /src/**/appsettings*.json @khuongpham1995
 /.gitignore @khuongpham1995
 /.dockerignore @khuongpham1995

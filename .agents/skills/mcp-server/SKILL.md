@@ -18,6 +18,11 @@ description: >
 
 The checked-in startup configures HTTP only. Stdio would require a separate transport change. Service authorization is enabled by default and cannot be disabled outside Development; active and rotation keys are required when enabled.
 
+Startup calls `UseMcpServiceAuthorization()` before `MapMcpServiceEndpoints()`.
+The mapping extension accepts and returns `IEndpointRouteBuilder`; middleware remains a
+`WebApplication` extension because raw SDK transport delegates must be authorized before dispatch.
+Keep both calls together in hosts and transport test fixtures.
+
 Gateway and Orchestrator use factory-managed clients with `McpServiceKeyHandler`. The key is scoped to the exact configured `McpServer:BaseUrl` origin and the root or `/mcp` paths. Production requires HTTPS; local Development permits loopback HTTP. Redirects and cookies are disabled. Trusted calls use Streamable HTTP explicitly; external agent endpoints remain anonymous and retain transport auto-detection. Authentication rejection must not silently fall back to chat without tools.
 
 ## Project Structure

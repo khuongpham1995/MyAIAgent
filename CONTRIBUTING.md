@@ -31,7 +31,7 @@ npm run quality
 
 | Check | Coverage |
 | --- | --- |
-| Full quality | TypeScript/automation, solution build, four .NET suites, changed C# format verification. Targeted runs do not replace it. |
+| Full quality | TypeScript/automation, solution build, four backend .NET suites plus console-client tests, SDK generation during build, changed C# format verification. Targeted runs do not replace it. |
 | Live Cosmos | `COSMOS_TEST_ENDPOINT`, Azure CLI identity, preprovisioned `myaiagent-test` containers. Skips when unset; never grant production access for tests. |
 | CI infrastructure checks | Bicep/workflow validation using pinned `.github/actions/` tools; run for deployment/config changes. |
 | `npm run security:scan` | Available Git history and nonignored files; see [security](docs/security.md) for download/network requirements. |

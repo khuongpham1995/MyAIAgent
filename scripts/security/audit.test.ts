@@ -144,7 +144,9 @@ test('a complete workflow is partial coverage and reports remain bound to conten
     assert.equal(reportAudit(f.run, f.root).complete, true);
     assert.equal(checkAudit(f.run, f.root).complete, true);
     const report = readFileSync(join(f.run, 'REPORT.md'), 'utf8');
-    assert.match(report, /Scope: src/);
+    assert.match(report, /Scope: src, tests,/);
+    assert.match(report, /Directory\.Build\.props/);
+    assert.match(report, /Directory\.Packages\.props/);
     assert.match(report, /no prior audit ledger/);
     assert.match(report, /covered: 1; candidate: 0/);
     assert.match(report, /Final coverage critic/);

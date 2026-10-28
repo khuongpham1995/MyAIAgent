@@ -1,0 +1,9 @@
+<!-- Declares the Orchestrator Domain project's build settings and dependency references. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Common/MyAIAgent.Common.Domain/MyAIAgent.Common.Domain.csproj"/>
+    </ItemGroup>
+
+</Project>

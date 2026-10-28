@@ -14,8 +14,11 @@ import { readTrx } from './trx.ts';
 import type { QualityReport, ToolRunner } from './types.ts';
 export { repoRoot } from './candidate.ts';
 
-export const services = ['Gateway', 'Orchestrator', 'KernelMemory', 'McpServer'];
-export const testProject = (service: string): string => `src/MyAIAgent.${service}.Tests/MyAIAgent.${service}.Tests.csproj`;
+export const services = ['Gateway', 'Orchestrator', 'KernelMemory', 'McpServer', 'ConsoleClient'];
+export const testProject = (service: string): string => {
+  const directory = service === 'ConsoleClient' ? 'tests/Clients' : `tests/Services/${service}`;
+  return `${directory}/MyAIAgent.${service}.Tests/MyAIAgent.${service}.Tests.csproj`;
+};
 const solution = 'src/MyAIAgent.slnx';
 
 interface QualityOptions { project?: string; base?: string }
@@ -25,7 +28,7 @@ export function parseOptions(args: string[]): QualityOptions {
   while (args.length) {
     const key = args.shift();
     if ((key !== '--project' && key !== '--base') || !args.length || args[0].startsWith('--') || options[key === '--project' ? 'project' : 'base']) {
-      throw new Error('Usage: npm run quality -- [--project Gateway|Orchestrator|KernelMemory|McpServer] [--base <merge-base>]');
+      throw new Error('Usage: npm run quality -- [--project Gateway|Orchestrator|KernelMemory|McpServer|ConsoleClient] [--base <merge-base>]');
     }
     options[key === '--project' ? 'project' : 'base'] = args.shift();
   }

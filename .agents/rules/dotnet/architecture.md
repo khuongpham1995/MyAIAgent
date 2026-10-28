@@ -35,6 +35,8 @@ Dependency direction is inward: **Domain ← Application ← Infrastructure ← 
 
 | Type | Layer | Examples |
 |---|---|---|
+| Shared operation results | Common.Application/Models | `ResponseModel<T>`, `ErrorResponseDto` |
+| Service-key configuration | Common.Infrastructure/Configuration | `ServiceAuthorizationModel` |
 | Entities (EF Core) | Domain | `ChatSession`, `AgentDefinition` |
 | Domain entities and value objects | Domain | `ChatSession`, `DocumentRecord` |
 | Feature contracts and projections | Application/{Feature} | `ChatRequest`, `AgentSummary`, `ChatResponse` |

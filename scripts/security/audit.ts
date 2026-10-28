@@ -251,7 +251,8 @@ export function initAudit(root = repoRoot, budget = 16): string {
   mkdirSync(join(run, 'agents'), { mode: 0o700 });
   const metadata: AuditMetadata = {
     version: 1, run_id: run.split('/').pop()!, repo: 'MyAIAgent', target: root, source_ref: source, profile: 'quick',
-    scope_paths: ['src', 'scripts', 'infra', '.github', '.agents/docs', '.agents/rules', '.agents/skills', '.codex', '.claude', 'AGENTS.md', 'CLAUDE.md'],
+    scope_paths: ['src', 'tests', 'scripts', 'infra', '.github', '.agents/docs', '.agents/rules', '.agents/skills', '.codex', '.claude',
+      'Directory.Build.props', 'Directory.Packages.props', 'AGENTS.md', 'CLAUDE.md'],
     budget, execution_policy: 'source-only', run_status: 'in_progress', incomplete_reason: null, agents: [], candidates: [],
     selected_companions: ['AI-AND-LLM.md', 'WEB-PROTOCOL-AND-AUTH.md', 'SUPPLY-CHAIN-AND-RELEASE.md', 'CLOUD-AND-DEPLOYMENT.md',
       'PROTOCOLS-RPC-AND-MESSAGING.md', 'RESOURCE-EXHAUSTION-AND-AVAILABILITY.md', 'DATA-ISOLATION-AND-LIFECYCLE.md'],

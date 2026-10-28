@@ -1,6 +1,9 @@
 # Dependency maintenance
 
-Maintain the .NET 10 package baseline without changing the [runtime architecture](architecture.md). Versions are pinned in `.csproj` files, including the Aspire SDK in `MyAIAgent.All.csproj`.
+Maintain the .NET 10 package baseline without changing the [runtime architecture](architecture.md).
+NuGet versions are pinned in root `Directory.Packages.props`; `.csproj` files declare which packages they use.
+The Aspire SDK remains pinned in `src/Aspire/MyAIAgent.All/MyAIAgent.All.csproj`.
+Shared target/compiler settings live in `Directory.Build.props`. The directory reorganization preserves all existing versions.
 
 ## Upgrade baseline
 
@@ -21,6 +24,14 @@ Baseline checked on 2026-10-19. Selected direct packages use MIT, Apache-2.0, or
 | KernelMemory | 0.98.250508.3 | Retain the latest published service package as requested; NuGet marks it unmaintained. |
 
 Azure.Identity, Azure.AI.OpenAI, Mapster, and Scrutor remain on the selected stable versions. KernelMemory remains in its Infrastructure project.
+
+## OpenAPI client generation
+
+The reusable Gateway SDK pins **NSwag.MSBuild 14.7.1** with `PrivateAssets=all` for generation during build.
+[NSwag is MIT-licensed](https://github.com/RicoSuter/NSwag/blob/master/LICENSE.md); no hosted SDK subscription is used.
+The compiler runs on .NET 10 and emits System.Text.Json code with an injected HttpClient.
+Its compiler dependencies are tooling-only and do not add a Newtonsoft.Json reference to ConsoleClient.
+See [API consumers and automatic generation](api-clients.md).
 
 ## KernelMemory security overrides
 

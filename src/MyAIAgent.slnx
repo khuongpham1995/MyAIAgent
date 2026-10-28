@@ -1,44 +1,65 @@
-<!-- Groups the service, shared, test, and Aspire projects for solution-wide builds and navigation. -->
-
+<!-- Mirrors the physical service, shared, client, and Aspire directories for solution navigation. -->
 <Solution>
   <Configurations>
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/Services/" />
+  <Folder Name="/Aspire/">
+    <Project Path="Aspire/MyAIAgent.All/MyAIAgent.All.csproj" />
+  </Folder>
   <Folder Name="/Common/">
-    <Project Path="MyAIAgent.Common.Application/MyAIAgent.Common.Application.csproj" />
-    <Project Path="MyAIAgent.Common.Domain/MyAIAgent.Common.Domain.csproj" />
-    <Project Path="MyAIAgent.Common.Infrastructure/MyAIAgent.Common.Infrastructure.csproj" />
-    <Project Path="MyAIAgent.Common.Tests/MyAIAgent.Common.Tests.csproj" />
+    <Project Path="Common/MyAIAgent.Common.Application/MyAIAgent.Common.Application.csproj" />
+    <Project Path="Common/MyAIAgent.Common.Domain/MyAIAgent.Common.Domain.csproj" />
+    <Project Path="Common/MyAIAgent.Common.Infrastructure/MyAIAgent.Common.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/Gateway/">
-    <Project Path="MyAIAgent.Gateway.Application/MyAIAgent.Gateway.Application.csproj" />
-    <Project Path="MyAIAgent.Gateway.Domain/MyAIAgent.Gateway.Domain.csproj" />
-    <Project Path="MyAIAgent.Gateway.Infrastructure/MyAIAgent.Gateway.Infrastructure.csproj" />
-    <Project Path="MyAIAgent.Gateway.Presentation/MyAIAgent.Gateway.Presentation.csproj" />
-    <Project Path="MyAIAgent.Gateway.Tests/MyAIAgent.Gateway.Tests.csproj" />
+  <Folder Name="/Clients/">
+    <Project Path="Clients/MyAIAgent.ConsoleClient/MyAIAgent.ConsoleClient.csproj" />
   </Folder>
-  <Folder Name="/McpServer/">
-    <Project Path="MyAIAgent.McpServer.Application/MyAIAgent.McpServer.Application.csproj" />
-    <Project Path="MyAIAgent.McpServer.Domain/MyAIAgent.McpServer.Domain.csproj" />
-    <Project Path="MyAIAgent.McpServer.Infrastructure/MyAIAgent.McpServer.Infrastructure.csproj" />
-    <Project Path="MyAIAgent.McpServer.Presentation/MyAIAgent.McpServer.Presentation.csproj" />
-    <Project Path="MyAIAgent.McpServer.Tests/MyAIAgent.McpServer.Tests.csproj" />
+  <Folder Name="/Services/Gateway/">
+    <Project Path="Services/Gateway/MyAIAgent.Gateway.Application/MyAIAgent.Gateway.Application.csproj" />
+    <Project Path="Services/Gateway/MyAIAgent.Gateway.Client/MyAIAgent.Gateway.Client.csproj" />
+    <Project Path="Services/Gateway/MyAIAgent.Gateway.Domain/MyAIAgent.Gateway.Domain.csproj" />
+    <Project Path="Services/Gateway/MyAIAgent.Gateway.Infrastructure/MyAIAgent.Gateway.Infrastructure.csproj" />
+    <Project Path="Services/Gateway/MyAIAgent.Gateway.Presentation/MyAIAgent.Gateway.Presentation.csproj" />
   </Folder>
-  <Folder Name="/Orchestrator/">
-    <Project Path="MyAIAgent.Orchestrator.Application/MyAIAgent.Orchestrator.Application.csproj" />
-    <Project Path="MyAIAgent.Orchestrator.Domain/MyAIAgent.Orchestrator.Domain.csproj" />
-    <Project Path="MyAIAgent.Orchestrator.Infrastructure/MyAIAgent.Orchestrator.Infrastructure.csproj" />
-    <Project Path="MyAIAgent.Orchestrator.Presentation/MyAIAgent.Orchestrator.Presentation.csproj" />
-    <Project Path="MyAIAgent.Orchestrator.Tests/MyAIAgent.Orchestrator.Tests.csproj" />
+  <Folder Name="/Services/KernelMemory/">
+    <Project Path="Services/KernelMemory/MyAIAgent.KernelMemory.Application/MyAIAgent.KernelMemory.Application.csproj" />
+    <Project Path="Services/KernelMemory/MyAIAgent.KernelMemory.Domain/MyAIAgent.KernelMemory.Domain.csproj" />
+    <Project Path="Services/KernelMemory/MyAIAgent.KernelMemory.Infrastructure/MyAIAgent.KernelMemory.Infrastructure.csproj" />
+    <Project Path="Services/KernelMemory/MyAIAgent.KernelMemory.Presentation/MyAIAgent.KernelMemory.Presentation.csproj" />
   </Folder>
-  <Folder Name="/RAG/">
-    <Project Path="MyAIAgent.KernelMemory.Application/MyAIAgent.KernelMemory.Application.csproj" />
-    <Project Path="MyAIAgent.KernelMemory.Domain/MyAIAgent.KernelMemory.Domain.csproj" />
-    <Project Path="MyAIAgent.KernelMemory.Infrastructure/MyAIAgent.KernelMemory.Infrastructure.csproj" />
-    <Project Path="MyAIAgent.KernelMemory.Presentation/MyAIAgent.KernelMemory.Presentation.csproj" />
-    <Project Path="MyAIAgent.KernelMemory.Tests/MyAIAgent.KernelMemory.Tests.csproj" />
+  <Folder Name="/Services/McpServer/">
+    <Project Path="Services/McpServer/MyAIAgent.McpServer.Application/MyAIAgent.McpServer.Application.csproj" />
+    <Project Path="Services/McpServer/MyAIAgent.McpServer.Domain/MyAIAgent.McpServer.Domain.csproj" />
+    <Project Path="Services/McpServer/MyAIAgent.McpServer.Infrastructure/MyAIAgent.McpServer.Infrastructure.csproj" />
+    <Project Path="Services/McpServer/MyAIAgent.McpServer.Presentation/MyAIAgent.McpServer.Presentation.csproj" />
   </Folder>
-  <Project Path="MyAIAgent.All/MyAIAgent.All.csproj" />
+  <Folder Name="/Services/Orchestrator/">
+    <Project Path="Services/Orchestrator/MyAIAgent.Orchestrator.Application/MyAIAgent.Orchestrator.Application.csproj" />
+    <Project Path="Services/Orchestrator/MyAIAgent.Orchestrator.Domain/MyAIAgent.Orchestrator.Domain.csproj" />
+    <Project Path="Services/Orchestrator/MyAIAgent.Orchestrator.Infrastructure/MyAIAgent.Orchestrator.Infrastructure.csproj" />
+    <Project Path="Services/Orchestrator/MyAIAgent.Orchestrator.Presentation/MyAIAgent.Orchestrator.Presentation.csproj" />
+  </Folder>
+  <Folder Name="/Tests/" />
+  <Folder Name="/Tests/Services/" />
+  <Folder Name="/Tests/Services/Gateway/">
+    <Project Path="../tests/Services/Gateway/MyAIAgent.Gateway.Tests/MyAIAgent.Gateway.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Services/Orchestrator/">
+    <Project Path="../tests/Services/Orchestrator/MyAIAgent.Orchestrator.Tests/MyAIAgent.Orchestrator.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Services/KernelMemory/">
+    <Project Path="../tests/Services/KernelMemory/MyAIAgent.KernelMemory.Tests/MyAIAgent.KernelMemory.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Services/McpServer/">
+    <Project Path="../tests/Services/McpServer/MyAIAgent.McpServer.Tests/MyAIAgent.McpServer.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Clients/">
+    <Project Path="../tests/Clients/MyAIAgent.ConsoleClient.Tests/MyAIAgent.ConsoleClient.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/Common/">
+    <Project Path="../tests/Common/MyAIAgent.Common.Tests/MyAIAgent.Common.Tests.csproj" />
+  </Folder>
 </Solution>

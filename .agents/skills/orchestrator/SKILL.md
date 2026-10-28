@@ -37,7 +37,8 @@ MyAIAgent.Orchestrator.Infrastructure/
   IoCExtension.cs            ← registers IChatClient, DB provider, HttpAuthEndpointFilter
 
 MyAIAgent.Orchestrator.Presentation/
-  Program.cs                             ← POST /chat, Aspire + Cosmos wiring
+  Program.cs                             ← host configuration and endpoint composition
+  Endpoints/                             ← chat, conversation, agent, health and service-auth composition modules
   appsettings.json
 ```
 
@@ -73,6 +74,10 @@ Conversation list/get/rename/delete handlers check that the session belongs to t
 ## Presentation Bootstrap
 
 `Program.cs` wires: `AddAzureAppConfiguration` → `AddApplication` → `AddInfrastructure(isDevelopment)` → `AddGlobalExceptionHandling` → `AddSingleton(TimeProvider.System)` → `UseExceptionHandler` → endpoints via `MapGroup("").AddEndpointFilter(HttpAuthEndpointFilter)`.
+
+`MapOrchestratorEndpoints()` composes the anonymous health module and the protected group.
+Feature extensions use `IEndpointRouteBuilder Map[Module]Endpoints(this IEndpointRouteBuilder endpoints)`
+and return the incoming builder. Put new routes in the appropriate module, retaining the protected parent group.
 
 `TimeProvider` is injected for testable timestamps and current UTC context each chat turn — never use `DateTimeOffset.UtcNow` directly.
 

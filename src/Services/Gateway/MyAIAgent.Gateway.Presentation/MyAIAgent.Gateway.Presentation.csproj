@@ -1,0 +1,21 @@
+<!-- Declares the Gateway Presentation project's build settings and dependency references. -->
+
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <UserSecretsId>aspnet-MyAIAgent.MainSubSys.Presentation-a1b2c3d4-e5f6-7890-abcd-ef1234567890</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../MyAIAgent.Gateway.Application/MyAIAgent.Gateway.Application.csproj" />
+        <ProjectReference Include="../MyAIAgent.Gateway.Infrastructure/MyAIAgent.Gateway.Infrastructure.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+      <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+      <PackageReference Include="Microsoft.OpenApi" />
+      <PackageReference Include="Scalar.AspNetCore" />
+    </ItemGroup>
+
+</Project>

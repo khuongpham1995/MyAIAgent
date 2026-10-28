@@ -11,7 +11,7 @@ Find code, configuration, and shared instructions. Source headers use `/** ... *
 ## Suggested reading order
 
 1. Start with the [README](../README.md) and [request diagrams](architecture.md).
-2. Open `MyAIAgent.All/AppHost.cs`, then Gateway `Program.cs` under `src/`.
+2. Open `src/Aspire/MyAIAgent.All/AppHost.cs`, then Gateway `Program.cs` under `src/Services/Gateway/`.
 3. Trace a Gateway handler/client into Orchestrator. Read `ChatSessionHistory` for context/persistence and `ChatOrchestratorService` for model/tools.
 4. For documents, read KernelMemory `Program.cs` and `KernelMemoryProviderExtension`.
 5. For web research, follow `WebSearchTool` → `WebSearchHandler` → `TavilySearchClient`, or `ReadWebPageTool` → `ReadWebPageHandler` → `TavilyWebPageClient`. Orchestrator's `AgentHelper`, `WebResearchFunction`, and `WebResearchSources` enforce selection, bound calls, and collect reply links.
@@ -21,13 +21,17 @@ Find code, configuration, and shared instructions. Source headers use `/** ... *
 
 | Location | Purpose |
 | --- | --- |
-| `src/MyAIAgent.All/` | Aspire process composition and dashboard launch configuration |
-| `src/MyAIAgent.<Service>.Domain/` | Entities, constants, and domain state |
-| `src/MyAIAgent.<Service>.Application/` | Requests, handlers, validation, response contracts, mappings, and dependency ports |
-| `src/MyAIAgent.<Service>.Infrastructure/` | HTTP/provider adapters, persistence, and infrastructure registration |
-| `src/MyAIAgent.<Service>.Presentation/` | Application entry point, configuration, HTTP endpoints, and MCP tool wrappers |
-| `src/MyAIAgent.<Service>.Tests/` | Unit and selected integration tests for that service |
-| `src/MyAIAgent.Common.*/` | Shared result types, validation, registration helpers, Azure configuration, errors, and test helpers |
+| `src/Aspire/MyAIAgent.All/` | Aspire process composition and dashboard launch configuration |
+| `src/Services/Gateway/MyAIAgent.Gateway.Client/` | Reusable HTTP SDK; generates all operations and wire models from its OpenAPI JSON during build |
+| `src/Clients/MyAIAgent.ConsoleClient/` | Interactive local Gateway client: menus, HTTP/SSE handling, session state, and safe terminal output |
+| `tests/Clients/MyAIAgent.ConsoleClient.Tests/` | Scripted terminal journeys plus SDK consumer, streaming, and cancellation tests |
+| `src/Services/<Service>/MyAIAgent.<Service>.Domain/` | Entities, constants, and domain state |
+| `src/Services/<Service>/MyAIAgent.<Service>.Application/` | Requests, handlers, validation, response contracts, mappings, and dependency ports |
+| `src/Services/<Service>/MyAIAgent.<Service>.Infrastructure/` | HTTP/provider adapters, persistence, and infrastructure registration |
+| `src/Services/<Service>/MyAIAgent.<Service>.Presentation/` | Application entry point, configuration, HTTP endpoints, and MCP tool wrappers |
+| `tests/Services/<Service>/MyAIAgent.<Service>.Tests/` | Unit and selected integration tests for that service |
+| `src/Common/MyAIAgent.Common.*/` | Shared domain bases, result types, validation, registration helpers, Azure configuration, and errors |
+| `tests/Common/MyAIAgent.Common.Tests/` | Shared test-only helpers; this project is not a runnable suite |
 | `scripts/ai/` | TypeScript quality runner, candidate/evidence checks, and their tests |
 | `scripts/deploy/` | TypeScript Container Apps deployment and authenticated smoke checks |
 | `scripts/security/` | TypeScript secret-scanner integration and opt-in GitHub protection configuration |
@@ -37,9 +41,29 @@ Find code, configuration, and shared instructions. Source headers use `/** ... *
 | `.codex/`, `.claude/` | Assistant-specific adapters and links to shared instructions |
 | `docs/` | Public setup, architecture, API, security, dependency, and deployment guides |
 
-`Common.Tests` supplies helpers, not a fifth test suite. Directories are flat under `src/`; `.slnx` groups them visually. Use `.csproj` files for current references and versions.
+`Common.Tests` supplies helpers and is not runnable. The quality gate runs four backend suites plus the console-client suite.
+The solution groups production projects from `src/` and test projects from the separate root `tests/` tree.
+Test folders mirror `Services`, `Common`, and `Clients`; production projects never reference test projects.
+Use `.csproj` files for dependencies, `Directory.Packages.props` for package versions, and
+`Directory.Build.props` for shared compiler defaults. Project-specific settings remain local.
+
+`Common.Domain` owns entity bases and lifetime markers; `Common.Application` owns `ResponseModel<T>`,
+error contracts, validation and DI helpers; `Common.Infrastructure` owns `ServiceAuthorizationModel`,
+HTTP controls, Azure configuration and persistence adapters. Add shared code only for a demonstrated
+cross-service need. The generated Gateway SDK is grouped with the API it represents and remains independent
+of these backend projects.
+
+The console client is a single executable project, not another backend service. `Program.cs` registers a typed `GatewayClient`; `ConsoleApplication.cs` manages menus and chat state; `TerminalTextFilter.cs` removes terminal controls across streaming chunks. It references the reusable Gateway SDK. `GatewayClient` retains the SSE adapter and safe error handling; `GatewayResponseHandler` applies console-specific response policies. Run it separately from Aspire so terminal input remains interactive.
+
+`MyAIAgent.Gateway.Client.csproj` generates the SDK before compilation from `OpenApi/openapi.json` using pinned NSwag.MSBuild and `nswag.json`. Output stays under `obj/` and is never manually edited. The SDK has no service or console project references. Gateway's `GatewayEndpoints.cs` maps runtime routes once; `GatewayOpenApiExtensions.cs` describes them. `GatewayOpenApiTests` compares the complete schema, including optional visitor routes, against the SDK input with mocked downstream dependencies.
 
 ## Common source-file roles
+
+Minimal API modules use `IEndpointRouteBuilder Map[Module]Endpoints(this IEndpointRouteBuilder endpoints, ...)`
+and return the incoming builder for chaining. Gateway composes chat, conversation, admin and health modules;
+Orchestrator composes chat, conversation, agent and health modules under its service-key filter.
+`MapMcpServiceEndpoints` and `MapKernelMemoryEndpoints` wrap their SDK route mappings.
+MCP startup must call `UseMcpServiceAuthorization()` before mapping transport routes, including in test hosts.
 
 | File/type | Role |
 | --- | --- |
@@ -57,22 +81,25 @@ Strict JSON cannot carry comments; lockfiles are generated. Keep tracked values 
 
 | File | Purpose |
 | --- | --- |
+| [src/Services/Gateway/MyAIAgent.Gateway.Client/OpenApi/openapi.json](../src/Services/Gateway/MyAIAgent.Gateway.Client/OpenApi/openapi.json) | Complete API contract input; replace its JSON and build to regenerate the consumer SDK |
+| [src/Clients/MyAIAgent.ConsoleClient/appsettings.json](../src/Clients/MyAIAgent.ConsoleClient/appsettings.json) | Console Gateway address and agent-creation MCP endpoint; environment-specific JSON/environment variables override defaults, with `--gateway` taking priority for Gateway |
+| [src/Services/Gateway/MyAIAgent.Gateway.Client/nswag.json](../src/Services/Gateway/MyAIAgent.Gateway.Client/nswag.json) | Generates every described operation and model with an injected HttpClient; output goes to obj/ |
 | [.claude/settings.json](../.claude/settings.json) | Claude permissions and workflow settings |
 | [package-lock.json](../package-lock.json) | Generated npm resolution/integrity data; update through npm |
 | [package.json](../package.json) | Node requirements, development dependencies, npm commands |
-| [src/MyAIAgent.All/Properties/launchSettings.json](../src/MyAIAgent.All/Properties/launchSettings.json) | AppHost launch profiles, ports, and Development environment |
-| [src/MyAIAgent.All/appsettings.Development.json](../src/MyAIAgent.All/appsettings.Development.json) | Public AppHost Development overrides |
-| [src/MyAIAgent.All/appsettings.json](../src/MyAIAgent.All/appsettings.json) | Public AppHost defaults |
-| [src/MyAIAgent.Gateway.Presentation/Properties/launchSettings.json](../src/MyAIAgent.Gateway.Presentation/Properties/launchSettings.json) | Gateway launch profiles, ports, and Development environment |
-| [src/MyAIAgent.Gateway.Presentation/appsettings.json](../src/MyAIAgent.Gateway.Presentation/appsettings.json) | Public Gateway defaults |
-| [src/MyAIAgent.KernelMemory.Presentation/Properties/launchSettings.json](../src/MyAIAgent.KernelMemory.Presentation/Properties/launchSettings.json) | KernelMemory launch profile, ports, and Development environment |
-| [src/MyAIAgent.KernelMemory.Presentation/appsettings.Development.json](../src/MyAIAgent.KernelMemory.Presentation/appsettings.Development.json) | Public KernelMemory Development overrides |
-| [src/MyAIAgent.KernelMemory.Presentation/appsettings.json](../src/MyAIAgent.KernelMemory.Presentation/appsettings.json) | Public KernelMemory defaults |
-| [src/MyAIAgent.McpServer.Presentation/Properties/launchSettings.json](../src/MyAIAgent.McpServer.Presentation/Properties/launchSettings.json) | MCP launch profiles, ports, and Development environment |
-| [src/MyAIAgent.McpServer.Presentation/appsettings.Development.json](../src/MyAIAgent.McpServer.Presentation/appsettings.Development.json) | Public MCP Development overrides |
-| [src/MyAIAgent.McpServer.Presentation/appsettings.json](../src/MyAIAgent.McpServer.Presentation/appsettings.json) | Public MCP defaults |
-| [src/MyAIAgent.Orchestrator.Presentation/Properties/launchSettings.json](../src/MyAIAgent.Orchestrator.Presentation/Properties/launchSettings.json) | Orchestrator launch profiles, ports, and Development environment |
-| [src/MyAIAgent.Orchestrator.Presentation/appsettings.json](../src/MyAIAgent.Orchestrator.Presentation/appsettings.json) | Public Orchestrator defaults |
+| [src/Aspire/MyAIAgent.All/Properties/launchSettings.json](../src/Aspire/MyAIAgent.All/Properties/launchSettings.json) | AppHost launch profiles, ports, and Development environment |
+| [src/Aspire/MyAIAgent.All/appsettings.Development.json](../src/Aspire/MyAIAgent.All/appsettings.Development.json) | Public AppHost Development overrides |
+| [src/Aspire/MyAIAgent.All/appsettings.json](../src/Aspire/MyAIAgent.All/appsettings.json) | Public AppHost defaults |
+| [src/Services/Gateway/MyAIAgent.Gateway.Presentation/Properties/launchSettings.json](../src/Services/Gateway/MyAIAgent.Gateway.Presentation/Properties/launchSettings.json) | Gateway launch profiles, ports, and Development environment |
+| [src/Services/Gateway/MyAIAgent.Gateway.Presentation/appsettings.json](../src/Services/Gateway/MyAIAgent.Gateway.Presentation/appsettings.json) | Public Gateway defaults |
+| [src/Services/KernelMemory/MyAIAgent.KernelMemory.Presentation/Properties/launchSettings.json](../src/Services/KernelMemory/MyAIAgent.KernelMemory.Presentation/Properties/launchSettings.json) | KernelMemory launch profile, ports, and Development environment |
+| [src/Services/KernelMemory/MyAIAgent.KernelMemory.Presentation/appsettings.Development.json](../src/Services/KernelMemory/MyAIAgent.KernelMemory.Presentation/appsettings.Development.json) | Public KernelMemory Development overrides |
+| [src/Services/KernelMemory/MyAIAgent.KernelMemory.Presentation/appsettings.json](../src/Services/KernelMemory/MyAIAgent.KernelMemory.Presentation/appsettings.json) | Public KernelMemory defaults |
+| [src/Services/McpServer/MyAIAgent.McpServer.Presentation/Properties/launchSettings.json](../src/Services/McpServer/MyAIAgent.McpServer.Presentation/Properties/launchSettings.json) | MCP launch profiles, ports, and Development environment |
+| [src/Services/McpServer/MyAIAgent.McpServer.Presentation/appsettings.Development.json](../src/Services/McpServer/MyAIAgent.McpServer.Presentation/appsettings.Development.json) | Public MCP Development overrides |
+| [src/Services/McpServer/MyAIAgent.McpServer.Presentation/appsettings.json](../src/Services/McpServer/MyAIAgent.McpServer.Presentation/appsettings.json) | Public MCP defaults |
+| [src/Services/Orchestrator/MyAIAgent.Orchestrator.Presentation/Properties/launchSettings.json](../src/Services/Orchestrator/MyAIAgent.Orchestrator.Presentation/Properties/launchSettings.json) | Orchestrator launch profiles, ports, and Development environment |
+| [src/Services/Orchestrator/MyAIAgent.Orchestrator.Presentation/appsettings.json](../src/Services/Orchestrator/MyAIAgent.Orchestrator.Presentation/appsettings.json) | Public Orchestrator defaults |
 | [tsconfig.json](../tsconfig.json) | Strict TypeScript compiler settings and source inclusion |
 
 ## Shared instruction links

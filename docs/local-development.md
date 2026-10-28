@@ -2,6 +2,11 @@
 
 Build the solution, configure providers, and run four services with Aspire. AppHost starts processes; it does not provision Azure resources.
 
+Service projects live in `src/Services/<Service>/`, AppHost in `src/Aspire/`, and the console in
+`src/Clients/`. Test projects live under root `tests/`, alongside `src/`.
+Reopen `src/MyAIAgent.slnx` and update IDE run configurations that still use
+the former flat paths. Existing user-secrets remain available because `UserSecretsId` values are unchanged.
+
 ## 1. Build before connecting providers
 
 Install Git, .NET 10 SDK, Node.js 20.6+, and Azure CLI. From the repository root:
@@ -51,7 +56,7 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ### Orchestrator
 
 ```bash
-dotnet user-secrets set --project src/MyAIAgent.Orchestrator.Presentation <<'JSON'
+dotnet user-secrets set --project src/Services/Orchestrator/MyAIAgent.Orchestrator.Presentation <<'JSON'
 {
   "CosmosDb:Endpoint": "https://<cosmos-account>.documents.azure.com/",
   "CosmosDb:DatabaseName": "myaiagent-test",
@@ -73,7 +78,7 @@ For OpenAI, set `AiProvider:Type=OpenAI`, `OpenAI:ApiKey`, and `OpenAI:ModelId` 
 ### KernelMemory
 
 ```bash
-dotnet user-secrets set --project src/MyAIAgent.KernelMemory.Presentation <<'JSON'
+dotnet user-secrets set --project src/Services/KernelMemory/MyAIAgent.KernelMemory.Presentation <<'JSON'
 {
   "CosmosDb:Endpoint": "https://<cosmos-account>.documents.azure.com/",
   "CosmosDb:DatabaseName": "myaiagent-test",
@@ -109,7 +114,7 @@ Check compatibility and regional availability before copying these examples. Use
 ### Gateway
 
 ```bash
-dotnet user-secrets set --project src/MyAIAgent.Gateway.Presentation <<'JSON'
+dotnet user-secrets set --project src/Services/Gateway/MyAIAgent.Gateway.Presentation <<'JSON'
 {
   "Orchestrator:BaseUrl": "http://localhost:5100",
   "Orchestrator:AccessKey": "<orchestrator-active-key>",
@@ -128,7 +133,7 @@ These URLs match the launch profiles. The KernelMemory `5227` override replaces 
 Authorization is enabled by default. Configure MCP's own store:
 
 ```bash
-dotnet user-secrets set --project src/MyAIAgent.McpServer.Presentation <<'JSON'
+dotnet user-secrets set --project src/Services/McpServer/MyAIAgent.McpServer.Presentation <<'JSON'
 {
   "ServiceAuthorization:Enabled": "true",
   "ServiceAuthorization:AccessKey1": "<mcp-active-key>",
@@ -179,7 +184,7 @@ Configure the reference only after running the updated AAC loader. Resolution fa
 Select `MyAIAgent.All` as the IDE startup project, or run:
 
 ```bash
-dotnet run --project src/MyAIAgent.All --launch-profile https
+dotnet run --project src/Aspire/MyAIAgent.All --launch-profile https
 ```
 
 - `https` is the default example; `http` permits an unencrypted local dashboard with authentication still enabled.
@@ -235,6 +240,67 @@ Basic search uses one Tavily credit per request; basic extraction uses one credi
 
 Next: [document routes](architecture.md#document-ingestion-and-rag) or [public visitor API](public-chat-api.md).
 
+## 5. Test with the console client
+
+Keep Aspire running, then use a **separate interactive terminal**:
+
+```bash
+dotnet run --project src/Clients/MyAIAgent.ConsoleClient
+```
+
+The console reads `Gateway:BaseUrl` from its own `appsettings.json` (default `https://localhost:7200`).
+Settings load from the executable directory, independently of the terminal's working directory.
+Later sources override earlier ones:
+
+1. `appsettings.json`
+2. Optional `appsettings.<DOTNET_ENVIRONMENT>.json`, such as `appsettings.Development.json`
+3. Environment variables, including `Gateway__BaseUrl`
+4. `--gateway`
+
+Edit `src/Clients/MyAIAgent.ConsoleClient/appsettings.json` and rebuild, or set `Gateway__BaseUrl` before starting.
+The same file sets `McpServer:Endpoint`, the default offered when creating a tool-enabled agent.
+Override it with `McpServer__Endpoint`; if unset, enter an MCP URL during agent creation.
+This client setting does not change the backend's trusted MCP origin or service authorization.
+Environment-specific JSON files are copied to build/publish output too; keep their values safe to publish.
+Settings are captured at startup, so restart the console after changes. For a one-off HTTP profile override:
+
+```bash
+dotnet run --project src/Clients/MyAIAgent.ConsoleClient -- --gateway http://localhost:5200
+```
+
+Only HTTP(S) loopback service roots are accepted. TLS validation stays enabled. The client has no provider credentials, does not change Azure CLI context, and does not start services itself. If configuration access fails, select the subscription/tenant containing your development resources before restarting Aspire.
+
+| Menu | What to test |
+| --- | --- |
+| **Connection check** | Gateway liveness; this does not check provider credentials or quota |
+| **Select/create agent** | Select an existing agent, or explicitly create one with instructions and tool names. Creation does not change the default agent. |
+| **New chat / Continue chat** | Type messages and see streamed replies; follow-up messages retain the session |
+| **Conversations** | Page through history, read messages, open a saved chat, rename, or confirm deletion |
+| **Tools** | Discover available tools without invoking Tavily |
+| **Mode** | Switch between streaming `/chat/stream` and JSON `/chat` replies |
+
+For a research agent, enable `web_search,read_webpage` and accept the local MCP endpoint when it matches your configuration. Then try an ordinary question, a current-facts search, and a public article summary. Chat can incur model usage; research can also consume Tavily credits.
+
+During chat, `/help` explains commands, `/new` resets the session, `/back` returns to the menu, and `/exit` quits. Ctrl+C cancels an active request and returns control; when idle it exits. The client retains a received session ID after interruption. Inspect history before resending: cancellation or a missing `done` event does not prove the turn was unsaved.
+
+Opening saved history leaves agent resolution to the server. Selecting another agent starts a new conversation. After opening saved history, `/new` uses the server default unless you explicitly select an agent.
+
+**Local scope:** Development routes share `development:anonymous`; this client does not test multi-user isolation, public visitor JWTs, browser CORS, or production sign-in. Document uploads and standalone KernelMemory queries remain in Scalar/direct HTTP. Untrusted output is printed as plain text with terminal controls removed; Markdown links remain visible text. Nothing is exported or logged to disk by the client.
+
+Automated client tests use mocked HTTP and no cloud access:
+
+```bash
+npm run quality -- --project ConsoleClient
+```
+
+The full `npm run quality` includes this suite alongside the four backend suites. Ordinary requests have a 30-second deadline; chat has a three-minute total deadline, including delayed JSON response headers. Streaming response headers have a separate 30-second deadline. There are no automatic retries. JSON responses are limited to 2 MiB and SSE responses to 8 MiB.
+
+### Update the API client from JSON
+
+Paste the complete OpenAPI document into `src/Services/Gateway/MyAIAgent.Gateway.Client/OpenApi/openapi.json`, save, and build ConsoleClient normally. Its project reference builds the reusable SDK and regenerates methods/models automatically. Generated C# stays under the SDK's ignored `obj/` directory.
+
+No generation script, running API, Azure configuration, or operation whitelist is involved. See [API consumers and SDK generation](api-clients.md) for the copy/paste workflow, authentication, streaming, and maintainer contract checks.
+
 ## Troubleshooting
 
 | Symptom | Check |
@@ -266,7 +332,7 @@ After granting the test-scoped identity and signing in:
 
 ```bash
 COSMOS_TEST_ENDPOINT='https://<cosmos-account>.documents.azure.com/' \
-  dotnet test src/MyAIAgent.Orchestrator.Tests/MyAIAgent.Orchestrator.Tests.csproj \
+  dotnet test tests/Services/Orchestrator/MyAIAgent.Orchestrator.Tests/MyAIAgent.Orchestrator.Tests.csproj \
   --filter FullyQualifiedName~Integration.Infrastructure.Repositories
 ```
 

@@ -1,0 +1,31 @@
+<!-- Declares the Orchestrator Tests project's build settings and dependency references. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../../src/Services/Orchestrator/MyAIAgent.Orchestrator.Application/MyAIAgent.Orchestrator.Application.csproj" />
+    <ProjectReference Include="../../../../src/Services/Orchestrator/MyAIAgent.Orchestrator.Infrastructure/MyAIAgent.Orchestrator.Infrastructure.csproj" />
+    <ProjectReference Include="../../../../src/Services/Orchestrator/MyAIAgent.Orchestrator.Domain/MyAIAgent.Orchestrator.Domain.csproj" />
+    <ProjectReference Include="../../../../src/Services/Orchestrator/MyAIAgent.Orchestrator.Presentation/MyAIAgent.Orchestrator.Presentation.csproj" />
+    <ProjectReference Include="../../../Common/MyAIAgent.Common.Tests/MyAIAgent.Common.Tests.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

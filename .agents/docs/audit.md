@@ -50,6 +50,9 @@ A complete workflow is still **partial quick coverage**, even with zero confirme
 
 ## Initial MyAIAgent scope
 
+Include production code under `src/`, test code under root `tests/`, and shared root
+`Directory.Build.props` / `Directory.Packages.props` configuration.
+
 Prioritize Gateway visitor JWT/origin/owner boundaries; Orchestrator conversations, persistence, authorization and tools; MCP outbound/extraction/untrusted results and spending; KernelMemory upload/retrieval authorization; Common HTTP/credentials/AAC/identity; and infrastructure/CI/TypeScript/assistant tooling. Read tests and documentation as source context. Record third-party package internals, the vendored audit engine, generated files, local ignored configuration, cloud deployment state, live providers, and other users' data as out of scope.
 
 Select the AI/LLM, web/auth, supply-chain/release, cloud/deployment, RPC/streaming, resource exhaustion, and data-isolation companion blocks applicable to each unit. Read only relevant portions. Use upstream canonical coverage IDs and state invariants; `canonicalCoverageId` is exported by the helper. Every source-only check has `artifact: null` and records its actual author and reviewed paths.

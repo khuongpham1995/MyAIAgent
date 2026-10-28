@@ -21,7 +21,7 @@ description: >
 Mirror the source layout inside the test project. Each service has its own test project:
 
 ```
-src/MyAIAgent.[Service].Tests/
+tests/Services/[Service]/MyAIAgent.[Service].Tests/
   Unit/
     Application/{Feature}/Commands/{RequestName}/ or Queries/{RequestName}/
                             → handler + validator unit tests

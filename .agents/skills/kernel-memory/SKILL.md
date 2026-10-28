@@ -53,7 +53,7 @@ RunKernelMemoryAsync(...)
 
 ## Endpoint Filters
 
-Both filters are instantiated manually in `WebApplicationExtension` (not via DI) because `AddKernelMemoryEndpoints` accepts filter instances directly. `ILoggerFactory` is resolved from `app.Services` to create the loggers.
+Both filters are instantiated manually in `Extensions/KernelMemoryEndpoints.cs` (not via DI) because `AddKernelMemoryEndpoints` accepts filter instances directly. `ILoggerFactory` is resolved from `endpoints.ServiceProvider` to create the loggers. `MapKernelMemoryEndpoints` returns `IEndpointRouteBuilder`; the run helper composes it before hosting.
 
 - `HttpAuthEndpointFilter` — validates the `Authorization` header against `ServiceAuthorization.AccessKey1`/`AccessKey2`; config validated once at construction
 - `HttpErrorsEndpointFilter` — catches `BadHttpRequestException` 413 → 413 response; all other exceptions → log + rethrow to `GlobalExceptionHandler`

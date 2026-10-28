@@ -1,0 +1,26 @@
+/**
+ * MyAIAgent | Gateway · Application
+ *
+ * Forwards agent creation to Orchestrator through the Gateway client port.
+ */
+
+using MyAIAgent.Common.Application.Models;
+using MediatR;
+using MyAIAgent.Gateway.Application.Common.Interfaces;
+
+namespace MyAIAgent.Gateway.Application.Agents.Commands.CreateAgent;
+
+public sealed class CreateAgentHandler(IOrchestratorClient orchestratorClient)
+    : IRequestHandler<CreateAgentCommand, ResponseModel<string>>
+{
+    public async Task<ResponseModel<string>> Handle(
+        CreateAgentCommand command,
+        CancellationToken cancellationToken) =>
+        await orchestratorClient.CreateAgentAsync(
+            command.Name,
+            command.Instructions,
+            command.McpServerEndpoint,
+            command.IsDefault,
+            command.EnabledTools,
+            cancellationToken);
+}
