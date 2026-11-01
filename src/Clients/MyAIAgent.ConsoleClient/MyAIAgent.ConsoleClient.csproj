@@ -1,0 +1,17 @@
+<!-- Builds the interactive local Gateway client without referencing backend implementation projects. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <ProjectReference Include="../../Services/Gateway/MyAIAgent.Gateway.Client/MyAIAgent.Gateway.Client.csproj" />
+    <InternalsVisibleTo Include="MyAIAgent.ConsoleClient.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="appsettings*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

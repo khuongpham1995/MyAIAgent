@@ -1,0 +1,20 @@
+<!-- Declares the McpServer Application project's build settings and dependency references. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <PackageId>MyAIAgent.McpServer.Application</PackageId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+        <PackageReference Include="MediatR" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Common/MyAIAgent.Common.Application/MyAIAgent.Common.Application.csproj" />
+        <ProjectReference Include="../MyAIAgent.McpServer.Domain/MyAIAgent.McpServer.Domain.csproj" />
+    </ItemGroup>
+
+</Project>

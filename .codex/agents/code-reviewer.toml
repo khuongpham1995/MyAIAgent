@@ -1,0 +1,11 @@
+# Defines the Codex code reviewer and its read-only review contract.
+
+name = "code-reviewer"
+description = "Read-only correctness, architecture and test review of a stable MyAIAgent candidate."
+model = "gpt-6-sol"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+developer_instructions = """
+Read .agents/docs/review.md and follow its shared constraints, Code reviewer
+checklist, and Report contract before reviewing.
+"""

@@ -1,0 +1,26 @@
+{
+  "runtime": "Net100",
+  "documentGenerator": {
+    "fromDocument": { "url": "OpenApi/openapi.json" }
+  },
+  "codeGenerators": {
+    "openApiToCSharpClient": {
+      "className": "GatewayApiClient",
+      "namespace": "MyAIAgent.Gateway.Client",
+      "operationGenerationMode": "SingleClientFromOperationId",
+      "injectHttpClient": true,
+      "disposeHttpClient": false,
+      "useBaseUrl": false,
+      "generateOptionalParameters": false,
+      "jsonLibrary": "SystemTextJson",
+      "generateNullableReferenceTypes": true,
+      "dateTimeType": "System.DateTimeOffset",
+      "arrayType": "System.Collections.Generic.IReadOnlyList",
+      "arrayInstanceType": "System.Collections.Generic.List",
+      "responseArrayType": "System.Collections.Generic.IReadOnlyList",
+      "generateDataAnnotations": false,
+      "generateResponseClasses": true,
+      "output": "$(Output)"
+    }
+  }
+}

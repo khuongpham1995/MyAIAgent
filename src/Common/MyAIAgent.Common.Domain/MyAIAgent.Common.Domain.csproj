@@ -1,0 +1,5 @@
+<!-- Declares the Common Domain project's build settings and dependency references. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+</Project>

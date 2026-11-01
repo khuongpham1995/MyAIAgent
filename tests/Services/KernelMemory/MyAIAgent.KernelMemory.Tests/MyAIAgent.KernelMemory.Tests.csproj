@@ -1,0 +1,30 @@
+<!-- Declares the KernelMemory Tests project's build settings and dependency references. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../../src/Services/KernelMemory/MyAIAgent.KernelMemory.Domain/MyAIAgent.KernelMemory.Domain.csproj" />
+    <ProjectReference Include="../../../../src/Services/KernelMemory/MyAIAgent.KernelMemory.Application/MyAIAgent.KernelMemory.Application.csproj" />
+    <ProjectReference Include="../../../../src/Services/KernelMemory/MyAIAgent.KernelMemory.Infrastructure/MyAIAgent.KernelMemory.Infrastructure.csproj" />
+    <ProjectReference Include="../../../../src/Services/KernelMemory/MyAIAgent.KernelMemory.Presentation/MyAIAgent.KernelMemory.Presentation.csproj" />
+    <ProjectReference Include="../../../Common/MyAIAgent.Common.Tests/MyAIAgent.Common.Tests.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

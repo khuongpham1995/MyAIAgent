@@ -1,0 +1,15 @@
+<!-- Declares the McpServer Infrastructure project's build settings and dependency references. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Configuration" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Common/MyAIAgent.Common.Infrastructure/MyAIAgent.Common.Infrastructure.csproj" />
+        <ProjectReference Include="../MyAIAgent.McpServer.Application/MyAIAgent.McpServer.Application.csproj" />
+        <ProjectReference Include="../MyAIAgent.McpServer.Domain/MyAIAgent.McpServer.Domain.csproj" />
+    </ItemGroup>
+
+</Project>

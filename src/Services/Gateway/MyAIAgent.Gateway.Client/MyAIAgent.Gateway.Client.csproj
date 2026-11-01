@@ -1,0 +1,23 @@
+<!-- Builds a reusable HTTP SDK from the supplied OpenAPI document; no running Gateway or application config is needed. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="NSwag.MSBuild" PrivateAssets="all" />
+  </ItemGroup>
+  <Target Name="GenerateGatewayClient"
+          Condition="'$(DesignTimeBuild)' != 'true'"
+          Inputs="$(MSBuildProjectDirectory)/OpenApi/openapi.json;$(MSBuildProjectDirectory)/nswag.json;$(MSBuildProjectFullPath);$(DirectoryPackagesPropsPath)"
+          Outputs="$(IntermediateOutputPath)GatewayApiClient.g.cs">
+    <PropertyGroup>
+      <GeneratedGatewayFile>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/$(IntermediateOutputPath)GatewayApiClient.g.cs').Replace('\', '/'))</GeneratedGatewayFile>
+    </PropertyGroup>
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)"
+          Command="$(NSwagExe_Net100) run nswag.json /variables:Output=&quot;$(GeneratedGatewayFile)&quot;" />
+  </Target>
+  <Target Name="IncludeGatewayClient" BeforeTargets="BeforeCompile" DependsOnTargets="GenerateGatewayClient">
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)GatewayApiClient.g.cs" Condition="Exists('$(IntermediateOutputPath)GatewayApiClient.g.cs')" />
+      <FileWrites Include="$(IntermediateOutputPath)GatewayApiClient.g.cs" />
+    </ItemGroup>
+  </Target>
+</Project>

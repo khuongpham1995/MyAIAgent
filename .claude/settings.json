@@ -1,0 +1,40 @@
+{
+  "model": "opusplan",
+  "permissions": {
+    "defaultMode": "plan",
+    "allow": [
+      "Bash(npm run quality)",
+      "Bash(npm run quality -- *)",
+      "Bash(npm run candidate:check -- *)",
+      "Bash(dotnet test src/MyAIAgent.slnx)",
+      "Bash(dotnet test tests/Services/Gateway/MyAIAgent.Gateway.Tests/MyAIAgent.Gateway.Tests.csproj)",
+      "Bash(dotnet test tests/Services/Orchestrator/MyAIAgent.Orchestrator.Tests/MyAIAgent.Orchestrator.Tests.csproj)",
+      "Bash(dotnet test tests/Services/KernelMemory/MyAIAgent.KernelMemory.Tests/MyAIAgent.KernelMemory.Tests.csproj)",
+      "Bash(dotnet test tests/Services/McpServer/MyAIAgent.McpServer.Tests/MyAIAgent.McpServer.Tests.csproj)"
+    ],
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(gh pr create *)"
+    ],
+    "deny": [
+      "Bash(git push *--force*)",
+      "Bash(git push -f *)",
+      "Bash(git push * -f)",
+      "Bash(git push * -f *)",
+      "Bash(git add .)",
+      "Bash(git add . *)",
+      "Bash(git add -A*)",
+      "Bash(git add * -A*)",
+      "Bash(git add --all*)",
+      "Bash(git add * --all*)",
+      "Bash(git commit -a*)",
+      "Bash(git commit * -a*)",
+      "Bash(git commit *--amend*)",
+      "Bash(git *--no-verify*)",
+      "Bash(git commit -n *)",
+      "Bash(git commit * -n)",
+      "Bash(git commit * -n *)"
+    ]
+  }
+}

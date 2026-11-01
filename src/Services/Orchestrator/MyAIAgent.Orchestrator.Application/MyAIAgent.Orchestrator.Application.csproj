@@ -1,0 +1,18 @@
+<!-- Declares the Orchestrator Application project's build settings and dependency references. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions"/>
+        <PackageReference Include="Mapster"/>
+        <PackageReference Include="Mapster.DependencyInjection"/>
+        <PackageReference Include="MediatR"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Common/MyAIAgent.Common.Application/MyAIAgent.Common.Application.csproj"/>
+        <ProjectReference Include="../MyAIAgent.Orchestrator.Domain/MyAIAgent.Orchestrator.Domain.csproj"/>
+    </ItemGroup>
+
+</Project>

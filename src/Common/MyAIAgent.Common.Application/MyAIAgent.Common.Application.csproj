@@ -1,0 +1,15 @@
+<!-- Declares the Common Application project's build settings and dependency references. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="FluentValidation"/>
+        <PackageReference Include="MediatR"/>
+        <PackageReference Include="Scrutor"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../MyAIAgent.Common.Domain/MyAIAgent.Common.Domain.csproj"/>
+    </ItemGroup>
+
+</Project>

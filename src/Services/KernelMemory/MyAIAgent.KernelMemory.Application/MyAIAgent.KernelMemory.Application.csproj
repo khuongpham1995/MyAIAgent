@@ -1,0 +1,15 @@
+<!-- Declares the KernelMemory Application project's build settings and dependency references. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions"/>
+        <PackageReference Include="MediatR"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Common/MyAIAgent.Common.Application/MyAIAgent.Common.Application.csproj"/>
+        <ProjectReference Include="../MyAIAgent.KernelMemory.Domain/MyAIAgent.KernelMemory.Domain.csproj"/>
+    </ItemGroup>
+
+</Project>

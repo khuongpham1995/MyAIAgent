@@ -1,0 +1,21 @@
+/**
+ * MyAIAgent | Orchestrator · Domain
+ *
+ * Stores an agent's instructions, MCP endpoint, default flag, and configured tool entries.
+ */
+
+using MyAIAgent.Common.Domain.Abstractions;
+
+namespace MyAIAgent.Orchestrator.Domain.Entities;
+
+public sealed class AgentDefinition : BaseEntity<string>
+{
+    public AgentDefinition() : base(Guid.NewGuid().ToString()) { }
+
+    public string Name { get; set; } = string.Empty;
+    public string Instructions { get; set; } = string.Empty;
+    public string McpServerEndpoint { get; set; } = string.Empty;
+    public bool IsDefault { get; set; }
+    // IList required by EF Core Cosmos OwnsMany for change tracking — do not change to IReadOnlyList
+    public IList<AgentTool> AgentTools { get; set; } = [];
+}

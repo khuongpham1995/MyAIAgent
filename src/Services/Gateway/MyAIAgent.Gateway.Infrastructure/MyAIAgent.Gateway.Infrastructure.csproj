@@ -1,0 +1,17 @@
+<!-- Declares the Gateway Infrastructure project's build settings and dependency references. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Http" />
+        <PackageReference Include="ModelContextProtocol.Core" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../../Common/MyAIAgent.Common.Infrastructure/MyAIAgent.Common.Infrastructure.csproj" />
+        <ProjectReference Include="../MyAIAgent.Gateway.Application/MyAIAgent.Gateway.Application.csproj" />
+        <ProjectReference Include="../MyAIAgent.Gateway.Domain/MyAIAgent.Gateway.Domain.csproj" />
+    </ItemGroup>
+
+</Project>
