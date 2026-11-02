@@ -12,6 +12,8 @@ These working agreements define how contributors and coding assistants plan, imp
 - Read `.agents/docs/project.md` before implementation and `.agents/docs/workflow.md` for delivery.
 - Use Plan → Build/test → Verify → Commit, with PR creation only when requested.
   A plan-only request ends after planning; a build request does not authorize publication.
+- During Build, the main agent may delegate independent, file-owned work to at most
+  two build workers. It integrates their changes and runs the full quality gate.
 - At Verify, explicitly spawn the code-reviewer and security-reviewer concurrently.
   Both are read-only. Wait for both; never run a build fixer alongside reviewers.
 - Report Summary / Changes / Risks with actual test evidence and unresolved limitations.

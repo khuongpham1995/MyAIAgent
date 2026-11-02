@@ -13,6 +13,7 @@ namespace MyAIAgent.Orchestrator.Tests.Integration.Infrastructure;
 
 public sealed class CosmosTestDatabase : IAsyncDisposable
 {
+    private static readonly AzureCliCredential credential = new();
     private readonly List<string> userIds = [];
     private readonly List<string> agentIds = [];
 
@@ -30,7 +31,7 @@ public sealed class CosmosTestDatabase : IAsyncDisposable
 
         var options = new DbContextOptionsBuilder<OrchestratorDbContext>()
             .UseCosmos(AzureCredentialFactory.RequireHttpsEndpoint(endpoint, CosmosTestEnvironment.EndpointVariable).AbsoluteUri,
-                new AzureCliCredential(), CosmosTestEnvironment.DatabaseName)
+                credential, CosmosTestEnvironment.DatabaseName)
             .Options;
 
         return new OrchestratorDbContext(options);

@@ -13,10 +13,10 @@ This guide configures the supported assistant tools, native model/mode controls,
 | `.agents/docs/evidence.md` | Candidate, quality and review evidence commands |
 | `.agents/skills/` | Four stage skills (`ai-plan`, `ai-build`, `ai-verify`, `ai-commit`) and domain skills |
 | `.agents/rules/` | Shared engineering, testing and security rules |
-| `CLAUDE.md`, `.claude/settings.json` | Shared instruction import, Opus Plan / Sonnet execution, permissions |
-| `.claude/agents/` | Two read-only Sonnet reviewers |
+| `CLAUDE.md`, `.claude/settings.json` | Shared instruction import, Opus Plan / Sonnet execution, permissions and two-subagent limit |
+| `.claude/agents/` | Sonnet build worker and two read-only reviewers |
 | `.claude/skills`, `.claude/rules/shared` | Per-skill links to `.agents/skills/*` and one shared rules link |
-| `.codex/config.toml`, `.codex/agents/` | Codex Sol default and two Sol reviewers; select Astra for main-session Plan |
+| `.codex/config.toml`, `.codex/agents/` | Codex Sol default, build worker and two Sol reviewers; select Astra for main-session Plan |
 | `scripts/ai/quality.ts`, `candidate.ts` | Test/format evidence and candidate/review/staging checks |
 | `.github/pull_request_template.md` | Shared PR report format |
 
@@ -110,8 +110,11 @@ IDE sessions must open this repository and trust it. A remote/cloud session must
 have the repository's configuration in its checkout. A plain Claude chat does not
 load these local files.
 
-The only project subagents are `code-reviewer` and `security-reviewer`. They
-explicitly declare `model`; they do not inherit Opus by accident. Plan
+The project subagents are `build-worker`, `code-reviewer` and
+`security-reviewer`. They explicitly declare `model`; they do not inherit Opus
+by accident. The worker follows [build-workers.md](build-workers.md) during Build;
+the reviewers run only during Verify. `.claude/settings.json` caps concurrent
+subagents at two and disables nested delegation. Plan
 permission mode and restricted tool lists reduce accidental edits. Shell-capable
 reviewers still rely on native permissions and the read-only contract; this is not
 a hardened arbitrary-command sandbox. No experimental agent-team flag is needed.
@@ -167,8 +170,9 @@ repository-local skills.
 `ai-commit` is explicit-only, so it may be absent from the automatic skill catalog;
 invoke `$ai-commit` or select its skill file explicitly. It never auto-authorizes
 Git writes. Fresh sessions need the plan and quality/review evidence from the
-previous session. Project config defaults to Sol; that default does not change an
-already-running session. Model/mode changes only count after client confirmation.
+previous session. Project config defaults to Sol and limits concurrent subagents
+to two. That model default does not change an already-running session. Model/mode
+changes only count after client confirmation.
 
 ## Discovery troubleshooting
 

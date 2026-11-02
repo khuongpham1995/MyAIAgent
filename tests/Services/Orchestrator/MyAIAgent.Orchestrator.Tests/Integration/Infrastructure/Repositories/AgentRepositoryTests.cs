@@ -5,7 +5,6 @@
  */
 
 using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using MyAIAgent.Orchestrator.Domain.Entities;
 using MyAIAgent.Orchestrator.Infrastructure.Data.Repositories;
 
@@ -28,19 +27,20 @@ public sealed class AgentRepositoryTests
 
         // Assert
         await using var otherContext = database.CreateContext();
-        (await otherContext.AgentDefinitions.AnyAsync(item => item.Id == agent.Id)).Should().BeFalse();
+        var otherRepository = new AgentRepository(otherContext);
+        (await otherRepository.FindByIdAsync(agent.Id, CancellationToken.None)).Should().BeNull();
 
         // Act
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
         // Assert
-        (await otherContext.AgentDefinitions.AnyAsync(item => item.Id == agent.Id)).Should().BeTrue();
+        (await otherRepository.FindByIdAsync(agent.Id, CancellationToken.None)).Should().NotBeNull();
 
         // Act
         repository.Delete(agent);
         await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
         // Assert
-        (await otherContext.AgentDefinitions.AnyAsync(item => item.Id == agent.Id)).Should().BeFalse();
+        (await otherRepository.FindByIdAsync(agent.Id, CancellationToken.None)).Should().BeNull();
     }
 }
