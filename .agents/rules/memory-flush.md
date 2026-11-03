@@ -2,7 +2,8 @@
 
 Preserve useful user corrections and durable architecture decisions in shared
 project documentation when they belong to the current task. Avoid duplicating facts
-already documented in `AGENTS.md` or `.agents/`.
+already documented in `AGENTS.md` or `.agents/`. A lesson that belongs to one
+agent's role goes in that persona's **Working experience** in `.agents/docs/team/`.
 
 Use the current client's task tracking for in-progress work. Native personal memory
 is optional and provider-specific; do not assume a particular memory tool exists,

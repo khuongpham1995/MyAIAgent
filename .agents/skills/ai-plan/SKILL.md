@@ -6,4 +6,5 @@ model: opusplan
 
 Follow **Plan** in `.agents/docs/workflow.md` and read `.agents/docs/project.md`.
 First follow **Native mode/model preflight** in `.agents/docs/setup.md`.
+Send `tech-lead` the goal before the draft (`.agents/docs/team.md` **Dispatch**).
 Do not edit source. Return Summary / Changes / Risks.

@@ -410,6 +410,7 @@ FodyWeavers.xsd
 
 # Claude
 .claude/settings.local.json
+.claude/agent-memory-local/
 
 # Local planning notes (not committed)
 plans/

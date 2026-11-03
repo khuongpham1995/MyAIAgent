@@ -74,12 +74,12 @@ export function captureCandidate(root = repoRoot, base = 'HEAD'): Candidate {
 
 export function assertCurrent(candidate: Candidate, root = repoRoot): Candidate {
   const current = captureCandidate(root, candidate.base);
-  if (current.digest !== candidate.digest) throw new Error('Candidate changed; rerun quality and both reviews.');
+  if (current.digest !== candidate.digest) throw new Error('Candidate changed; rerun quality, both reviews and the lead review.');
   return current;
 }
 
-export function checkEvidence(reportPath: string, { root = repoRoot, reviews = [], staged = false }:
-  { root?: string; reviews?: string[]; staged?: boolean } = {}) {
+export function checkEvidence(reportPath: string, { root = repoRoot, reviews = [], lead, staged = false }:
+  { root?: string; reviews?: string[]; lead?: string; staged?: boolean } = {}) {
   const report = readJson<QualityReport>(reportPath);
   if (report.version !== 1 || report.status !== 'PASS' || report.scope !== 'full') {
     throw new Error('A completed PASS from the full quality gate is required.');
@@ -100,8 +100,18 @@ export function checkEvidence(reportPath: string, { root = repoRoot, reviews = [
     }
     if (expected.size) throw new Error('Both distinct reviewer reports are required.');
   }
+  if (lead) {
+    if (reviews.length !== 2) throw new Error('Lead review requires both reviewer reports.');
+    const review = readJson<ReviewRecord>(lead);
+    if (review.reviewer !== 'tech-lead' || review.verdict !== 'ALIGNED' ||
+        review.candidateDigest !== current.digest || review.qualitySha256 !== hash(readFileSync(reportPath)) ||
+        !review.summary?.trim() || !Array.isArray(review.changes) || !Array.isArray(review.risks)) {
+      throw new Error(`Missing, stale or non-aligned lead review: ${lead}`);
+    }
+  }
   if (staged) {
     if (reviews.length !== 2) throw new Error('Commit gate requires both reviewer reports.');
+    if (!lead) throw new Error('Commit gate requires a valid lead review.');
     if (git(root, ['diff', '--name-only', '-z', '--']).length ||
         git(root, ['ls-files', '--others', '--exclude-standard', '-z']).length) {
       throw new Error('Stage the complete candidate with explicit paths; unstaged/untracked changes remain.');
@@ -116,11 +126,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   try {
     const [command, reportPath, ...rest] = process.argv.slice(2);
     const staged = rest.at(-1) === '--staged';
-    const reviews = staged ? rest.slice(0, -1) : rest;
-    if (command !== 'check' || !reportPath || ![0, 2].includes(reviews.length) || reviews.some(p => p.startsWith('--'))) {
-      throw new Error('Usage: npm run candidate:check -- <quality.json> [<code-review.json> <security-review.json>] [--staged]');
+    const records = staged ? rest.slice(0, -1) : rest;
+    const reviews = records.slice(0, 2);
+    const lead = records[2];
+    if (command !== 'check' || !reportPath || ![0, 2, 3].includes(records.length) || records.some(p => p.startsWith('--'))) {
+      throw new Error('Usage: npm run candidate:check -- <quality.json> [<code-review.json> <security-review.json> [<lead-review.json>]] [--staged]');
     }
-    console.log(JSON.stringify(checkEvidence(reportPath, { reviews, staged }), null, 2));
+    console.log(JSON.stringify(checkEvidence(reportPath, { reviews, lead, staged }), null, 2));
   } catch (error) {
     console.error(`BLOCKED: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;

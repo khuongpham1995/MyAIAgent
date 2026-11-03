@@ -10,7 +10,7 @@ For an optional source-based security audit, use the separate [ai-audit workflow
 | --- | --- | --- | --- |
 | Plan | Opus, native Plan mode | Astra, native Plan mode | Concrete scope, files, acceptance criteria, tests and risks |
 | Build | Sonnet | Sol | Implementation and relevant tests; quality command passes |
-| Verify | Two Sonnet reviewers in parallel | Two Sol reviewers in parallel | Both reports complete, blocking findings resolved |
+| Verify | Two Sonnet reviewers in parallel, then the Opus lead | Two Sol reviewers in parallel, then the Astra lead | Both reports PASS, lead ALIGNED, blocking findings resolved |
 | Commit | Sonnet | Sol | Task-owned commit; optional PR; Summary / Changes / Risks |
 
 ## Questions and approvals
@@ -49,7 +49,10 @@ and use the host's supported approval flow rather than inventing an override.
 4. Do not edit source or run mutating agents in Plan mode. Hand the plan to Build
    through the conversation, or a user-selected handoff file when switching sessions.
    A read-only sandbox alone does not enable native Plan mode. Plan runs in the
-   main session; only the two Verify reviewers are configured as project subagents.
+   main session. Before presenting the plan it consults the read-only `tech-lead`
+   (optional for configuration, docs and one-line fixes) following [team.md](team.md)
+   **Dispatch**, and resolves each requested change with evidence.
+   Name the Build agent that owns each slice of the plan.
 
 Ask only about consequential ambiguity. Respect the host's native Plan-to-Build
 transition; a plan-only request ends here. Existing authorization to implement
@@ -62,10 +65,14 @@ persists after that transition; do not add another approval ritual.
 2. Use Sonnet/Sol. Make focused changes in dependency order and preserve unrelated work.
    The main session owns integration, build fixes and the full quality gate. When the
    plan contains independent work with disjoint file ownership, it may dispatch up
-   to two `build-worker` subagents concurrently in the shared worktree. Give each
-   worker its exact files, goal, acceptance criteria and targeted tests. Keep
-   overlapping or shared files with the main session; do not edit worker-owned
-   files while they run. Follow [build-workers.md](build-workers.md).
+   to two Build subagents concurrently in the shared worktree: the service engineer
+   whose persona owns those paths, `build-worker` for Common, Aspire, clients,
+   tooling and cross-cutting work, or `test-engineer` for tests ([team.md](team.md)).
+   Give each worker its exact files, goal, acceptance criteria and targeted tests.
+   Keep overlapping or shared files with the main session; do not edit worker-owned
+   files while they run.
+   When the plan assigns `test-engineer`, run it before the SDE for that behavior.
+   Follow [build-workers.md](build-workers.md).
    For behavior changes, reproduce the bug or write a meaningful failing test first
    when practical, then implement and refactor. Do not add tests that merely repeat code.
 3. Wait for every worker and inspect its diff and test results before integrating.
@@ -94,7 +101,8 @@ dependencies installed over the network.
    merge-base-to-HEAD diff. Do not assume the base branch is named `main`.
 2. Launch **code-reviewer** and **security-reviewer** concurrently, using Sonnet/Sol,
    with the same `quality.json` path, candidate digest, quality SHA-256, scope,
-   acceptance criteria and test evidence. Both read
+   acceptance criteria and test evidence. Send facts, not conclusions: follow
+   **Blind review inputs** in `.agents/docs/review.md`. Both read
    `.agents/docs/review.md`. Neither may edit, stage, format, build, restore, commit or
    dispatch mutating agents. They may inspect code, diffs and existing logs.
 3. Wait for both reports. Missing, timed-out or failed review is **BLOCKED**, not
@@ -104,9 +112,16 @@ dependencies installed over the network.
    themselves remain read-only. Run the candidate check with both records.
    Consolidate findings. Fix critical/high findings before commit; document lower
    severity risks. Reject false positives with evidence.
-5. After code/config/test changes, rerun affected tests and quality checks, then
-   both reviews on the new candidate. Never change files while reviewers run.
-   User edits during review invalidate affected evidence; obtain a fresh review.
+5. Result review: once both reviewers return PASS on the final candidate, launch
+   `tech-lead` alone with the blind inputs, both review records as paths, and the
+   owner's draft Summary / Changes / Risks as a path it opens last. It cannot clear or
+   downgrade a reviewer finding. Save its record as `lead-review.json` beside
+   `quality.json`. REVISE about the candidate means a fix and a full rerun. REVISE about
+   only the owner report is fixed without rerunning quality or the reviewers; relaunch
+   `tech-lead` on the same candidate for a fresh record. Never edit a returned verdict.
+6. After code/config/test changes, rerun affected tests and quality checks, then
+   both reviews and the result review on the new candidate. Never change files while
+   reviewers run. User edits during review invalidate affected evidence; obtain a fresh review.
 
 ## Commit and optional PR
 
@@ -118,8 +133,8 @@ Automatic skill selection or an agent invoking the stage does not grant authoriz
 request before any Git mutation; preserve authorization already given in the session.
 Configuring this workflow alone does not request committing or publishing it.
 
-1. Confirm quality evidence and both review verdicts still describe the exact
-   candidate, using `candidate.ts check` with both review files. Stop on unresolved
+1. Confirm quality evidence, both review verdicts and the ALIGNED lead record still
+   describe the exact candidate, using `candidate.ts check` with all three files. Stop on unresolved
    blockers; do not label it ready. This check is required by the adapters; it is
    not a Git hook and cannot prevent a user from running Git directly.
    Once ready, if the user has not already selected the delivery option, show one
@@ -154,7 +169,7 @@ Configuring this workflow alone does not request committing or publishing it.
 
    Changes
    - Describe the final implementation.
-   - Validation: exact checks, results, and both reviewer verdicts.
+   - Validation: exact checks, results, both reviewer verdicts and the lead verdict.
 
    Risks
    - Residual risk, missing checks and rollback considerations, or None identified.

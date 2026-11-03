@@ -1,4 +1,4 @@
-# Configures project-local Codex defaults and the two read-only reviewer roles.
+# Configures project-local Codex defaults; agent roles live in .codex/agents/.
 
 # Project-local defaults. Select Astra explicitly for native Plan mode.
 model = "gpt-6-sol"

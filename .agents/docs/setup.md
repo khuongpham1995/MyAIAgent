@@ -10,26 +10,31 @@ This guide configures the supported assistant tools, native model/mode controls,
 | `.agents/docs/project.md` | Real service layout, architecture and test strategy |
 | `.agents/docs/workflow.md` | Stage gates, review concurrency, commit/PR policy |
 | `.agents/docs/review.md` | Shared code/security review contracts |
+| `.agents/docs/team.md`, `.agents/docs/team/` | Agent roster, dispatch rules and one persona per subagent |
+| `.agents/docs/team-maintenance.md` | Persona format, lessons and memory rules (not loaded by agents) |
 | `.agents/docs/evidence.md` | Candidate, quality and review evidence commands |
 | `.agents/skills/` | Four stage skills (`ai-plan`, `ai-build`, `ai-verify`, `ai-commit`) and domain skills |
 | `.agents/rules/` | Shared engineering, testing and security rules |
 | `CLAUDE.md`, `.claude/settings.json` | Shared instruction import, Opus Plan / Sonnet execution, permissions and two-subagent limit |
-| `.claude/agents/` | Sonnet build worker and two read-only reviewers |
+| `.claude/agents/` | Opus tech lead, Sonnet build agents and two read-only reviewers, each loading its persona and preloading skills; Build agents keep ignored local memory |
 | `.claude/skills`, `.claude/rules/shared` | Per-skill links to `.agents/skills/*` and one shared rules link |
-| `.codex/config.toml`, `.codex/agents/` | Codex Sol default, build worker and two Sol reviewers; select Astra for main-session Plan |
-| `scripts/ai/quality.ts`, `candidate.ts` | Test/format evidence and candidate/review/staging checks |
+| `.codex/config.toml`, `.codex/agents/` | Codex Sol default, Astra tech lead, Sol build agents and two Sol reviewers; select Astra for main-session Plan |
+| `scripts/ai/quality.ts`, `candidate.ts` | Test/format evidence and candidate/review/lead/staging checks |
 | `.github/pull_request_template.md` | Shared PR report format |
 
 Everything shared has one canonical source under `.agents/`; `.claude/` and
-`.codex/` contain only provider settings, reviewer definitions and discovery links.
+`.codex/` contain only provider settings, agent adapters and discovery links.
 Codex discovers `.agents/skills/` natively. Claude discovers one directory symlink
 per skill under `.claude/skills/`, using its documented symlink layout. When adding
 or renaming a shared skill, update its Claude link; the configuration test checks
 that both inventories match. Edit the canonical skill, never a separate copy.
 File explorers may expand these links as if they were duplicate folders. They
 resolve to the same files; do not delete them merely to hide that visual repetition.
-Reviewer adapters retain each client's required format and model/tool settings;
-their instructions point to the single contract in [review.md](review.md).
+Agent adapters retain each client's required format and model/tool settings; their
+instructions load one persona from [team/](team/) and point to the single stage
+contract ([review.md](review.md) or [build-workers.md](build-workers.md)). When adding
+or renaming an agent, follow [team-maintenance.md](team-maintenance.md);
+the configuration test checks that all four match.
 
 The four delivery commands are `ai-plan`, `ai-build`, `ai-verify`, and `ai-commit`.
 The separate `ai-audit` skill runs an on-demand source audit; see [audit.md](audit.md).
@@ -110,10 +115,10 @@ IDE sessions must open this repository and trust it. A remote/cloud session must
 have the repository's configuration in its checkout. A plain Claude chat does not
 load these local files.
 
-The project subagents are `build-worker`, `code-reviewer` and
-`security-reviewer`. They explicitly declare `model`; they do not inherit Opus
-by accident. The worker follows [build-workers.md](build-workers.md) during Build;
-the reviewers run only during Verify. `.claude/settings.json` caps concurrent
+The project subagents are the seven agents in the [team.md](team.md) roster. They
+explicitly declare `model`; they do not inherit Opus by accident. `tech-lead` reviews
+plans and, after both reviewers, the final result; the Build agents follow
+[build-workers.md](build-workers.md); the reviewers run only during Verify. `.claude/settings.json` caps concurrent
 subagents at two and disables nested delegation. Plan
 permission mode and restricted tool lists reduce accidental edits. Shell-capable
 reviewers still rely on native permissions and the read-only contract; this is not

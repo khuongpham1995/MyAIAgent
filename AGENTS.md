@@ -13,9 +13,12 @@ These working agreements define how contributors and coding assistants plan, imp
 - Use Plan → Build/test → Verify → Commit, with PR creation only when requested.
   A plan-only request ends after planning; a build request does not authorize publication.
 - During Build, the main agent may delegate independent, file-owned work to at most
-  two build workers. It integrates their changes and runs the full quality gate.
+  two Build subagents. It integrates their changes and runs the full quality gate.
+- Each subagent is a persona with one role (SDE, SDET, lead or reviewer); see the roster
+  in `.agents/docs/team.md`.
 - At Verify, explicitly spawn the code-reviewer and security-reviewer concurrently.
   Both are read-only. Wait for both; never run a build fixer alongside reviewers.
+  Then run the read-only tech-lead result review alone; commit needs its ALIGNED record.
 - Report Summary / Changes / Risks with actual test evidence and unresolved limitations.
 - For an on-demand source audit, use `ai-audit` and `.agents/docs/audit.md`; keep its evidence local and its coverage claims separate from change verification.
 
