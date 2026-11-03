@@ -22,7 +22,10 @@ function evidence(t: TestContext) {
       qualitySha256: hash(readFileSync(reportPath)), summary: 'Inspected fixture', changes: [], risks: [] }));
     return path;
   });
-  return { root, report, reportPath, reviews };
+  const lead = join(report.directory, 'tech-lead.json');
+  writeFileSync(lead, JSON.stringify({ reviewer: 'tech-lead', verdict: 'ALIGNED', candidateDigest: report.candidate.digest,
+    qualitySha256: hash(readFileSync(reportPath)), summary: 'Result matches the plan', changes: [], risks: [] }));
+  return { root, report, reportPath, reviews, lead };
 }
 test('manifest includes untracked content, deletions, modes, symlinks and unusual paths', t => {
   // Arrange
@@ -58,17 +61,17 @@ test('manifest includes untracked content, deletions, modes, symlinks and unusua
 });
 test('staging same final content preserves digest; stale index cannot pass commit gate', t => {
   // Arrange
-  const { root, report, reportPath, reviews } = evidence(t);
+  const { root, report, reportPath, reviews, lead } = evidence(t);
 
   // Act & Assert
-  assert.throws(() => checkEvidence(reportPath, { root, reviews, staged: true }), /unstaged/);
+  assert.throws(() => checkEvidence(reportPath, { root, reviews, lead, staged: true }), /unstaged/);
 
   // Arrange
   git(root, ['add', '--', 'example.cs']);
 
   // Act & Assert
   assert.equal(captureCandidate(root).digest, report.candidate.digest);
-  assert.equal(checkEvidence(reportPath, { root, reviews, staged: true }).status, 'PASS');
+  assert.equal(checkEvidence(reportPath, { root, reviews, lead, staged: true }).status, 'PASS');
 
   // Arrange
   writeFileSync(join(root, 'example.cs'), 'other');
@@ -76,7 +79,55 @@ test('staging same final content preserves digest; stale index cannot pass commi
   writeFileSync(join(root, 'example.cs'), 'candidate\n');
 
   // Act & Assert
-  assert.throws(() => checkEvidence(reportPath, { root, reviews, staged: true }), /unstaged/);
+  assert.throws(() => checkEvidence(reportPath, { root, reviews, lead, staged: true }), /unstaged/);
+});
+test('lead review is optional without staging and accepted when valid', t => {
+  // Arrange
+  const { root, reportPath, reviews, lead } = evidence(t);
+
+  // Act & Assert
+  assert.equal(checkEvidence(reportPath, { root, reviews }).status, 'PASS');
+  assert.equal(checkEvidence(reportPath, { root, reviews, lead }).status, 'PASS');
+});
+test('invalid or stale lead reviews are blocked', t => {
+  // Arrange
+  const { root, reportPath, reviews, lead } = evidence(t);
+  const original = readFileSync(lead, 'utf8');
+  const updates: Record<string, unknown>[] = [
+    { reviewer: 'code-reviewer' }, { verdict: 'PASS' }, { verdict: 'MISALIGNED' }, { candidateDigest: 'old' },
+    { qualitySha256: 'old' }, { summary: '  ' }, { changes: 'none' }, { risks: null },
+  ];
+
+  for (const update of updates) {
+    // Arrange
+    writeFileSync(lead, JSON.stringify({ ...JSON.parse(original), ...update }));
+
+    // Act & Assert
+    assert.throws(() => checkEvidence(reportPath, { root, reviews, lead }), /lead review/i, JSON.stringify(update));
+  }
+});
+test('lead review requires both reviewer records', t => {
+  // Arrange
+  const { root, reportPath, reviews, lead } = evidence(t);
+
+  // Act & Assert
+  assert.throws(() => checkEvidence(reportPath, { root, lead }), /Lead review requires both reviewer reports/);
+  assert.throws(() => checkEvidence(reportPath, { root, reviews: [reviews[0]], lead }), /Both distinct reviewer reports/);
+});
+test('commit gate requires a valid lead review in addition to both reviewers', t => {
+  // Arrange
+  const { root, reportPath, reviews, lead } = evidence(t);
+  git(root, ['add', '--', 'example.cs']);
+
+  // Act & Assert
+  assert.throws(() => checkEvidence(reportPath, { root, reviews, staged: true }), /lead review/i);
+  assert.throws(() => checkEvidence(reportPath, { root, lead, staged: true }));
+
+  // Arrange
+  writeFileSync(lead, JSON.stringify({ ...JSON.parse(readFileSync(lead, 'utf8')), verdict: 'BLOCKED' }));
+
+  // Act & Assert
+  assert.throws(() => checkEvidence(reportPath, { root, reviews, lead, staged: true }), /lead review/i);
 });
 test('new untracked files or HEAD movement invalidate evidence', t => {
   // Arrange

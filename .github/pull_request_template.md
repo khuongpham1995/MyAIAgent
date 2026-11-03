@@ -10,6 +10,7 @@ Describe the problem and resulting behavior.
 - Validation: commands, results, and test counts.
 - Code review: verdict and scope.
 - Security review: verdict and scope.
+- Lead result review: verdict and goal alignment.
 
 ## Risks
 

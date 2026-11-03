@@ -74,7 +74,16 @@ npm run candidate:check -- artifacts/ai/<run>/quality.json artifacts/ai/<run>/co
 ```
 
 Both distinct PASS reports must match the current candidate and exact quality
-report bytes. Any source/config/test change requires fresh quality and both reviews.
+report bytes. Any source/config/test change requires fresh quality, both reviews and
+the lead result review.
+
+After both PASS, the `tech-lead` result review returns the same record shape with
+`"reviewer": "tech-lead"` and verdict `ALIGNED` or `REVISE`. Save it as
+`lead-review.json`; the checker accepts it as an optional third file:
+
+```bash
+npm run candidate:check -- artifacts/ai/<run>/quality.json artifacts/ai/<run>/code-review.json artifacts/ai/<run>/security-review.json artifacts/ai/<run>/lead-review.json
+```
 Do not edit while reviewers run. Concurrency and honest reviewer provenance remain
 the owner's responsibility; these local JSON records are not signed attestations.
 
@@ -84,10 +93,10 @@ Only after explicit user authorization, stage the complete reviewed candidate
 using explicit paths. Preserve unrelated work. Immediately before committing:
 
 ```bash
-npm run candidate:check -- artifacts/ai/<run>/quality.json artifacts/ai/<run>/code-review.json artifacts/ai/<run>/security-review.json --staged
+npm run candidate:check -- artifacts/ai/<run>/quality.json artifacts/ai/<run>/code-review.json artifacts/ai/<run>/security-review.json artifacts/ai/<run>/lead-review.json --staged
 ```
 
-This additionally requires a nonempty staged diff, no unstaged/untracked changes,
+This additionally requires an ALIGNED lead record, a nonempty staged diff, no unstaged/untracked changes,
 and a clean `git diff --cached --check`. Changed HEAD/base/content, missing reviews,
 partial quality runs and stale evidence return BLOCKED with nonzero exit status.
 No files or Git state are mutated by this checker. There is no bypass flag.
