@@ -60,11 +60,18 @@ persists after that transition; do not add another approval ritual.
 1. Confirm the concrete plan and acceptance criteria are available. If a fresh
    session lacks the plan, obtain that context before guessing what to implement.
 2. Use Sonnet/Sol. Make focused changes in dependency order and preserve unrelated work.
-   The main session owns implementation, test writing, build fixes and refactoring.
+   The main session owns integration, build fixes and the full quality gate. When the
+   plan contains independent work with disjoint file ownership, it may dispatch up
+   to two `build-worker` subagents concurrently in the shared worktree. Give each
+   worker its exact files, goal, acceptance criteria and targeted tests. Keep
+   overlapping or shared files with the main session; do not edit worker-owned
+   files while they run. Follow [build-workers.md](build-workers.md).
    For behavior changes, reproduce the bug or write a meaningful failing test first
    when practical, then implement and refactor. Do not add tests that merely repeat code.
-3. Run `npm run quality -- --project <Service>` while iterating, then
-   `npm run quality` for the full gate (including workflow tests).
+3. Wait for every worker and inspect its diff and test results before integrating.
+   The main session resolves conflicts and failures. Do not run Build workers
+   alongside Verify reviewers. Run `npm run quality -- --project <Service>` while
+   iterating, then `npm run quality` for the full gate (including workflow tests).
    For a branch review, pass `--base <merge-base-commit>` to include committed task
    changes; resolve it against the intended target branch, not an assumed `main`.
    See [evidence.md](evidence.md) for scope, counts and candidate checks.

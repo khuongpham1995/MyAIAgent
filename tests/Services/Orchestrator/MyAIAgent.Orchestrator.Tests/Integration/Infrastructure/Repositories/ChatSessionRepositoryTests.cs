@@ -207,13 +207,14 @@ public sealed class ChatSessionRepositoryTests
 
         // Assert
         await using var otherContext = database.CreateContext();
-        (await otherContext.ChatSessions.AnyAsync(item => item.SessionId == session.SessionId)).Should().BeFalse();
+        var otherRepository = new ChatSessionRepository(otherContext);
+        (await otherRepository.FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None)).Should().BeNull();
 
         // Act
         await new OrchestratorUnitOfWork(context).SaveChangesAsync(CancellationToken.None);
 
         // Assert
-        (await otherContext.ChatSessions.AnyAsync(item => item.SessionId == session.SessionId)).Should().BeTrue();
+        (await otherRepository.FindForUserAsync(session.SessionId, session.UserId, CancellationToken.None)).Should().NotBeNull();
     }
 
     [CosmosFact]

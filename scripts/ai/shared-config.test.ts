@@ -140,6 +140,27 @@ test('no file points at the locations that were consolidated into .agents', () =
   assert.deepEqual(aiConfigFilesMatching(stale, { except: [testFile] }), []);
 });
 
+test('Build worker adapters follow the shared contract and two-worker limit', () => {
+  const contract = readFileSync(join(repoRoot, '.agents/docs/build-workers.md'), 'utf8');
+  const workflow = readFileSync(join(repoRoot, '.agents/docs/workflow.md'), 'utf8');
+  const codex = readFileSync(join(repoRoot, '.codex/agents/build-worker.toml'), 'utf8');
+  const claude = readFileSync(join(repoRoot, '.claude/agents/build-worker.md'), 'utf8');
+  const config = readFileSync(join(repoRoot, '.codex/config.toml'), 'utf8');
+  const claudeSettings = JSON.parse(readFileSync(join(repoRoot, '.claude/settings.json'), 'utf8'));
+
+  assert.match(contract, /disjoint file ownership/);
+  assert.match(contract, /must not spawn agents, stage or commit, push/);
+  assert.match(workflow, /up\s+to two `build-worker` subagents concurrently/);
+  assert.match(config, /max_concurrent_threads_per_session = 2/);
+  assert.equal(claudeSettings.env.CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS, '2');
+  assert.equal(claudeSettings.env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH, '1');
+  assert.match(codex, /name = "build-worker"/);
+  assert.match(codex, /model = "gpt-6-sol"/);
+  assert.match(codex, /\.agents\/docs\/build-workers\.md/);
+  assert.equal(frontmatter(join(repoRoot, '.claude/agents/build-worker.md')).model, 'sonnet');
+  assert.match(claude, /\.agents\/docs\/build-workers\.md/);
+});
+
 test('the delivery options are defined only in the workflow policy', () => {
   // Arrange
   const options = /Commit only|Commit \+ push/i;
