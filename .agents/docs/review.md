@@ -25,6 +25,10 @@ secrets in reports. A clean review does not prove application security.
 - Follow gateway → Orchestrator/KernelMemory/MCP contracts, validation and mapping.
 - Check layer references, DI lifetimes, session/persistence ordering, retries and
   idempotency. Inspect test fixtures and missing failure-path tests.
+- For added C# files and changed tests, check the required header and distinct
+  Arrange/Act/Assert comments. Reconcile manual registrations with the DI rule;
+  when a framework callback needs an exception, verify its rationale, actual
+  application resolution and implementation order for overlapping interfaces.
 - For tooling/config changes, verify real CLI support, model routing, paths, gate
   failures, ignored artifacts and preservation of staged/untracked user changes.
 - Prioritize observable defects over style. Report existing out-of-scope issues

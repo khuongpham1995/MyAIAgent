@@ -4,10 +4,19 @@
  * Binds supported Azure providers and rejects unsupported memory databases or orchestration settings at startup.
  */
 
+using Azure;
+using Azure.AI.DocumentIntelligence;
+using Azure.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.KernelMemory;
+using Microsoft.KernelMemory.DataFormats;
+using Microsoft.KernelMemory.DataFormats.Pdf;
+using Microsoft.KernelMemory.DataFormats.Office;
+using Microsoft.KernelMemory.DataFormats.WebPages;
 using Microsoft.KernelMemory.DocumentStorage.DevTools;
+using MyAIAgent.KernelMemory.Infrastructure.Models;
+using MyAIAgent.KernelMemory.Infrastructure.Services;
 
 namespace MyAIAgent.KernelMemory.Infrastructure.Extensions;
 
@@ -63,6 +72,8 @@ public static class KernelMemoryProviderExtension
             services.AddAzureBlobsAsDocumentStorage(Bind<AzureBlobsConfig>(configuration, AzureBlobs));
         else
             services.AddSimpleFileStorageAsDocumentStorage(Bind<SimpleFileStorageConfig>(configuration, SimpleFileStorage));
+
+        AddOcrWhenEnabled(memoryBuilder, configuration);
     }
 
     public static void EnsureSupportedMemoryDbTypes(IEnumerable<string> memoryDbTypes)
@@ -73,6 +84,74 @@ public static class KernelMemoryProviderExtension
                 throw new ConfigurationException(
                     $"Memory DB type '{type}' is not supported. Supported types: {string.Join(", ", SupportedMemoryDbTypes)}.");
         }
+    }
+
+    private static void AddOcrWhenEnabled(IKernelMemoryBuilder memoryBuilder, IConfiguration configuration)
+    {
+        var services = memoryBuilder.Services;
+        var options = configuration.GetSection("KernelMemory:Ocr").Get<DocumentIntelligenceOcrOptions>()
+            ?? new DocumentIntelligenceOcrOptions();
+        if (!options.Enabled) return;
+
+        if (!Uri.TryCreate(options.Endpoint, UriKind.Absolute, out var endpoint)
+            || endpoint.Scheme != Uri.UriSchemeHttps || string.IsNullOrWhiteSpace(endpoint.Host))
+            throw new ConfigurationException("KernelMemory:Ocr:Endpoint must be an absolute HTTPS URL when OCR is enabled.");
+
+        if (!string.Equals(options.Tier, "F0", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(options.Tier, "S0", StringComparison.OrdinalIgnoreCase))
+            throw new ConfigurationException("KernelMemory:Ocr:Tier must be F0 or S0.");
+
+        if (string.Equals(options.Auth, "ApiKey", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(options.ApiKey))
+                throw new ConfigurationException("KernelMemory:Ocr:APIKey is required when Auth is ApiKey.");
+        }
+        else if (string.Equals(options.Auth, "ManagedIdentity", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(options.ClientId))
+                throw new ConfigurationException("KernelMemory:Ocr:ClientId is required when Auth is ManagedIdentity.");
+        }
+        else
+        {
+            throw new ConfigurationException("KernelMemory:Ocr:Auth must be ApiKey or ManagedIdentity.");
+        }
+
+        var clientOptions = new DocumentIntelligenceClientOptions(
+            DocumentIntelligenceClientOptions.ServiceVersion.V2024_11_30);
+        var client = string.Equals(options.Auth, "ApiKey", StringComparison.OrdinalIgnoreCase)
+            ? new DocumentIntelligenceClient(endpoint, new AzureKeyCredential(options.ApiKey), clientOptions)
+            : new DocumentIntelligenceClient(endpoint,
+                new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(options.ClientId)), clientOptions);
+
+        // OCR is optional and KernelMemory selects the last matching decoder. Register through its
+        // service pool after the defaults so both its internal and host providers see this order.
+        // Marker scanning would register OCR when disabled and cannot supply per-MIME Office instances.
+        memoryBuilder.WithCustomMimeTypeDetection(new HeifMimeTypeDetection());
+        services.AddSingleton(options);
+        services.AddSingleton(client);
+        services.AddSingleton<IDocumentIntelligenceOcrClient, DocumentIntelligenceOcrClient>();
+        services.AddSingleton<IContentDecoder, DocumentIntelligenceImageDecoder>();
+        services.AddSingleton<IContentDecoder>(provider => new DocumentIntelligencePdfDecoder(
+            provider.GetRequiredService<IDocumentIntelligenceOcrClient>(),
+#pragma warning disable KMEXP00
+            new PdfDecoder(provider.GetRequiredService<Microsoft.Extensions.Logging.ILoggerFactory>()),
+#pragma warning restore KMEXP00
+            options));
+
+#pragma warning disable KMEXP00
+        services.AddSingleton<IContentDecoder>(provider => new DocumentIntelligenceOfficeDecoder(
+            provider.GetRequiredService<IDocumentIntelligenceOcrClient>(), new MsWordDecoder(), options,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
+        services.AddSingleton<IContentDecoder>(provider => new DocumentIntelligenceOfficeDecoder(
+            provider.GetRequiredService<IDocumentIntelligenceOcrClient>(), new MsExcelDecoder(), options,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        services.AddSingleton<IContentDecoder>(provider => new DocumentIntelligenceOfficeDecoder(
+            provider.GetRequiredService<IDocumentIntelligenceOcrClient>(), new MsPowerPointDecoder(), options,
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation"));
+        services.AddSingleton<IContentDecoder>(provider => new DocumentIntelligenceOfficeDecoder(
+            provider.GetRequiredService<IDocumentIntelligenceOcrClient>(), new HtmlDecoder(), options,
+            "text/html"));
+#pragma warning restore KMEXP00
     }
 
     // A blank secret would otherwise pass startup and only fail on the first ingest or search.

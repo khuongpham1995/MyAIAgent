@@ -38,7 +38,9 @@ Examples: `Handle_WhenCommandIsValid_ShouldReturnSuccess`, `Handle_WhenEntityNot
 
 ## Test Pattern
 
-Arrange / Act / Assert separated by blank lines. One act per test. Keep assertions focused.
+Use separate `// Arrange`, `// Act`, and `// Assert` comments in each new or changed test,
+with blank lines between the three sections. Do not combine section comments.
+One act per test. Keep assertions focused.
 
 ## FluentAssertions
 
