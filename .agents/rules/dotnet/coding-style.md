@@ -10,6 +10,9 @@ description: >
 
 ## File Organization
 
+- **Header on each new C# file** — start with the repository's signature block,
+  using `/**` on the first line, ` * MyAIAgent | <service> · <layer>` on the second,
+  and a brief purpose before ` */`, matching neighboring files
 - **File-scoped namespaces always** — block-scoped namespaces waste indentation
 - **One type per file** — file name must match the type name exactly
 - **Member order:** constants → fields → constructors → properties → public methods → private methods

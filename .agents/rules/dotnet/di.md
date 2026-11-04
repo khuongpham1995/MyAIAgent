@@ -27,6 +27,13 @@ Manual registration is only needed for types that **cannot implement marker inte
 - `DbContext` via `AddDbContext<T>()`
 - `TimeProvider.System` — framework type
 
+Framework builder callbacks are a narrow exception when registration must be conditional,
+must preserve multiple implementations of one framework interface in a specific order,
+or requires per-instance constructor arguments. Register through the framework's own
+service collection so its internal provider receives the services. Document why the
+marker scanner is unsuitable at the registration site, and test resolution through
+the application's actual builder path, including implementation precedence.
+
 ## Anti-patterns
 
 - Never add manual `AddScoped/AddSingleton/AddTransient` for a type that already implements a marker interface
